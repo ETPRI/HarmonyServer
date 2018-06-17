@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>widgetTableQuery test</title>
+    <link href="../../../app.css" type="text/css" rel="stylesheet" />
+    <script src="../../../Libs/neo4j-web.js"></script>
+    <script src="../../LV5/app/app.js"></script>
+    <script src="../../LV2/db/db.js"></script>
+    <script src="../../LV3/dragDrop/dragDrop.js"></script>
+    <script src="../dragDropTable/dragDropTable.js"></script>
+    <script src="widgetTableQuery.js"></script>
+    <script src="../widgetTableNodes/widgetTableNodes.js"></script>
+    <script src="../../LV3/widgetNode/widgetNode.js"></script>
+    <script src="../../LV1/domFunctions/domFunctions.js"></script>
+    <script src="../../../MetaData.js"></script>
+    <script src="../../../regressionTesting.js"></script>
+    <script src="../widgetRelations/widgetRelations.js"></script>
+    <script src="../../../widgetLogin.js"></script>
+    <script src="../../../checkEmpty.js"></script>
+  </head>
+
+  <body>
+    <p>Instructions: To run tests, ensure that you are working with an empty database, then select all tests and run them. Later tests rely on changes made to the database by earlier changes, so tests need to be run in order. Also, this page uses the app.widgets array, so tests need to be run all at once on the same page (without refreshing or opening new widgets) to ensure that the widget IDs of the recording and the replay match.</p>
+    <p>Number of tests written for this page so far: 3</p>
+
+    <div id="loginDiv"></div>
+    <hr>
+    <div id="regressionHeader"></div>
+    <hr>
+    <select id = "metaData" onclick="app.menuDBstats(this)">
+      <option value="">--Meta Data--</option>
+      <option value="trash">Trash</option>
+      <option value="nodes">Nodes</option>
+      <option value="keysNode">Keys</option>
+      <option value="relations">Relations</option>
+      <option value="keysRelation">Keys</option>
+    </select>
+    <hr>
+    <select id="menuNodes" onclick="app.menuNodes(this)">
+      <option value="">-- Nodes --</option>
+    </select>
+    <input  type="button" value="New" onclick="app.menuNodes(this)">
+    <input type="button" id="checkEmpty" value="Check whether database is empty" onclick = "checkEmpty.checkEmpty(this)">
+
+    <div id="widgets" class=""> </div>
+    <hr>
+    <div id="log"></div>
+  </body>
+</html>
+
+<script type="text/javascript">
+  app = new app();  // only global variable
+  checkEmpty = new checkEmpty();
+
+  // build node menu
+  app.menuNodesInit();
+</script>

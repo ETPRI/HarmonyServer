@@ -1,0 +1,70 @@
+<html lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+
+  <title>CSS Positioning with divs | example</title>
+
+<meta name="author" content="Ross Shannon">
+<meta name="copyright" content="Ross Shannon 2000–2018 and beyond...">
+<meta name="robots" content="all">
+
+<meta name="viewport" content="width=780">
+<base target="_top">
+
+<style type="text/css" media="all">
+@import "/bubbleicious.css";
+</style>
+<link rel="stylesheet" type="text/css" href="/print.css" media="print">
+
+<link rel="shortcut icon" type="image/ico" href="/favicon.ico">
+<link rel="search" type="application/opensearchdescription+xml" title="HTML Source" href="/htmlsource-search.xml">
+
+<script src="http://www.google.com/jsapi"></script>
+<script>
+  google.load("jquery", "1");
+</script><script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js" type="text/javascript"></script>
+<script src="/sourcescripts.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-204627-1']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script');
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' :
+        'http://www') + '.google-analytics.com/ga.js';
+    ga.setAttribute('async', 'true');
+    document.getElementsByTagName("head")[0].appendChild(ga);
+  })();
+
+</script><script src="http://www.google-analytics.com/ga.js" async="true"></script>
+	<style type="text/css">
+	<!--
+	body {margin: 3em; background-image: none; background-color: white; font-size: .8em; text-align: left; }
+	-->
+	</style>
+
+</head>
+
+
+<body id="htmlsource">
+<div style="background-color: #292929; color: white; position: absolute; left: 0px; top: 80px; width: 100px; height: 300px; padding: 5px; padding-right: 20px;">This will be the navigation 'column', which will run down the left of the page.</div>
+
+<div style="position: absolute; left: 120px; top: 90px; background-color: orange; width: 620px; padding: 15px;">And this will be the main content block. I have not used another HTML tag beyond the <code>div</code> tag on this page to lay it out. No <a href="../tables/" class="more" style="font-weight: bold">tables</a>, no transparent images; just <code>div</code>s and style commands.<br>
+This layer may look like a table, but you may notice that it is positioned above the layer to the left.</div>
+
+<div style="z-index: 2; position: absolute; left: 610px; top: 155px; background-color: yellow; width: 100px; padding: 10px; border: red 2px dashed;">And yet another layer goes above the main content. <p>Notice the tasteful border.</p></div>
+
+<div style="position: absolute; left: 10px; bottom: 100px; background-color: #0099CC; padding: 5px; color: white; border: 5px white groove; font-size: 13pt;">I could go on, but I think you see the brilliance of these things.</div>
+
+<div style="position: absolute; left: 120px; bottom: 180px; background-color: green; width: 150px; padding: 5px; color: white; border: 10px black double;">Make sure you view the <strong>source</strong> of this page to properly understand what's going on here.</div>
+
+<div style="z-index: 1; position: absolute; right: 10px; bottom: 10px; background-color: #cc3300; width: 280px; padding: 10px; color: white; ">Now, try resizing this window by pulling the corner. The layers will move around as the page sides get closer to them, because they are positioned on the page relative to its edges, and can react if those edges change.</div>
+
+<p>And here's some words. This text comes last in the code, but appears top of the page, as there's 'nothing' above it.</p>
+
+
+<!-- ~Fin~ -->
+</body></html>

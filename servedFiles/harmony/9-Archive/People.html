@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>people</title>
+    <script src="Libs/neo4j-web.js"></script>
+    <link href="index.css" type="text/css" rel="stylesheet" />
+  </head>
+
+  <body>
+  <textarea id="statement"></textarea>
+  <p>Last name</p>
+  <input id="nameLast" type="text" onblur="run()">
+  <input id="nameFirst" type="text" onblur="run()">
+
+  <table><tr>
+    <td><div id="results"></div></td>
+    <td><ol> <li>one</li> <li>two</li> </ol> </td>
+  </tr></table>
+
+	<script>
+  var authToken = neo4j.v1.auth.basic("neo4j", "neo4j");
+
+  console.log(authToken);
+
+  var driver = neo4j.v1.driver("bolt://localhost", authToken, {
+  	encrypted:false
+  });
+
+  var session = driver.session();
+
+function add(element,elementString,value){
+  var elChild = document.createElement(elementString);
+  element.appendChild(document.createTextNode(value));
+  return(element);
+}
+
+  function run() {
+    // put Cypher statement back on page for debuging
+    statement = document.getElementById("statement").value =
+      'match(n:people) where n.nameLast=~"(?i)'
+      + document.getElementById("nameLast").value
+      + '.*" and n.nameFirst=~"(?i)'
+      + document.getElementById("nameFirst").value
+      + '.*" return n';
+
+      var attNames= {
+        "nameLast": "Last Name",
+        "nameFirst": "First Name",
+        "email": "Email"
+        }
+
+    // create html table with data in it
+  	var table = document.createElement("table");
+
+    // create table headers
+    var tr = document.createElement("tr");
+    add(tr,"th","#");
+
+    for (var atr in attNames) {
+        th = document.createElement("th");
+        th.appendChild(document.createTextNode(attNames[atr]));
+        tr.appendChild(th);
+    }
+    table.appendChild(tr);
+
+    var recordCount = 0;
+  	session.run(statement, {}).subscribe({
+  		onNext: function(record) {
+  			// On receipt of RECORD
+  			var tr = document.createElement("tr");
+
+        // add record count to first colum of table
+        var td = document.createElement("td");
+        td.appendChild(document.createTextNode(++recordCount));
+        tr.appendChild(td);
+
+  			record.forEach( function( value ) {
+           var col=value.properties;
+           for (var atr in attNames) {
+              td = document.createElement("td");
+       				td.appendChild(document.createTextNode(col[atr]));
+       				tr.appendChild(td);
+          }
+  			});
+  			table.appendChild(tr);
+  		},
+  		onCompleted: function(metadata) {
+
+  		}
+  	});
+
+  	var results = document.getElementById("results");
+  	while(results.childElementCount > 0) {
+  		results.removeChild(results.children[0]);
+  	}
+  	results.appendChild(table);
+
+  }
+
+  // attach run function to runButton
+//  document.getElementById("runButton").onclick = run;
+
+  </script>
+  </body>
+</html>

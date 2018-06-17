@@ -1,0 +1,56 @@
+/* use in table widget */
+table {
+	width: auto;
+	background-color: #EEE;
+	font-size: 13px;
+}
+
+th {
+	border-right: 1px solid #DDD;
+	border-bottom: 1px solid #DDD;
+	padding: 3px 5px;
+	background-color: #999;
+	color: #FFF;
+}
+
+td {
+	border-right: 1px solid #BBB;
+	border-bottom: 1px solid #BBB;
+	padding: 3px 5px;
+	vertical-align: top;
+}
+
+.changedData {background-color: yellow}
+/* // not being used
+[draggable=true] {
+    cursor: move;
+}
+
+//  resizeable class, not being used right now
+.resizable {
+	overflow: scroll;
+	resize: both;
+	max-width: 300px;
+	max-height: 460px;
+position: absolute;
+left: 280px;
+top: 300px;
+background-color: #cc3300;
+padding: 10px;
+color: white;
+z-index: 1;
+}
+
+// note being used
+textarea {
+	border-width: 0;
+	font: 15px "Courier New";
+	margin: 0;
+	width: 100%;
+	resize: vertical;
+	min-height: 36px;
+	height: 72px;
+	padding: 0;
+	background-color: skyblue;
+	vertical-align: top;
+} */

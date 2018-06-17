@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+		 <title>Drag and Drop List</title>
+
+		 <style>
+			.div1 {width:200px; height: 150px; padding: 10px; border: 1px solid green;}
+		 </style>
+
+<script type="text/javascript">
+
+var dwb_node; // save node dragging
+
+function drag(ev){
+	dwb_node = ev.target;
+}
+
+function allowDrop(ev){
+	ev.preventDefault();
+}
+
+
+function drop(ev) {
+	ev.preventDefault();
+	if (dwb_node.offsetTop < ev.target.offsetTop) {
+		// drag down
+		ev.target.parentNode.insertBefore(dwb_node, ev.target.nextSibling);
+	} else {
+		// drag up
+		ev.target.parentNode.insertBefore(dwb_node, ev.target);
+	}
+}
+
+
+function insert(ev) { // edit
+  log("insert");
+
+  // make input element visible
+  var el = document.getElementById("ed");
+  el.setAttribute("value","");      // init value of input
+  el.setAttribute("type", "text");  // make input visible
+//  ev.target.textContent = "";
+//  ev.target.appendChild(el);
+
+  // insert new li before element that was clicked on
+  const newEl = document.createElement('li');
+  newEl.appendChild(document.createTextNode(""));
+  ev.target.parentElement.insertBefore(newEl, ev.target);
+  dwb_node = newEl; // remember <li> that we are editing
+
+  // set all the draggable functions
+  newEl.setAttribute("ondrop"        ,"drop(event)"     );
+  newEl.setAttribute("ondragover"    ,"allowDrop(event)");
+  newEl.setAttribute("ondragstart"   ,"drag(event)"     );
+  newEl.setAttribute("ondblclick"    ,"dbclick(event)"  );
+  newEl.setAttribute("oncontextmenu" ,"insert(event)"   );
+  newEl.draggable  = true;
+}
+
+
+function edit(ev) { // edit
+  log("edit")
+  dwb_node = ev.target;  // remember <li> that we are editing
+
+  // make input element visible
+  var el = document.getElementById("ed");
+  el.setAttribute("value", ev.target.textContent);  // init value of input
+  el.setAttribute("type", "text");      // make input visible
+  ev.target.textContent = "";
+  ev.target.appendChild(el);
+}
+
+
+function save(ev){
+//			ev.preventDefault();
+log("save");
+
+  var el = document.getElementById("ed");  // get input element
+  el.setAttribute("type", "hidden"); 		 // hide input element
+  document.body.appendChild(el)            // move input field to end of body
+  if (el.value ==="" ) {
+    dwb_node.parentElement.removeChild(dwb_node); // delete
+  } else {
+    dwb_node.textContent=el.value;			// update <li> with edited content
+  }
+//				ev.target.appendChild(el);
+}
+
+
+function log(s) {
+  var ul = document.getElementById("eventLog");
+  var li = document.createElement("li");
+  li.appendChild(document.createTextNode(s));
+  ul.appendChild(li);
+}
+
+</script>
+
+    </head>
+
+    <body>
+		<h2>Dragable</h2>
+
+  <ol>
+    <li>insert- right click - move everything down, enter edit mode on that number</li>
+    <li>edit-click text (clearing all text will delete)</li>
+    <li>drag-click -drag</li>
+  </ol>
+    <input id="ed" type="hidden" onchange="save()">
+		<ol>
+		<li ondrop="drop(event)" ondragover="allowDrop(event)" draggable="true" ondragstart="drag(event)" ondblclick="edit(event)" oncontextmenu="insert(event)">one</li>
+		<li ondrop="drop(event)" ondragover="allowDrop(event)" draggable="true" ondragstart="drag(event)" ondblclick="edit(event)" oncontextmenu="insert(event)">three</li>
+		<li ondrop="drop(event)" ondragover="allowDrop(event)" draggable="true" ondragstart="drag(event)" ondblclick="edit(event)" oncontextmenu="insert(event)">four</li>
+		<li ondrop="drop(event)" ondragover="allowDrop(event)" draggable="true" ondragstart="drag(event)" ondblclick="edit(event)" oncontextmenu="insert(event)">
+		 <a href="file:///Users/David/1-Topics/J/JavaScript/1-LocalAppExamples/10-DragDrop/2-List.html">link</a> 5</li>
+		<li ondrop="drop(event)" ondragover="allowDrop(event)" draggable="true" ondragstart="drag(event)" ondblclick="edit(event)" oncontextmenu="insert(event)">two</li>
+		</ol>
+
+    <ul id=eventLog>
+    </ul>
+
+    </body>
+
+</html>

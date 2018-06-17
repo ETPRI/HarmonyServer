@@ -1,0 +1,44 @@
+<html>
+   <body>
+
+<p>
+CRUD - Creat, Read, Update, Delete<br>
+<br><a href="http://sql2gremlin.com/">sql gremlin translations</a><br>
+
+
+<br><strong>Create</strong><br>
+Vertex<br>
+g.addV('person').property('id', 'david').property('firstName', 'David').property('age', 60)<br>
+g.addV('person').property('id', 'mert').property('firstName', 'Mert').property('age', 40).property('userid', 2)<br>
+
+<br>Edge<br>
+g.V('mert').addE('knows').to(g.V('david'))<br>
+
+<br><br><strong>Read/Search</strong><br>
+Vertex<br>
+g.V().count()<br>
+g.V().values('id')<br>
+g.V("david").valueMap()<br>
+g.V("david").values('firstName')<br>
+
+g.V.has('firstName','David')
+g.V("firstName","David")
+g.V().has('firstName','Mert')
+g.V().has('firstName','Mert')
+g.V().hasLabel("person").valueMap("id","firstName", "age")
+
+<br>Edge<br>
+g.E().count()<br>
+
+
+<br><br><strong>update</strong><br>
+g.V('david').property('age',59)  will set the age<br>
+g.V('david').property('age',59).values('age')  will set the age, and then read it back
+<br><br><strong>delete</strong><br>
+g.V('mert').drop()  delete a node<br>
+g.V().drop()        delete all data
+
+</p>
+
+   </body>
+</html>

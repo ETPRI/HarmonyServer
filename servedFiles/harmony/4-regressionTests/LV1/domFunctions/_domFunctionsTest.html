@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>DomFunctions test</title>
+    <script src="../../../regressionTesting.js"></script>
+    <script src="domFunctions.js"></script>
+    <script src="domFunctionsTest.js"></script>
+    <script src="../../../Libs/neo4j-web.js"></script>
+    <script src="../../LV5/app/app.js"></script>
+    <script src="../../LV2/db/db.js"></script>
+    <script src="../../../MetaData.js"></script>
+    <script src="../../../widgetLogin.js"></script>
+  </head>
+
+  <body>
+    <p>Instructions: To run tests, simply select them. This page does NOT require any particular DB configuration and does NOT create new widgets, so tests may be run at any time and in any order.</p>
+    <p>Number of tests written for this page so far: 1</p>
+    <div id="loginDiv"></div>
+    <div id="regressionHeader"></div>
+    <br><br>
+
+    <input type="button" id="outsideButton" value="Get my widgetID" onclick="domFunctionsTest.getId(this)">
+    <br><br>
+
+    topWidget:
+    <div id = "topWidget" class = "widget">
+      My idr is "First" and my ID is "1" <input type="text" id="1" idr="First" readonly>
+      My idr is "Second" and my ID is "2" <input type="text" id="2" idr="Second" readonly>
+      Type an IDR here and click "Search". <input id="IDRtext1" type="text" onchange="domFunctionsTest.textChange(this)">
+      <input type="button" id="Search1" value="Search" onclick="domFunctionsTest.searchIDR(this)">
+      <input type="button" id="topButton" idr="topButton" value="Get my widgetID" onclick="domFunctionsTest.getId(this)">
+    </div>
+    <br>
+    bottomWidget:
+    <div id = "bottomWidget" class = "widget">
+      My idr is "First" and my ID is "3" <input type="text" id="3" idr="First" readonly>
+      My idr is "Last" and my ID is "4" <input type="text" id="4" idr="Last" readonly>
+      Type an IDR here and click "Search". <input id="IDRtext2" type="text" onchange="domFunctionsTest.textChange(this)">
+      <input type="button" id="Search2" value="Search" onclick="domFunctionsTest.searchIDR(this)">
+      <input type="button" id="bottomButton" idr="bottomButton" value="Get my widgetID" onclick="domFunctionsTest.getId(this)">
+    </div>
+
+    <div id = "log"></div>
+  </body>
+</html>
+
+<script type="text/javascript">
+  app = new app();
+  domFunctionsTest = new domFunctionsTest();
+</script>

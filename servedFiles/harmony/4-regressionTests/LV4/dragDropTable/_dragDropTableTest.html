@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+		<title>DragDropTable test</title>
+
+    <script src="../../LV3/DragDrop/dragDrop.js"></script>
+    <script src="../../../regressionTesting.js"></script>
+    <script src="../../LV1/domFunctions/domFunctions.js"></script>
+    <script src="dragDropTable.js"></script>
+    <script src="../../LV5/app/app.js"></script>
+    <script src="../../../metaData.js"></script>
+    <script src="../../LV2/db/db.js"></script>
+    <script src="../../../Libs/neo4j-web.js"></script>
+    <script src="../../../widgetLogin.js"></script>
+
+
+    <link href="../../../app.css" type="text/css" rel="stylesheet" />
+  </head>
+
+  <body>
+		<h2>Draggable</h2>
+    <p>Instructions: To run tests, select all tests, then run them in order. This page does NOT interact with the database in any way and may be run at any time. However, later tests depend on changes to the table made by earlier tests, so they need to be run in order.</p>
+    <p>Number of tests written for this page so far: 4</p>
+
+  <div id="loginDiv"></div>
+  <div id="regressionHeader"></div>
+
+    <ol>
+      <li>insert- Type into insert box, then hit return.</li>
+      <li>edit- Double click text, type, then hit return.</li>
+      <li>delete- Click the X button.</li>
+      <li>move- Click and drag.</li>
+    </ol>
+
+
+    <table id="table">
+      <thead>
+        <tr idr = "template"><th editable>Column 1</th><th editable>Column 2</th></tr>
+      </thead>
+      <tbody idr = "container">
+        <tr idr="item0" ondrop="app.widget('drop', this, event)" ondragover="app.widget('allowDrop', this, event)" draggable="true" ondragstart="app.widget('drag', this, event)">
+          <td idr="content0" editable ondblclick="app.widget('edit', this, event)">This is a test.</td>
+          <td idr="content1" editable ondblclick="app.widget('edit', this, event)">Can I have data here already?</td>
+          <td><button idr="delete0" onclick="app.widget('delete', this)">Delete</button></td>
+        </tr>
+        <tr idr="item1" ondrop="app.widget('drop', this, event)" ondragover="app.widget('allowDrop', this, event)" draggable="true" ondragstart="app.widget('drag', this, event)">
+          <td idr="content2" editable ondblclick="app.widget('edit', this, event)">This is a test.</td>
+          <td idr="content3" editable ondblclick="app.widget('edit', this, event)">This is only a test.</td>
+          <td><button idr="delete1" onclick="app.widget('delete', this)">Delete</button></td>
+        </tr>
+        <tr idr="item2" ondrop="app.widget('drop', this, event)" ondragover="app.widget('allowDrop', this, event)" draggable="true" ondragstart="app.widget('drag', this, event)">
+          <td idr="content4" editable ondblclick="app.widget('edit', this, event)">This is a test.</td>
+          <td idr="content5" editable ondblclick="app.widget('edit', this, event)">You may turn your papers over and start now.</td>
+          <td><button idr="delete2" onclick="app.widget('delete', this)">Delete</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <ul id=eventLog>
+    </ul>
+
+    <script type="text/javascript">
+      app = new app();
+      dragDrop = new dragDropTable("template", "container", document.getElementById("table"), 3, 6);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1 @@
+[{"id":"0","idr":"content1","action":"dblclick"},{"id":"0","idr":"edit","value":"And can I change it","action":"blur"},{"id":"0","idr":"content1","action":"dblclick"},{"id":"0","idr":"edit","value":"And can I change it?","action":"blur"},{"id":"0","idr":"content5","action":"dblclick"},{"id":"0","idr":"edit","value":"Or maybe it's a quiz.","action":"blur"}]

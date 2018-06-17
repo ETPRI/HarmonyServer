@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>ETPRI Data</title>
+    <link href="app.css" type="text/css" rel="stylesheet" />
+  </head>
+
+  <body>
+
+      <input type="button" value="Nodes"    onclick="app.widget.create('nodes')"    >
+      <input type="button" value="Keys"     onclick="app.widget.create('keys')"     >
+      <input type="button" value="Relatios" onclick="app.widget.create('relations')"> -|-
+
+  <select id="show">
+    <option value="nodes">nodes</option>
+    <option value="keys">keys</option>
+    <option value="relations">relations</option>
+  </select>
+
+  <input type="button"  value="Show"   onclick="app.widget.show(this)">
+  <input type="button"  value="test memeory build" onclick="app.widget.test()">
+  <br>|-> debugging <input id="debug" type="text" width="180">
+   <a href="http://localhost:7474/browser/" target="_blank">neo4j browser </a> neo4j desktop must be running with database started
+
+   <div id="widgets" class=""> </div>
+
+<hr>
+
+<script src="Libs/neo4j-web.js"></script>
+
+<script src="app.js"></script>
+<script src="db.js"></script>
+<script src="widgetTableV2.js"></script>
+<script src="classDB.js"></script>
+
+  </body>
+</html>
+
+<!-- where all the widgets go
+  <div dragable="true" style="position: absolute;  background-color: #cc3300;  padding: 10px; color: white; ">
+    (6) Now, try resizing this window by pulling the corner.
+  </div>
+  <div draggable="true" class="resizable">quae autem nihil aut perferendis aliquid eum in commodi vitae.
+    Nihil ducimus enim ad nam facere.</div>
+  -->

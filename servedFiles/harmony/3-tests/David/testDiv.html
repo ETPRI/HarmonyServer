@@ -1,0 +1,31 @@
+<html lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>test div for window and widget sematics</title>
+<meta name="viewport" content="width=780">
+<base target="_top">
+</head>
+
+
+<body id="htmlsource">
+<div style="position: absolute; left: 0px; top: 0px; width: 100px; height: 300px; padding: 5px; padding-right: 20px; background-color: #292929; color: white; ">
+  (1) This will be the navigation 'column', which will run down the left of the page.</div>
+
+<div style="position: absolute; left: 120px; top: 90px; background-color: orange; width: 620px; padding: 15px;">
+  (2) And this will be the main content block. I have not used another HTML tag beyond the <code>div</code> tag on this page to lay it out. No
+  <a href="../tables/" class="more" style="font-weight: bold">tables</a>, no transparent images; just <code>div</code>s and style commands.<br>
+This layer may look like a table, but you may notice that it is positioned above the layer to the left.</div>
+
+<div style="z-index: 2; position: absolute; left: 610px; top: 155px; background-color: yellow; width: 100px; padding: 10px; border: red 2px dashed;">
+  (3) And yet another layer goes above the main content. <p>Notice the tasteful border.</p></div>
+
+<div style="position: absolute; left: 10px; bottom: 100px; background-color: #0099CC; padding: 5px; color: white; border: 5px white groove; font-size: 13pt;">
+  (4) I could go on, but I think you see the brilliance of these things.</div>
+
+<div style="position: absolute; left: 120px; bottom: 180px; background-color: green; width: 150px; padding: 5px; color: white; border: 10px black double;">
+  (5) Make sure you view the <strong>source</strong> of this page to properly understand what's going on here.</div>
+
+<div style="z-index: 3; position: absolute; right: 0px; bottom: 0px;  background-color: #cc3300; width: 280px; padding: 10px; color: white; ">
+  (6) Now, try resizing this window by pulling the corner. The layers will move around as the page sides get closer to them,
+  because they are positioned on the page relative to its edges, and can react if those edges change.</div>
+
+</body></html>

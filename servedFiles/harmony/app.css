@@ -1,0 +1,389 @@
+/* use in table widget */
+table {
+	background-color: #EEE;
+	font-size: 13px;
+}
+
+th {
+	border-right: 1px solid #DDD;
+	border-bottom: 1px solid #DDD;
+	padding: 3px 5px;
+	background-color: #999;
+	color: #FFF;
+}
+
+td {
+	border-right: 1px solid #BBB;
+	border-bottom: 1px solid #BBB;
+	padding: 3px 5px;
+	vertical-align: top;
+}
+
+.month td {
+	width: 200px;
+	height: 150px;
+	font-weight: bold;
+	font-size:large;
+}
+
+.year td {
+	width:30px;
+	height: 30px;
+	font-weight: bold;
+	font-size: small;
+}
+
+.month .wrongMonth {
+	font-size: medium;
+	font-weight: normal;
+	color: gray;
+}
+
+.year .wrongMonth {
+	font-size: x-small;
+	font-weight: normal;
+	color: gray;
+}
+
+.weekDayCell {
+	font-size: 16px;
+}
+
+.today {
+	color: red;
+}
+
+.selectedButton {
+	background-color:yellow;
+}
+
+.changedData {
+	background-color: yellow;
+	fill: yellow !important;
+}
+
+.newData {
+	background-color: limegreen;
+	fill: limegreen !important;
+}
+
+.deletedData {background-color: palevioletred}
+
+.loggedIn {
+	color: green;
+	font-weight: bold;
+	font-size: 120%;
+}
+
+.activeView {background-color: yellow}
+
+svg {
+	border-style: ridge;
+	border-width: 5px;
+	background-color: antiquewhite;
+	-webkit-user-select:none;
+}
+
+.parent .nodeRect {
+	stroke: blue;
+	stroke-width: 5px;
+}
+
+.currentParent .nodeRect {
+	stroke: red;
+	stroke-width: 5px;
+}
+
+.currentParent.parent .nodeRect {
+	stroke:purple;
+}
+
+.activeWidget {
+	border-style: double;
+	border-color: green;
+	border-width: 5px;
+}
+
+.activeWidget .selected .nodeRect {
+	stroke: green;
+	stroke-width: 5px;
+}
+
+text {
+	text-anchor: middle;
+	font-size: 16px;
+}
+
+text.toggleExpln {
+	font-size: 12px;
+}
+
+.toggleExpBox {
+	stroke: gray;
+	stroke-width: 1px;
+	fill: white;
+}
+
+text.noteExpln {
+	font-size: 12px;
+}
+
+.noteExpBox {
+	stroke: gray;
+	stroke-width: 1px;
+	fill: white;
+}
+
+text.detailExpln {
+	font-size: 12px;
+}
+
+.detailExpBox {
+	stroke: gray;
+	stroke-width: 1px;
+	fill: white;
+}
+
+text.editExpln {
+	font-size: 12px;
+}
+
+.editExpBox {
+	stroke: gray;
+	stroke-width: 1px;
+	fill: white;
+}
+
+
+.selectBox {
+	stroke: black;
+	stroke-width: 2px;
+	fill: turquoise;
+	opacity: 0.25;
+}
+
+.link {
+	fill: none;
+	stroke: black;
+	stroke-width: 3px;
+}
+
+.nodeRect {
+	stroke: black;
+	stroke-width: 1px;
+	fill: lightblue;
+	/* -webkit-touch-callout: none !important;
+	-webkit-user-select: none !important;
+	-khtml-user-select: none !important;
+	-moz-user-select: none !important;
+	-ms-user-select: none !important;
+	user-select: none !important;
+	pointer-events: none !important; */
+}
+
+/* .childrenHiddenToggle {
+	stroke: black;
+	stroke-width: 1px;
+	fill: rebeccapurple;
+} */
+
+.toggleRect {
+	stroke: black;
+	stroke-width: 1px;
+	fill: white;
+}
+
+/* .noChildrenToggle {
+	display: none;
+} */
+
+.detailsRect {
+	stroke: black;
+	stroke-width: 1px;
+	fill: white;
+}
+
+.showNotesRect {
+	stroke: black;
+	stroke-width: 1px;
+	fill: white;
+}
+
+.editRect {
+	stroke: black;
+	stroke-width: 1px;
+	fill: white;
+}
+
+.inactive {
+	stroke: black;
+	stroke-width: 1px;
+	fill: gainsboro;
+}
+
+.inactiveText {
+	fill: dimgray;
+}
+
+text.toggleButtonText {
+	font-size: 12px;
+}
+
+text.notesButtonText {
+	font-size: 12px;
+}
+
+text.detailButtonText {
+	font-size: 12px;
+}
+
+text.editText {
+	font-size: 12px;
+}
+/* .detailNoNode {
+	display: none;
+} */
+
+.detailPopup {
+	stroke: black;
+	stroke-width: 1px;
+	fill: white;
+}
+
+.detailHeader {
+	stroke:black;
+	stroke-width: 1px;
+	fill: #999;
+}
+
+.disassociateButton {
+	fill:blue;
+}
+
+.showNodeButton {
+	fill:blue;
+}
+
+.disassociateText {
+	fill: white;
+}
+
+.showNodeText {
+	fill: white;
+}
+
+.notesExist {
+	stroke:black;
+	stroke-width: 1px;
+	fill: white;
+}
+
+.noNotes {
+	display: none;
+}
+
+.detailPopupHidden {
+	display: none;
+}
+
+.hideable {
+	display: none;
+}
+
+.hidden {display: none} !important
+
+.nodeText {
+	-webkit-touch-callout: none !important;
+	-webkit-user-select: none !important;
+	-khtml-user-select: none !important;
+	-moz-user-select: none !important;
+	-ms-user-select: none !important;
+	user-select: none !important;
+	pointer-events: none !important;
+}
+
+.unselectable {
+    -webkit-touch-callout: none !important;
+    -webkit-user-select: none !important;
+    -khtml-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+		pointer-events: none !important;
+}
+
+.resizeable {
+	overflow: scroll;
+	resize: vertical;
+	margin: auto;
+	width: 100%;
+	height: 400px;
+z-index: 1;
+}
+
+.widgetHeader {
+	position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  padding: 5px;
+  background-color: white;
+  border: 2px solid black;}
+
+/* // not being used
+[draggable=true] {
+    cursor: move;
+}
+*/
+
+textarea {
+	border-width: 0;
+	font: 15px "Courier New";
+	margin: 0;
+	width: 200px;
+	resize: both;
+	min-height: 36px;
+	height: 72px;
+	padding: 0;
+	background-color: white;
+	vertical-align: top;
+}
+
+.dataBrowserBlank {
+	width: 200px;
+	height: 300px;
+}
+
+.dataBrowserCell {
+	position: relative;
+}
+
+.dataBrowserDescription {
+	display:none;
+	margin:0px;
+	position:absolute;
+	left: 0px;
+	border:1px solid #000;
+	font-weight: none;
+	width:auto;
+	height:auto;
+	background-color:white;
+}
+
+.dataBrowserDescShow {
+	margin:0px;
+	position:absolute;
+	left: 0px;
+	border:1px solid #000;
+	font-weight: none;
+	width:auto;
+	height:auto;
+	background-color:white;
+	z-index: 1000;
+}
+
+.dataBrowserOpen {
+	color: green;
+	font-weight: bold;
+	font-size: 120%;
+	background-color: yellow;
+}
