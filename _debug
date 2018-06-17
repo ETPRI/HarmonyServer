@@ -1,0 +1,12 @@
+#!/bin/bash
+# run electron application, this is a node.js app
+#
+cd "${0%/*}"
+#pwd
+#npm start
+
+echo in chrome browser, About:inspect, Then click Open dedicated DevTolls for Node
+
+
+node --inspect-brk server.js
+#node server.js

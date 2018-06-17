@@ -1,0 +1,5 @@
+#!/bin/bash
+# run electron application, this is a node.js app
+#
+cd "${0%/*}"
+node server.js
