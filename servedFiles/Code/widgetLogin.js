@@ -35,6 +35,11 @@ class widgetLogin {
   // a login/logout button that changes when you log in or out, an info paragraph that shows who's logged in, and prompts for
   // the name and password. These are placed in the element with ID loginDiv (if no such element exists, this is not called).
   buildLoginWidget() {
+    // needs to come from ../view/widgetLogin.html
+
+// code below that deals with visual asspects and is or could be moved to widgetLogin.html sould be removed.
+// to be reivewed and removed if possible
+
     // the loginDiv functions as a widget so app.widget can work with it. Over in app, it's also added to the widgets array.
     this.loginDiv.setAttribute("class", "widget");
 
