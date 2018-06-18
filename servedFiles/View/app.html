@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>app test</title>
+    <link href="app.css" type="text/css" rel="stylesheet" />
+
+    <script src="../Libs/neo4j-web.js"></script>
+    <script src="../Libs/d3.js"></script>
+    <script src="../code/app.js"></script>
+    <script src="../code/db.js"></script>
+    <script src="../code/dragDrop.js"></script>
+    <script src="../code/dragDropTable.js"></script>
+    <script src="../code/widgetTableQuery.js"></script>
+    <script src="../code/widgetTableNodes.js"></script>
+    <script src="../code/widgetNode.js"></script>
+    <script src="../code/domFunctions.js"></script>
+    <script src="../code/MetaData.js"></script>
+    <script src="../code/regressionTesting.js"></script>
+    <script src="../code/widgetRelations.js"></script>
+    <script src="../code/widgetLogin.js"></script>
+    <script src="../code/checkEmpty.js"></script>
+    <script src="../code/widgetView.js"></script>
+    <script src="../code/widgetSVG.js"></script>
+    <script src="../code/widgetCalendar.js"></script>
+    <script src="../code/widgetDetails.js"></script>
+    <script src="../code/dataBrowser.js"></script>
+    <script src="../code/d3Functions.js"></script>
+    <script src="../code/mindmapKeypress.js"></script>
+    <script src="../code/mindmapClick.js"></script>
+  </head>
+
+  <body>
+    <div id="loginDiv"></div>
+    <div id="regressionHeader"></div>
+    <div id="debugHeader"></div>
+    <div id="workSpace">
+      <select id="menuNodes" onchange="app.menuNodes(this); this.selectedIndex = 0">
+        <option value="">-- Nodes --</option>
+      </select>
+      <input  type="button" value="New" onclick="app.menuNodes(this)">
+      <div id="widgets" class=""> </div>
+      <div id="log" hidden="true"></div>
+      <hr>
+    </div>
+  </body>
+</html>
+
+<script type="text/javascript">
+  app = new app();  // only global variable
+  app.buildApp();
+</script>

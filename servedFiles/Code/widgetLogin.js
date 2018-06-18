@@ -217,9 +217,8 @@ class widgetLogin {
       const loginButton = app.domFunctions.getChildByIdr(this.loginDiv, "loginButton");
       loginButton.setAttribute("value", "Log Out");
       loginButton.setAttribute("onclick", "app.widget('logout', this)");
-  	} // end elseif (can log in)
-
-  	else {
+  	 // end elseif (can log in)
+    } else {
   		alert ("Multiple such nodes found");
   	}
 
