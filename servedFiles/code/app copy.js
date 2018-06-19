@@ -51,10 +51,10 @@ buildApp() {
 	this.menuNodesInit();
 
 	// Create preset calendar options
-//	this.presetCalendars();
+	this.presetCalendars();
 
 	// Create temp admin account if a real one doesn't yet exist; delete it if a real one does exist
-//	this.login.checkAdminTable();
+	this.login.checkAdminTable();
 
 	// Create the debug menu, assuming a header is provided for it to go in
 	this.createDebug();

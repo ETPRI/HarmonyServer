@@ -35,10 +35,6 @@ class widgetLogin {
   // a login/logout button that changes when you log in or out, an info paragraph that shows who's logged in, and prompts for
   // the name and password. These are placed in the element with ID loginDiv (if no such element exists, this is not called).
   buildLoginWidget() {
-    // this should get built from ../view/widgetLogin.html
-
-// can we get rid of all or most of the code below?
-
     // the loginDiv functions as a widget so app.widget can work with it. Over in app, it's also added to the widgets array.
     this.loginDiv.setAttribute("class", "widget");
 
@@ -118,7 +114,6 @@ class widgetLogin {
     }
   }
 
-
   // Runs when the page loads. Ensures that the Admin and User nodes exist (all admins are connected to the Admin node,
   // and all users are connected to the User node, so they must exist). Searches for users who are admins
   // and sends the results to this.checkAdminUser().
@@ -132,7 +127,6 @@ class widgetLogin {
                       with admin match (user:people)-[:Permissions]->(admin) return user`);
     this.db.runQuery(this, 'checkAdminUser');
   }
-
 
   // If there are no real admins, create a temporary admin account with username and password of "admin".
   // If there ARE real admins, delete the temporary admin account if it exists.
