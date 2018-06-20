@@ -42,6 +42,18 @@ class widgetLogin {
 
     // the loginDiv functions as a widget so app.widget can work with it. Over in app, it's also added to the widgets array.
     this.loginDiv.setAttribute("class", "widget");
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        // update page with result from server
+      this.loginDiv.innerHTML = this.responseText;
+      }
+    };
+
+    xhttp.open("GET", "widgetLogin.html");
+    xhttp.send();
+
 
     // Create a paragraph that says "Not Logged In", with an idr so it can be changed later
     this.info = document.createElement("p");
