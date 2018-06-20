@@ -25,6 +25,7 @@ buildApp() {
 	this.metaData  			= new metaData();
 	this.db        			= new db();
 	this.domFunctions 	= new domFunctions();
+	this.nodeFunctions 	= new nodeFunctions();
 	this.login 					= new widgetLogin();
 	this.regression 		= new regressionTesting();
 	this.checkEmpty 		= new checkEmpty();
@@ -57,7 +58,7 @@ buildApp() {
 //	this.login.checkAdminTable();
 
 	// Create the debug menu, assuming a header is provided for it to go in
-	this.createDebug();
+	// this.createDebug();
 
 	// Run any test code currently in app
 	this.test();
@@ -108,7 +109,7 @@ hideRegression(button) {
 // Removes all widgets other than the login div and regression header from both the screen and the widgets array
 clearWidgets() {
 	for (let id in this.widgets) { // For every widget...
-		if (id != "loginDiv" && id != "regHeader") { // (except for the login div and regression header)...
+		if (id != "loginDiv" && id != "regressionHeader") { // (except for the login div and regression header)...
 			// Remove widget objects
 			delete this.widgets[id];
 

@@ -14,10 +14,6 @@ class regressionTesting {
     this.regHeader = document.getElementById("regressionHeader");
     this.dragData = {};
 
-    if (!(this.regHeader == null)) {
-      this.buildRegressionHeader();
-    }
-
     this.playDOM = document.getElementById("replay");
     this.stepDOM = document.getElementById("stepThrough");
     this.delayMS = document.getElementById("delayMS");

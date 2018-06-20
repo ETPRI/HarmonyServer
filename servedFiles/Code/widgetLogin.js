@@ -37,8 +37,8 @@ class widgetLogin {
   buildLoginWidget() {
     // needs to come from ../view/widgetLogin.html
 
-// code below that deals with visual asspects and is or could be moved to widgetLogin.html sould be removed.
-// to be reivewed and removed if possible
+    // code below that deals with visual aspects and is or could be moved to widgetLogin.html sould be removed.
+    // to be reviewed and removed if possible
 
     // the loginDiv functions as a widget so app.widget can work with it. Over in app, it's also added to the widgets array.
     this.loginDiv.setAttribute("class", "widget");
@@ -47,81 +47,28 @@ class widgetLogin {
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         // update page with result from server
-      this.loginDiv.innerHTML = this.responseText;
+      app.login.loginDiv.innerHTML = this.responseText;
+
+      // Set variables
+      app.login.nameInput = document.getElementById("userName");
+      app.login.passwordInput = document.getElementById("password");
+      app.login.loginButton = document.getElementById("loginButton");
+      app.login.info = document.getElementById("userInfo");
+
+      // Create debug and regression headers and link to debug and regression buttons in login header
+      app.createDebug();
+      const headerExists = !(document.getElementById("regressionHeader") == null);
+      if (headerExists) {
+        app.regression.buildRegressionHeader();
+      }
+
+      // The <p> containing the login fields is only visible when logged out
+      app.login.viewLoggedOut.push(app.login.nameInput.parentElement);
       }
     };
 
     xhttp.open("GET", "widgetLogin.html");
     xhttp.send();
-
-
-    // Create a paragraph that says "Not Logged In", with an idr so it can be changed later
-    this.info = document.createElement("p");
-    this.info.setAttribute("idr", "userInfo");
-    const text = document.createTextNode("Not Logged In");
-    this.info.appendChild(text);
-    this.loginDiv.appendChild(this.info);
-
-    // element to hold the prompts and textboxes for logging in. Visible only when logged out.
-    const loginInfo = document.createElement('p');
-    this.viewLoggedOut.push(loginInfo);
-    this.loginDiv.appendChild(loginInfo);
-
-    // Prompt for username. Appended to loginInfo, so also visible only when logged out.
-    const namePrompt = document.createTextNode("Username:");
-    loginInfo.appendChild(namePrompt);
-
-    // Textbox to actually store the username. Appended to loginInfo, so also visible only when logged out.
-    this.nameInput = document.createElement("input");
-    this.nameInput.setAttribute("idr", "userName");
-    this.nameInput.setAttribute("onblur", "app.regression.logText(this)");
-    loginInfo.appendChild(this.nameInput);
-
-    // Prompt for password. Appended to loginInfo, so also visible only when logged out.
-    const passwordPrompt = document.createTextNode("Password: ");
-    loginInfo.appendChild(passwordPrompt);
-
-    // Textbox to store the password. Allows you to login by hitting Enter.
-    // Appended to loginInfo, so also visible only when logged out.
-    this.passwordInput = document.createElement("input");
-    this.passwordInput.setAttribute("type", "password");
-    this.passwordInput.setAttribute("idr", "password");
-    this.passwordInput.setAttribute("onblur", "app.regression.logText(this)");
-    this.passwordInput.setAttribute("onkeydown", "app.widget('loginOnEnter', this, event)");
-    loginInfo.appendChild(this.passwordInput);
-
-    // Button to log in.
-    this.loginButton = document.createElement("input");
-    this.loginButton.setAttribute("idr", "loginButton");
-    this.loginButton.setAttribute("type", "button");
-    this.loginButton.setAttribute("value", "Log In");
-    this.loginButton.setAttribute("onclick", "app.widget('login', this)");
-    this.loginDiv.appendChild(this.loginButton);
-
-    // Button to show debug header. Visible only when logged in as an admin
-    this.debugButton = document.createElement('input');
-    this.debugButton.setAttribute('id', 'debugButton');
-    this.debugButton.setAttribute('type', 'button');
-    this.debugButton.setAttribute('value', 'Show Debug Menu');
-    this.debugButton.setAttribute('onclick', 'app.showDebug(this)');
-    this.debugButton.setAttribute('hidden', 'true');
-    this.loginDiv.appendChild(this.debugButton);
-    this.viewAdmin.push(this.debugButton);
-
-    // Button to show regression header. Visible only when logged in as an admin
-    this.regressionButton = document.createElement('input');
-    this.regressionButton.setAttribute('id', 'regressionButton');
-    this.regressionButton.setAttribute('type', 'button');
-    this.regressionButton.setAttribute('value', 'Show Regression Menu');
-    this.regressionButton.setAttribute('onclick', 'app.showRegression(this)');
-    this.regressionButton.setAttribute('hidden', 'true');
-    this.loginDiv.appendChild(this.regressionButton);
-    this.viewAdmin.push(this.regressionButton);
-
-
-    // Horizontal line
-    const line = document.createElement("hr");
-    this.loginDiv.appendChild(line);
   }
 
   // Called when you hit a key while in the password box. If the key was "Enter", calls the login method.
@@ -174,12 +121,20 @@ class widgetLogin {
       alert("Enter your name and password first!");
     }
     else {
-      // DBREPLACE DB function: changePattern
-      // JSON object: {nodesFind:[{name:"user"; type:"people"}, {name:"table"; type:"LoginTable"}];
-      //               relsFind:[{from:"user"; to: "table"; type:"Permissions"; details: {username:name; password:password}}]}
-  	  this.db.setQuery(`match (user)-[rel:Permissions {username:"${name}", password:"${password}"}]->(table:LoginTable)
-                        return ID(user) as userID, user.name as name, table.name as permissions`);
-  	  this.db.runQuery(this, 'loginComplete');
+      const obj = {};
+      obj.from = {};
+      obj.from.name = "user";
+      obj.to = {};
+      obj.to.name = "table";
+      obj.to.type = "LoginTable";
+      obj.rel = {};
+      obj.rel.type = "Permissions";
+      obj.rel.properties = {};
+      obj.rel.properties.username = name;
+      obj.rel.properties.password = password;
+      app.nodeFunctions.changeRelation(obj, this, 'loginComplete');
+
+      // app.nodeFunctions.login(name, password);
     }
   }
 
@@ -193,9 +148,9 @@ class widgetLogin {
   	}
 
   	else if (data.length == 1) { // Can actually log in
-      this.userID = data[0].userID; // Log the user in
-      this.userName = data[0].name;
-      this.permissions = data[0].permissions;
+      this.userID = data[0].user.identity.low; // Log the user in
+      this.userName = data[0].user.properties.name;
+      this.permissions = data[0].table.properties.name;
   		this.info.textContent = `Logged in as ${this.userName} -- Role: ${this.permissions}`;
       this.info.classList.add('loggedIn');
 
@@ -231,7 +186,7 @@ class widgetLogin {
       dropDown.appendChild(option);
 
       // Turn login button into logout button
-      const loginButton = app.domFunctions.getChildByIdr(this.loginDiv, "loginButton");
+      const loginButton = document.getElementById("loginButton");
       loginButton.setAttribute("value", "Log Out");
       loginButton.setAttribute("onclick", "app.widget('logout', this)");
   	 // end elseif (can log in)
@@ -276,12 +231,8 @@ class widgetLogin {
     const dropDown = document.getElementById("metaData");
      dropDown.remove(dropDown.length-1);
 
-     // Update login div to let user log in instead of out
-     const loginInp = app.domFunctions.getChildByIdr(this.loginDiv, "userName");
-     loginInp.removeAttribute("hidden");
-     const loginButton = app.domFunctions.getChildByIdr(this.loginDiv, "loginButton");
-     loginButton.setAttribute("value", "Log In");
-     loginButton.setAttribute("onclick", "app.widget('login', this)");
+     this.loginButton.setAttribute("value", "Log In");
+     this.loginButton.setAttribute("onclick", "app.widget('login', this)");
 
      this.userID = null; // Log the user out
      this.userName = null;
