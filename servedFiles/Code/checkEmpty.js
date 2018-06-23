@@ -4,15 +4,10 @@ class checkEmpty {
 
   // Runs a query to see all nodes in the database, then passes the results to verifyEmpty.
   checkEmpty(button) {
-    // DBREPLACE DB function: changeNode
-    // JSON object: {name:"n"}
-
     const obj = {};
     obj.node = {};
     obj.node.name = "n";
     app.nodeFunctions.changeNode(obj, this, 'verifyEmpty');
-    // app.db.setQuery("match(n) return n");
-    // app.db.runQuery(this, 'verifyEmpty');
   }
 
   // Checks whether any nodes were found. If so, alert the user that an empty database is needed,

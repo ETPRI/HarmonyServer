@@ -326,16 +326,9 @@ class regressionTesting {
       app.clearWidgets();
 
   		// Remove nodes and relationships
-      // DBREPLACE DB command: deleteNode
-      // JSON object: {} (assume empty means no restrictions)
-
       const obj = {};
       obj.name = "n";
       app.nodeFunctions.deleteNode(obj);
-
-  		// const command = "MATCH (n) DETACH DELETE n";
-  		// app.db.setQuery(command);
-  		// app.db.runQuery(this, "dummy");
 
   		// reset all variables to ensure same state every time "Clear All" is chosen
   		app.idCounter = 0; // reset ID counter

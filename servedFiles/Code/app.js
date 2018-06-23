@@ -23,7 +23,6 @@ buildApp() {
 	// Create instances of other classes needed to run the page. Called here because some of them require app to exist
 	// before their constructors can run.
 	this.metaData  			= new metaData();
-	this.db        			= new db();
 	this.domFunctions 	= new domFunctions();
 	this.nodeFunctions 	= new nodeFunctions();
 	this.login 					= new widgetLogin();
@@ -56,9 +55,6 @@ buildApp() {
 
 	// Create temp admin account if a real one doesn't yet exist; delete it if a real one does exist
 	this.login.checkAdminTable();
-
-	// Create the debug menu, assuming a header is provided for it to go in
-	// this.createDebug();
 
 	// Run any test code currently in app
 	this.test();
@@ -309,9 +305,6 @@ menuDBstats(dropDown){
 // Runs when the page loads. Ensures all preset calendars exist in the database.
 presetCalendars() {
 	// At the moment the only preset calendar is a dummy calendar that doesn't show events. This will change.
-	// DBREPLACE DB function: createNode
-	// JSON object: {type: "calendar"; details:{name: "dummy"; description: "dummy calendar"}; merge:true}
-
 	const obj = {};
 	obj.type = "calendar";
 	obj.properties = {};
@@ -320,10 +313,6 @@ presetCalendars() {
 	obj.merge = true;
 
 	this.nodeFunctions.createNode(obj);
-
-	// const query = `merge (dummy:calendar {name: "dummy", description: "dummy calendar"})`;
-	// this.db.setQuery(query);
-	// this.db.runQuery();
 }
 
 // refresh widget with new database call. domElement is the search button that triggered the search.

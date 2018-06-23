@@ -27,23 +27,11 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
   app.widgets[app.idCounter++] = this;
   this.containedWidgets = [];
 
-  this.db          = new db();
   this.refresh()
 }
 
 // Refreshes the widget by running the query to get all nodes in this user's view, then calling this.rComplete().
 refresh() {
-  // const query = `match (per)-[:Owner]->(view:View {direction:"${this.relationType}"})-[:Subject]->(node)
-  //                where ID(per) = ${this.viewID} and ID(node) = ${this.nodeID}
-  //                match (view)-[r:Link]->(a) return r, a, view.order as ordering order by r.comment, a.name, a.labels[0]`;
-  // DBREPLACE DB function: changePattern
-  // JSON object: {nodesFind:[{name:"per"; id:this.viewID},
-  //                          {name:"view"; type:"View"; details:[{direction:this.relationType}]},
-  //                          {name:"node"; ID: this.nodeID},
-  //                          {name:"a"}];
-  //                relsFind:[{type:"Owner"; from:"per"; to:"view"},
-  //                          {type:"Subject"; from:"view"; to:"node"},
-  //                          {name: "r"; type:"Link"; from:"view"; to:"a"}]}
   const obj = {};
   obj.start = {};
   obj.start.name = "per";
@@ -61,9 +49,6 @@ refresh() {
   obj.rel2 = {};
   obj.rel2.type = "Subject";
   app.nodeFunctions.changeTwoRelPattern(obj, this, 'findLinks');
-
-  // this.db.setQuery(query);
-  // this.db.runQuery(this,"rComplete");
 }
 
 findLinks(data) { // data should include the view found by the previous function. Find all nodes that it is linked to.
@@ -470,15 +455,6 @@ processNext(data, rows, prevFunction) {
   else { // when all rows are processed
     this.order.reverse();
 
-    // Update the view's order property and refresh the widget.
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user", id:this.viewID},
-    //                          {name:"node"; id:this.nodeID},
-    //                          {name:"view"; type:"View"; details:{direction:this.relationType};
-    //                              changes:{order:JSON.stringify(this.order)}};
-    //               relsFind: [{from:"user"; to:"view"; type:"Owner"},
-    //                          {from:"view"; to:"node"; type:"Subject"}}
-
     const obj = {};
     obj.start = {};
     obj.start.name = "user";
@@ -504,12 +480,6 @@ processNext(data, rows, prevFunction) {
     obj.changes.push(change);
     app.nodeFunctions.changeTwoRelPattern(obj, this, 'refresh');
 
-    // const query = `match (user)-[:Owner]->(view:View {direction:"${this.relationType}"})-[:Subject]->(node)
-    //                where ID(user) = ${this.viewID} and ID(node) = ${this.nodeID}
-    //                set view.order = ${JSON.stringify(this.order)}`;
-    // this.db.setQuery(query);
-    // this.db.runQuery(this,'refresh');
-
     this.order = []; // Finally, reset this.order.
   }
 }
@@ -528,16 +498,6 @@ deleteNode(row, rows) {
   // find the user's view of the other node, and delete the relation from that view to this node.
   // ("user" is the user, "node" is the other node, "this" is this node, and "view" is the user's view of the other node.)
   // Then call processNext() to do the next row.
-  // DBREPLACE DB function: changePattern
-  // JSON object: {nodesFind:[{name:"user"; ID:this.viewID},
-  //                          {name:"node"},
-  //                          {name:"this"; ID:this.nodeID},
-  //                          {name:"view"; type:"View"; details:{direction:otherRelType}}];
-  //                relsFind:[{name:"r"; ID:id; to:"node"};
-  //                          {type:"Owner"; from:"user"; to:"view"}
-  //                          {type:"Subject"; from:"view"; to:"node"}
-  //                          {name:"r2"; type:"Link"; from:"view"; to:"this"}
-  //               relsDelete:["r", "r2"]}
   const obj = {};
   obj.to = {};
   obj.to.name = "node";
@@ -545,11 +505,6 @@ deleteNode(row, rows) {
   obj.rel.name = "r";
   obj.rel.id = id;
   app.nodeFunctions.deleteRelation(obj, this, 'findReverse', rows);
-
-  // this.db.setQuery(`match ()-[r]->(node) where ID(r) = ${id} delete r with node
-  //                   match (user)-[:Owner]->(view:View {direction:"${otherRelType}"})-[:Subject]->(node) where ID(user) = ${this.viewID}
-  //                   match (view)-[r2:Link]->(this) where ID(this) = ${this.nodeID} delete r2`);
-  // this.db.runQuery(this, "processNext", rows);
 }
 
 findReverse(data, rows) {
@@ -618,8 +573,6 @@ modifyNode (row, rows) {
   const commentCell = cells[5];
   const comment = commentCell.textContent;
 
-  // DBREPLACE DB function: changeRelation
-  // JSON object: {id:id; changes:{comment: app.stringEscape(comment)}}
   const obj = {};
   obj.rel = {};
   obj.rel.name = "r";
@@ -631,9 +584,6 @@ modifyNode (row, rows) {
   change.value = app.stringEscape(comment);
   obj.changes.push(change);
   app.nodeFunctions.changeRelation(obj, this, 'processNext', rows, "modify");
-
-  // this.db.setQuery(`match ()-[r]-() where ID(r) = ${id} set r.comment = "${app.stringEscape(comment)}"`);
-  // this.db.runQuery(this, "processNext", rows);
 }
 
 // Adds a new relation to the node being viewed. If a destination node was specified for the relation,
@@ -704,17 +654,6 @@ addNode(row, rows) {
   obj.attributes = attributes;
   obj.relation = relation;
   app.nodeFunctions.addNodeToView(obj, this, 'processNext', rows, "add");
-
-  // const query = `match (per), (start), (end)
-  //              where ID(per) = ${this.viewID} and ID(start) = ${startID} and ID(end)=${endID}
-  //              merge (per)-[:Owner]->(view:View {direction:"start"})-[:Subject]->(start)
-  //              merge (view)-[endLink:Link {${attributes}}]->(end)
-  //              merge (per)-[:Owner]->(view2:View {direction:"end"})-[:Subject]->(end)
-  //              merge (view2)-[startLink:Link {${attributes}}]->(start)
-  //              return ${relation} as link`;
-  //
-  // this.db.setQuery(query);
-  // this.db.runQuery(this, "processNext", rows, "add");
 }
 
 // Fires when a row from any relations table - whether it's the fully interactive table for a logged-in user,

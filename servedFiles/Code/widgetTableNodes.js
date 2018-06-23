@@ -14,7 +14,6 @@ class widgetTableNodes {
     this.queryObject     = app.metaData.getNode(queryObjectName);
     this.fields          = this.queryObject.fields;
     this.fieldsDisplayed = this.queryObject.fieldsDisplayed;
-    this.db              = new db();  // where db object will be new db(this.queryObj)
     this.queryData       = {}; // where returned data will be stored
 
     this.idWidget = app.idCounter;   // strings
@@ -34,11 +33,7 @@ class widgetTableNodes {
 
   ////////////////////////////////////////////////////////////////////
   search() { // public - call when data changes
-    // DBREPLACE DB function: changePattern
-    // I would have to review the code more closely to see exactly what to look for, but this should just involve searching for a pattern.
     app.nodeFunctions.tableNodeSearch(this.buildQuery(), this, 'buildData');
-    // this.db.setQuery(this.buildQuery());
-    // this.db.runQuery(this,"buildData");
   }
 
   searchOnEnter(input, evnt) { // Makes hitting enter run a search
@@ -55,26 +50,6 @@ class widgetTableNodes {
     obj.orderBy = this.queryObject.orderBy;
     obj.limit = app.domFunctions.getChildByIdr(this.widget, "limit").value;
     return obj;
-
-    // init cypherQuery data
-    // let match    = `(n:${this.queryObject.nodeLabel})`;
-    // if (app.login.userID) {
-    //   match += `, (a)`;
-    // }
-    // const where    = this.buildWhere();
-    // const orderBy  = this.queryObject.orderBy;
-    // const limit    = app.domFunctions.getChildByIdr(this.widget, "limit").value;
-    // const type = this.queryObjectName;
-    //
-    // const query =
-  	//     "match " + match
-  	// 	+ (function(w){if(0<w.length) return " where "  + w + " "; else return " ";})(where)
-  	// 	+ (function(t){if(t=="people") return "optional match (n)-[:Permissions]->(perm:LoginTable) return n, perm.name as permissions"; else return "return n";})(type)
-  	// 	+ (function(o){if(0<o.length) return " order by "+ o + " "; else return " ";}) (orderBy)
-  	// 	+ (function(l){if (l.trim === "") return ""; else return " limit " + l}) (limit)
-  	// 	;
-    //
-    // return(query);
   }
 
   buildWhere() {
@@ -102,43 +77,9 @@ class widgetTableNodes {
         else {
           where[field].fieldType = "number";
         }
-        // if (dropDown.options[0].value === "S") {
-        //   this.getSearchString(inputDOM, searchType, where);  // assume a string search
-        // } else {
-        //   this.getSearchNumber(inputDOM, searchType, where);  // assume a number search
-        // }
       }
     }
     return where;
-  }
-
-  // getSearchNumber(inputDOM, searchType, where) {
-  //   // n.born <= 1958   match (n:Person) where n.name=~"(?i)ton.*" return n order by n.nameLast  limit 9
-  //   const field = this.getAtt(inputDOM,"fieldName");
-  //   where[field] = {};
-  //   where[field].value = inputDOM.value;
-  //   where[field].searchType = searchType;
-  //   // const w = "n."+ this.getAtt(inputDOM,"fieldName") +searchType + inputDOM.value +' and ';
-  //   // return(w);
-  // }
-
-  getSearchString(inputDOM, searchType, where) {
-    const w = `n.${this.getAtt(inputDOM,"fieldName")}=~"(?i).*${inputDOM.value}.*" and `;
-
-    let w1="";
-    switch(searchType) {
-    case "S":    // start
-        w1 = w.replace('#s#',"").replace('#E#','.*');    break;
-    case "M":    // middle
-        w1 = w.replace('#s#',".*").replace('#E#','.*');  break;
-    case "E":    // end
-        w1 = w.replace('#s#',".*").replace('#E#','');    break;
-    case "=":    // equal to
-        w1 = w.replace('#s#',"").replace('#E#','');      break;
-    default:
-        alert("app.js:buildWhere - error")
-    }
-    return(w1);
   }
 
   getAtt(element,attName) { // private -----------

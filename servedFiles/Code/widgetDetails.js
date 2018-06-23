@@ -11,8 +11,6 @@ constructor(label, container, id) { // Label: the type of node described. ID: th
   this.idWidget = app.idCounter;
   app.widgets[app.idCounter] = this; // Add to app.widgets
 
-  this.db          = new db();
-
   // If we're editing, then the ID for the node was passed in.
   if (id) {
     const obj = {};
@@ -27,11 +25,6 @@ constructor(label, container, id) { // Label: the type of node described. ID: th
     obj.rel.type = "Trash";
     obj.rel.direction = "left"; // (n)<-[rel]-(a)
     app.nodeFunctions.findOptionalRelation(obj, this, 'finishConstructor');
-
-    // this.db.setQuery(`match (n) where ID(n)=${id} match (a) where ID(a)=${app.login.userID}
-    //                   optional match (a)-[r:Trash]->(n)
-    //                   return n, r.reason as reason`);
-    // this.db.runQuery(this, 'finishConstructor');
   }
   else { // If no ID was passed in
      this.finishConstructor();

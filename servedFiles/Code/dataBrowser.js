@@ -4,7 +4,6 @@ class dataBrowser {
     this.widgetID = app.idCounter;
     app.widgets[app.idCounter] = this; // Add to app.widgets
 
-    this.db = new db();
     this.nodeData = {};
 
     this.buildWidget();
@@ -56,16 +55,7 @@ class dataBrowser {
     }
 
     else {
-      // query the DB for all info about this node and its relations
-
-      // DBREPLACE DB function: changePattern
-      // JSON object: {nodesFind:[{name:"n"; ID:data.nodeID};
-      //                          {name:"in"};
-      //                          {name:"out"}];
-      //              relsFind:[{name:"inRel"; from: "in"; to: "n"; optional:true};
-      //                        {name:"outRel"; from: "n"; to: "out"; optional:true}]}
-      // This still wouldn't do the collecting, but we could take the raw data and do collecting in the program
-
+      // query the DB for all info about this node and its relations, starting with the incoming relations
       const obj = {};
       obj.required = {};
       obj.required.name = "n";
@@ -76,17 +66,10 @@ class dataBrowser {
       obj.rel.name = "inRel";
       obj.rel.direction = "left"; // (required)<-[rel]-(optional)
       app.nodeFunctions.findOptionalRelation(obj, this, 'findOuts', data.nodeID, cell);
-
-      // const query = `match (n) where ID(n) = ${data.nodeID}
-      // with n optional match (in)-[inRel]->(n)
-      // with n, collect(in) as ins, collect(inRel) as inRels optional match (out)<-[outRel]-(n)
-      // return n, inRels, ins, collect(outRel) as outRels, collect(out) as outs`;
-      // this.db.setQuery(query);
-      // this.db.runQuery(this, 'loadNode', cell);
     }
   }
 
-  findOuts(data, ID, cell) {
+  findOuts(data, ID, cell) { // query the DB about outgoing relations, and pass along the incoming ones that were already found
     const obj = {};
     obj.required = {};
     obj.required.name = "n";
@@ -343,14 +326,7 @@ class dataBrowser {
       }
 
       else {
-        // query the DB for all info about this node and its relations
-        // DBREPLACE DB function: changePattern
-        // JSON object: {nodesFind:[{name:"n"; ID:data.nodeID};
-        //                          {name:"in"};
-        //                          {name:"out"}];
-        //              relsFind:[{name:"inRel"; from: "in"; to: "n"; optional:true};
-        //                        {name:"outRel"; from: "n"; to: "out"; optional:true}]}
-        // This still wouldn't do the collecting, but we could take the raw data and do collecting in the program
+        // query the DB for all info about this node and its relations, starting with incoming relations
         const obj = {};
         obj.required = {};
         obj.required.name = "n";
@@ -361,14 +337,6 @@ class dataBrowser {
         obj.rel.name = "inRel";
         obj.rel.direction = "left"; // (required)<-[rel]-(optional)
         app.nodeFunctions.findOptionalRelation(obj, this, 'findOuts', ID, newCell);
-
-        //
-        // const query = `match (n) where ID(n) = ${ID}
-        // with n optional match (in)-[inRel]->(n)
-        // with n, collect(in) as ins, collect(inRel) as inRels optional match (out)<-[outRel]-(n)
-        // return n, inRels, ins, collect(outRel) as outRels, collect(out) as outs`;
-        // this.db.setQuery(query);
-        // this.db.runQuery(this, 'loadNode', newCell);
       }
     }
   }

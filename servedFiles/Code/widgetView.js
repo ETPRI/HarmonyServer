@@ -28,16 +28,6 @@ class widgetView {
     this.relCell = null; // The cell of this.widgetTable which contains the active view (if any), and any previously active views (hidden)
     this.add = null; // The "Add Me" button, which is visible when a user is logged in but doesn't have a view of this node
 
-    this.db = new db();
-
-    // Get the IDs and names of all the people with views of this node, and pass them to buildViews.
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; type:"people"},
-    //                          {name:"view"; type:"View"; details:"direction:relationType"},
-    //                          {name:"node"; ID:nodeID}];
-    //                relsFind:[{type:"Owner"; from:"user"; to:"view"},
-    //                          {type:"Subject"; from:"view"; to:"node"}]}
-
     const obj = {};
     obj.start = {};
     obj.start.name = "user";
@@ -53,10 +43,6 @@ class widgetView {
     obj.rel2 = {};
     obj.rel2.type = "Subject";
     app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
-
-    // const query = `match (user)-[:Owner]->(view:View {direction:"${relationType}"})-[:Subject]->(node) where id(node) = ${nodeID} return ID(user) as ID, user.name as name order by name, ID`;
-    // this.db.setQuery(query);
-    // this.db.runQuery(this, "buildViews");
   }
 
   // Adds the view widget to the page: A list of views, possibly an active view,
@@ -287,13 +273,6 @@ class widgetView {
   refresh(button) {
     this.relations = {}; // reset list of existing relation DOM objects
     // Get the IDs and names of all the people with views of this node, and pass them to buildViews.
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; type:"people"},
-    //                          {name:"view"; type:"View"; details:"direction:relationType"},
-    //                          {name:"node"; ID:nodeID}];
-    //                relsFind:[{type:"Owner"; from:"user"; to:"view"},
-    //                          {type:"Subject"; from:"view"; to:"node"}]}
-    // Consider: Can this be combined with the version in constructor?
     const obj = {};
     obj.start = {};
     obj.start.name = "user";
@@ -310,9 +289,6 @@ class widgetView {
     obj.rel2.type = "Subject";
     app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
 
-    // const query = `match (user)-[:Owner]->(view:View {direction:"${this.relationType}"})-[:Subject]->(node) where id(node) = ${this.nodeID} return ID(user) as ID, user.name as name order by name, ID`;
-    // this.db.setQuery(query);
-
     // log click
     const recordObj = {};
     recordObj.id = app.domFunctions.widgetGetId(button);
@@ -320,8 +296,6 @@ class widgetView {
     recordObj.action = "click";
     app.regression.log(JSON.stringify(recordObj));
     app.regression.record(recordObj);
-
-    // this.db.runQuery(this, "buildViews");
   }
 
   // Expands or collapses the whole widget.
@@ -428,12 +402,6 @@ class widgetView {
   // Adds a new view to the database linked to the node being viewed and the logged-in user, then calls addComplete
   addUser(button) {
     // Create a view of this node for this user
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; ID:app.login.userID},
-    //                          {name:"subject"; ID:this.nodeID}];
-    //             nodesCreate:[{name:"view"; type:"View"; details:{direction:this.relationType}}];
-    //              relsCreate:[{type:"Owner"; from:"user"; to:"view"},
-    //                          {type:"Subject"; from:"view"; to:"subject"}]}
     const obj = {};
     obj.name = "view";
     obj.type = "View";
@@ -441,19 +409,13 @@ class widgetView {
     obj.properties.direction = this.relationType;
     app.nodeFunctions.createNode(obj, this, 'linkViewUser');
 
-    // const query = `match (user), (subject) where ID(user) = ${app.login.userID} and ID(subject) = ${this.nodeID}
-    //                create (user)-[:Owner]->(:View {direction: "${this.relationType}"})-[:Subject]->(subject)`;
-    // this.db.setQuery(query);
-
-    // Log click before running - just to be sure it will log BEFORE the data does
+    // Log click
     const recordObj = {};
     recordObj.id = app.domFunctions.widgetGetId(button);
     recordObj.idr = button.getAttribute("idr");
     recordObj.action = "click";
     app.regression.log(JSON.stringify(recordObj));
     app.regression.record(recordObj);
-
-    // this.db.runQuery(this, 'addComplete');
   }
 
   linkViewUser(data) { // Take the newly-created node and connect it to the user

@@ -25,20 +25,12 @@ class widgetSVG {
     this.notesLabel = null;
 
     if (this.mapID) {
-      // DBREPLACE DB function: changeNode
-      // JSON object: {name:"mindmap"; id:this.mapID}
-
       const obj = {};
       obj.node = {};
       obj.node.name = "mindmap";
       obj.node.type = "mindmap";
       obj.node.id = this.mapID;
       app.nodeFunctions.changeNode(obj, this, 'buildWidget');
-
-      // const query = `match (mindmap:mindmap) where ID(mindmap) = ${this.mapID}
-      //                return mindmap.roots as roots, mindmap.count as count, mindmap.name as name`;
-      // app.db.setQuery(query);
-      // app.db.runQuery(this, 'buildWidget');
     }
 
     else {
@@ -671,8 +663,6 @@ class widgetSVG {
     let query = "";
 
     if (newMap) { // Creating a new map, either because we're saving a copy or this map has never been saved before
-      // DBREPLACE DB function: createNode
-      // JSON object: {name:"mindmap"; type:"mindmap"; details:{name:name; roots:app.stringEscape(JSON.stringify(rootsCopy)); count:this.d3Functions.count}; merge:false}
       const obj = {};
       obj.name = "mindmap";
       obj.type = "mindmap";
@@ -681,15 +671,8 @@ class widgetSVG {
       obj.properties.count = this.d3Functions.count;
       obj.properties.name = name;
       app.nodeFunctions.createNode(obj, this.d3Functions, 'update');
-
-      // query = `create (mindmap:mindmap
-      //     {roots:"${app.stringEscape(JSON.stringify(rootsCopy))}",
-      //     count:${this.d3Functions.count},
-      //     name:"${name}"}) return ID(mindmap) as ID`;
     }
     else { // Updating an existing map
-      // DBREPLACE DB function: changeNode
-      // JSON object:{ID:this.mapID; changes:{ roots:app.stringEscape(JSON.stringify(rootsCopy)); count:this.d3Functions.count; name:name}}
       const obj = {};
       obj.node = {};
       obj.node.name = "mindmap";
@@ -700,14 +683,7 @@ class widgetSVG {
       obj.changes.count = this.d3Functions.count;
       obj.changes.name = name;
       app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
-
-      // query = `match (mindmap:mindmap) where ID(mindmap) = ${this.mapID} set
-      //           mindmap.roots="${app.stringEscape(JSON.stringify(rootsCopy))}",
-      //           mindmap.count = ${this.d3Functions.count},
-      //           mindmap.name = "${name}"`
     }
-    // app.db.setQuery(query);
-    // app.db.runQuery(this.d3Functions, 'update');
   }
 
   lookForEnter(input, evnt) { // Makes hitting enter do the same thing as blurring (e. g. inserting a new node or changing an existing one)

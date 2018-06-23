@@ -1,7 +1,6 @@
 // This class handles everything to do with logging in and out of the website.
 class widgetLogin {
   constructor() {
-    this.db = new db();
 
     // DOM elements to be filled in later
     this.info = null; // Will show whether the user is logged in, and if so, their name and role
@@ -83,25 +82,16 @@ class widgetLogin {
   // Runs when the page loads. Ensures that the Admin and User nodes exist (all admins are connected to the Admin node,
   // and all users are connected to the User node, so they must exist). Searches for users who are admins
   // and sends the results to this.checkAdminUser().
-  checkAdminTable() {
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesCreate:[{type:"LoginTable", details:{name:"User"}, merge:true},
-    //                           {name:"admin", type:"LoginTable", details:{"name:"Admin"}, merge:true}];
-    //              nodesFind:[{name:"user"; type:"people"}];
-    //              relsFind:{type:"Permissions"; from:"user"; to:"admin"}}
+  checkAdminTable() { // start by merging the User table...
     const obj = {};
     obj.merge = true;
     obj.type = "LoginTable";
     obj.properties = {};
     obj.properties.name = "User";
     app.nodeFunctions.createNode(obj, this, "mergeAdmin");
-
-    // this.db.setQuery(`merge (:LoginTable {name: "User"}) merge (admin:LoginTable {name: "Admin"})
-    //                   with admin match (user:people)-[:Permissions]->(admin) return user`);
-    // this.db.runQuery(this, 'checkAdminUser');
   }
 
-  mergeAdmin(data) {
+  mergeAdmin(data) { // then merge the Admin table...
     const obj = {};
     obj.merge = true;
     obj.type = "LoginTable";
@@ -128,26 +118,16 @@ class widgetLogin {
   // If there are no real admins, create a temporary admin account with username and password of "admin".
   // If there ARE real admins, delete the temporary admin account if it exists.
   checkAdminUser(data) {
-    if (data.length == 0) { // if no users are admins, create a temporary admin node if it doesn't exist
-      // DBREPLACE DB function: changePattern
-      // JSON object: {nodesFind: [name:"admin"; type:"LoginTable"; details:{name:"Admin"}];
-      //               nodesCreate: [{name:"tempAdmin"; type:"tempAdmin"; details:{name:"Temporary Admin Account"}; merge:true}];
-      //               relsCreate: [{from:"tempAdmin"; to:"admin"; type:"Permissions"; details:{username:"admin"; password:"admin"}; merge:true}]}
+    if (data.length == 0) { // if no users are admins, create a temporary admin node if it doesn't exist...
       const obj = {};
       obj.name = "tempAdmin";
       obj.type = "tempAdmin";
       obj.properties = {};
       obj.properties.name = "Temporary Admin Account";
       obj.merge = true;
-      app.nodeFunctions.createNode(obj, this, 'linkTempAdmin');
-
-      // this.db.setQuery(`match (admin:LoginTable {name: "Admin"}) merge (tempAdmin:tempAdmin {name: "Temporary Admin Account"})-[temp:Permissions {username:"admin", password:"admin"}]->(admin)`);
-      // this.db.runQuery();
+      app.nodeFunctions.createNode(obj, this, 'linkTempAdmin'); //... and call another function to link it to the admin table.
     }
     else { // if at least one user is an admin, delete the temporary admin node if it exists
-      // DBREPLACE DB function: deleteNode
-      // JSON object: {type: tempAdmin}
-
       const obj = {};
       obj.name = "tempAdmin";
       obj.type = "tempAdmin";
@@ -155,7 +135,7 @@ class widgetLogin {
     }
   }
 
-  linkTempAdmin(data) {
+  linkTempAdmin(data) { // Link the temporary admin account to the Admin table, if it wasn't already linked.
     const id = data[0].tempAdmin.ID;
     const obj = {};
     obj.from = {};

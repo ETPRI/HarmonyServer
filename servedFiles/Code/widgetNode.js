@@ -38,13 +38,8 @@ constructor(callerID, label, id, name) {
   this.containedWidgets = [];
   this.callerID = callerID;
 
-  this.db          = new db();
-
-  // If we're editing, then the ID for the node was passed in.
+  // If we're editing, then the ID for the node was passed in. Search for its info, including whether it was trashed by this user.
   if (id) {
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind: [{name: n; id: id}, {name: a; id: app.login.userID}]
-    //               relsFind: [{name: r; from: a; to: n; type: Trash; optional: true}]}
     const obj = {};
     obj.required = {};
     obj.required.name = "n";
@@ -57,13 +52,6 @@ constructor(callerID, label, id, name) {
     obj.rel.type = "Trash";
     obj.rel.direction = "left"; // (n)<-[rel]-(a)
     app.nodeFunctions.findOptionalRelation(obj, this, 'finishConstructor');
-
-
-    // this.db.setQuery(`match (n) where ID(n)=${id} match (a) where ID(a)=${app.login.userID}
-    //                   optional match (a)-[r:Trash]->(n)
-    //                   return n, r.reason as reason`);
-    //
-    // this.db.runQuery(this, 'finishConstructor');
   } else {
      this.finishConstructor();
    }
@@ -87,9 +75,9 @@ finishConstructor(data) {
   this.buildDataNode();
 
   if (data) { // I hate to do this twice, but I have to create dataNode before I can call buildWidget or buildDataNode, and I have to call buildWidget before changing and using DOM elements.
-    if (data[0].reason) { // If a reason for trashing was returned (meaning that the node was already trashed by this user)...
-      this.dataNode.properties.trash=true;
-      this.dataNode.properties.reason = data[0].reason;                                                // Record in the dataNode that it was trashed already...
+    if (data[0].r) { // If a trash relation was returned (meaning that the node was already trashed by this user)...
+      this.dataNode.properties._trash=true;
+      this.dataNode.properties.reason = data[0].r.properties.reason; // Record in the dataNode that it was trashed already...
       const trashCheck = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
       trashCheck.checked=true;
 
@@ -97,7 +85,7 @@ finishConstructor(data) {
       const reasonText = app.domFunctions.getChildByIdr(this.widgetDOM, 'reasonText');      // Show the reason prompt and textbox...
       reason.removeAttribute("hidden");
       reasonText.removeAttribute("hidden");
-      reason.setAttribute("value", data[0].reason);                                    // And prefill that textbox with the reason.
+      reason.setAttribute("value", data[0].r.properties.reason); // And prefill that textbox with the reason.
     }
 
     this.buildStart();
@@ -202,7 +190,6 @@ buildDataNode() {   // put in one field label and input row for each field
       value = this.name;
     }
 
-
     const dataField = document.createElement('td');
     row.appendChild(dataField);
     const input = document.createElement('input');
@@ -249,6 +236,16 @@ buildDataNode() {   // put in one field label and input row for each field
   this.tableDOM.appendChild(trashRow);
   app.login.viewLoggedIn.push(trashRow);
 
+  if (this.dataNode.properties._trash) {
+    const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
+    const reason = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
+    const reasonText = app.domFunctions.getChildByIdr(this.widgetDOM, 'reasonText');
+    checkbox.checked = true; // Check the box...
+    reason.removeAttribute("hidden"); // Show the reason prompt and textbox...
+    reasonText.removeAttribute("hidden");
+    reason.setAttribute("value", this.dataNode.properties.reason); // And prefill that textbox with the reason.
+  }
+
   // set the button to be save or added
   if (this.dataNode) {this.addSaveDOM.value = "Save";
   } else {this.addSaveDOM.value = "Add";}
@@ -258,13 +255,13 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
   // director function
   if (widgetElement.value === "Save") {
     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
-    if (this.dataNode.properties.trash === true && checkbox.checked === false && app.login.userID) { // If the node was trashed and now shouldn't be
+    if (this.dataNode.properties._trash === true && checkbox.checked === false && app.login.userID) { // If the node was trashed and now shouldn't be
       this.untrashNode(widgetElement);
     }
-    else if (!(this.dataNode.properties.trash === true) && checkbox.checked === true && app.login.userID) { // If the node was not trashed and now should be
+    else if (!(this.dataNode.properties._trash === true) && checkbox.checked === true && app.login.userID) { // If the node was not trashed and now should be
       this.trashNode(widgetElement);
     }
-    else if (this.dataNode.properties.trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData") && app.login.userID) { // If the node was and should stay trashed, but the reason has changed
+    else if (this.dataNode.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData") && app.login.userID) { // If the node was and should stay trashed, but the reason has changed
       this.updateReason(widgetElement);
     }
     else { // If the node's trash status isn't changing, only the data, go straight to save().
@@ -276,15 +273,12 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
 }
 
 trashNode(widgetElement) {
-  this.dataNode.properties.trash = true;
+  this.dataNode.properties._trash = true;
   const user = app.login.userID;
   const node = this.dataNode.identity;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
   reasonInp.setAttribute("class",""); // remove changedData class from reason
-
-  // DBREPLACE DB function: createRelation
-  // JSON object: {from: {ID:user}; to: {ID:node}; type:"Trash"; properties:{reason:app.stringEscape(reason)}; merge:true}
 
   const obj = {};
   obj.from = {};
@@ -299,10 +293,6 @@ trashNode(widgetElement) {
   obj.rel.properties = {};
   obj.rel.properties.reason = app.stringEscape(reason);
   app.nodeFunctions.createRelation(obj, this, 'trashUntrash', widgetElement);
-
-  const query = `match (user), (node) where ID(user)=${user} and ID(node)=${node} merge (user)-[tRel:Trash {reason:"${app.stringEscape(reason)}"}]->(node)`
-  this.db.setQuery(query);
-  this.db.runQuery(this, "trashUntrash", widgetElement);
 }
 
 updateReason(widgetElement) {
@@ -313,8 +303,6 @@ updateReason(widgetElement) {
   this.dataNode.properties.reason = reason;
   reasonInp.setAttribute("class","");
 
-  // DBREPLACE DB function: changeRelation
-  // JSON object: {from: {ID:user}; to: {ID:node}; type:"Trash"; changes:{reason:app.stringEscape(reason)}}
   const obj = {};
   obj.from = {};
   obj.from.name = "user";
@@ -332,19 +320,13 @@ updateReason(widgetElement) {
   change.value = app.stringEscape(reason);
   obj.changes.push(change);
   app.nodeFunctions.changeRelation(obj, this, 'trashUntrash', widgetElement);
-
-  // const query = `match (user)-[rel:Trash]->(node) where ID(user) = ${user} and ID(node) = ${node} set rel.reason = "${reason}"`;
-  // this.db.setQuery(query);
-  // this.db.runQuery(this, "trashUntrash", widgetElement);
 }
 
 untrashNode(widgetElement) {
-  this.dataNode.properties.trash = false;
+  this.dataNode.properties._trash = false;
   const user = app.login.userID;
   const node = this.dataNode.identity;
 
-  // DBREPLACE DB function: deleteRelation
-  // JSON object: {fromID: user; toID: node; type:Trash}
   const obj = {};
   obj.from = {};
   obj.from.name = "user";
@@ -356,10 +338,6 @@ untrashNode(widgetElement) {
   obj.rel.name = "rel";
   obj.rel.type = "Trash";
   app.nodeFunctions.deleteRelation(obj, this, 'trashUntrash', widgetElement);
-
-  // const query = `match (user)-[rel:Trash]->(node) where ID(user)=${user} and ID(node)=${node} delete rel`;
-  // this.db.setQuery(query);
-  // this.db.runQuery(this, "trashUntrash", widgetElement);
 }
 
 trashUntrash(data, widgetElement) {
@@ -368,8 +346,6 @@ trashUntrash(data, widgetElement) {
 
 ////////////////////////////////////////////////////////////////////
 add(widgetElement) { // Builds a query to add a new node, then runs it and passes the result to addComplete
-  // CREATE (n:person {name:'David Bolt', lives:'Knoxville'}) return n
-
   let tr = this.tableDOM.firstElementChild;
 
   const create = "create (n:"+ this.label+" {#data#}) return n";
@@ -379,7 +355,6 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
 
     if (inp && inp.hasAttribute("db")) { // Only process input rows with a db value - not the trash div; that's done separately
       data[inp.getAttribute("db")] = app.stringEscape(inp.value);
-      // data += inp.getAttribute("db") +':"' + app.stringEscape(inp.value) +'", ';
     }
     tr=tr.nextElementSibling;
   }
@@ -389,12 +364,6 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
   obj.type = this.label;
   obj.properties = data;
   app.nodeFunctions.createNode(obj, this, 'addComplete');
-
-  // const query = create.replace("#data#", data.substr(0,data.length-2) );
-  // // DBREPLACE DB function: createNode
-  // // JSON object (from example): {type:person; properties:{name: "David Bolt"; lives: "Knoxville"}}
-  // this.db.setQuery(query);
-  // this.db.runQuery(this,"addComplete");
 }
 
 
@@ -490,9 +459,6 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     alert("no changes to save")
     }
   } else {
-    // DBREPLACE DB function: changeNode
-    // JSON object: {name: "n"; id:this.dataNode.identity; changes:{data.substr(0,data.length-2)}}, or I may change how data is built.
-
     const obj = {};
     obj.node = {};
     obj.node.name = "n";
@@ -500,15 +466,21 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     obj.changes = data;
 
     app.nodeFunctions.changeNode(obj, this, 'saveData');
-
-    // this.db.setQuery( `match (n) where id(n)=${this.dataNode.identity} set ${data.substr(0,data.length-2)} return n` );
-    // this.db.runQuery(this,"saveData");
   }
 }
 saveData(data) { // Refreshes the node table and logs that addSave was clicked
   // redo from as edit now that data is saved
-  // alert(JSON.stringify(data));
   this.dataNode = data[0].n;
+  // Keep the trash relation shown in the table
+  const text = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
+  const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
+  if (checkbox.checked) {
+    this.dataNode.properties._trash = true;
+    this.dataNode.properties.reason = text.value;
+  }
+  else {
+    this.dataNode.properties._trash = false;
+  }
   this.buildDataNode();
 
   // log
