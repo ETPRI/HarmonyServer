@@ -112,18 +112,19 @@ class nodeFunctions {
     const node = this.buildSearchString(dataObj.node, strings, "where");
 
     // Build the string representing the changes - what comes after the SET keyword
+    // dataObj.changes should be an array, each entry in which includes a property, a value and possibly a string boolean
     let changes ="";
-    if (dataObj.changes && dataObj.node.name) { // You can't really request changes to a relation unless you can refer to it by name
-      for (let prop in dataObj.changes) {
-        let value = `"${dataObj.changes[prop]}"`;
+    if (dataObj.changes && dataObj.node.name) {
+      for (let i = 0; i < dataObj.changes.length; i++) {
+        let value = `"${dataObj.changes[i].value}"`;
         if (dataObj.changes[i].string === false) { // default is that the new value is a string, but can be overridden
-          value = `${dataObj.changes[prop]}`;
+          value = `${dataObj.changes[i].value}`;
         }
 
         if (changes == "") {
-          changes = `set ${dataObj.node.name}.${prop} = ${value}`;
+          changes = `set ${dataObj.node.name}.${dataObj.changes[i].property} = ${value}`;
         }
-        else changes += `, ${dataObj.node.name}.${prop} = ${value}`;
+        else changes += `, ${dataObj.node.name}.${dataObj.changes[i].property} = ${value}`;
       }
     }
 

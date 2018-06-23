@@ -59,9 +59,9 @@ constructor(callerID, label, id, name) {
 
 finishConstructor(data) {
   if (data) { // If data were passed in, add them to the table
-    if (data[0].n.ID) {
-      data[0].n.identity = data[0].n.ID;
-    }
+    // if (data[0].n.ID) {
+    //   data[0].n.identity = data[0].n.ID;
+    // }
     this.dataNode = data[0].n;
 
     const obj = {};
@@ -94,12 +94,12 @@ finishConstructor(data) {
 
 buildStart() {
   this.containedWidgets.push(app.idCounter);
-  new widgetView(this.startDOM, this.dataNode.identity, "start", this, 'buildEnd');
+  new widgetView(this.startDOM, this.dataNode.ID, "start", this, 'buildEnd');
 }
 
 buildEnd() {
   this.containedWidgets.push(app.idCounter);
-  new widgetView(this.endDOM, this.dataNode.identity, "end");
+  new widgetView(this.endDOM, this.dataNode.ID, "end");
 }
 
 buildWidget() { // public - build table header
@@ -111,7 +111,7 @@ buildWidget() { // public - build table header
 
   if (this.dataNode) {
     // we are edit mode
-    id = this.dataNode.identity;
+    id = this.dataNode.ID;
     name = this.dataNode.properties.name;
   }
 
@@ -160,10 +160,10 @@ buildDataNode() {   // put in one field label and input row for each field
   }
 
   // NOTE: Kludge to be removed once all function calls return ID number instead of identity object
-  if (this.dataNode && ("id" in this.dataNode)) {
-    this.dataNode.identity = this.dataNode.id;
-    delete this.dataNode.id;
-  }
+  // if (this.dataNode && ("id" in this.dataNode)) {
+  //   this.dataNode.identity = this.dataNode.id;
+  //   delete this.dataNode.id;
+  // }
 
   for (let fieldName in this.fields) {
 
@@ -275,7 +275,7 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
 trashNode(widgetElement) {
   this.dataNode.properties._trash = true;
   const user = app.login.userID;
-  const node = this.dataNode.identity;
+  const node = this.dataNode.ID;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
   reasonInp.setAttribute("class",""); // remove changedData class from reason
@@ -297,7 +297,7 @@ trashNode(widgetElement) {
 
 updateReason(widgetElement) {
   const user = app.login.userID;
-  const node = this.dataNode.identity;
+  const node = this.dataNode.ID;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
   this.dataNode.properties.reason = reason;
@@ -325,7 +325,7 @@ updateReason(widgetElement) {
 untrashNode(widgetElement) {
   this.dataNode.properties._trash = false;
   const user = app.login.userID;
-  const node = this.dataNode.identity;
+  const node = this.dataNode.ID;
 
   const obj = {};
   obj.from = {};
@@ -370,7 +370,7 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
   this.dataNode = data[0].n; // takes single nodes
   const id = this.dataNode.ID;
-  this.dataNode.identity = this.dataNode.ID; // NOTE: Kludge; remove later
+  // this.dataNode.identity = this.dataNode.ID; // NOTE: Kludge; remove later
   const name = this.dataNode.properties.name;
   const nodeLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeLabel");
   nodeLabel.textContent=`${this.label}#${id}: ${name}`;
@@ -427,7 +427,7 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
   */
   let tr = this.tableDOM.firstElementChild;
 
-  let data={};
+  let data=[];
   while (tr) {
     const inp = tr.lastElementChild.firstElementChild;  // find <input> element
     if(inp.getAttribute("class") === "changedData") {
@@ -436,13 +436,16 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
       // const d1 = "n."+ fieldName +"=#value#, ";
       // let d2 = "";
       if (fieldName in this.fields) {
+        const change = {};
+        change.property = fieldName;
         if (this.fields[fieldName].type === "number") {
-          data[fieldName] = inp.value;  // number
+          change.value = inp.value;
+          change.string = false;
         } else {
-          data[fieldName] = app.stringEscape(inp.value);  // assume string
+          change.value = app.stringEscape(inp.value);  // assume string
         }
+        data.push(change);
       }
-      // data += d1.replace('#value#',d2)
     }
     tr=tr.nextElementSibling;
   }
@@ -462,7 +465,7 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     const obj = {};
     obj.node = {};
     obj.node.name = "n";
-    obj.node.id = this.dataNode.identity;
+    obj.node.id = this.dataNode.ID;
     obj.changes = data;
 
     app.nodeFunctions.changeNode(obj, this, 'saveData');
