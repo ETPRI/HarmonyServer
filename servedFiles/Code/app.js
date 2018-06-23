@@ -52,10 +52,10 @@ buildApp() {
 	this.menuNodesInit();
 
 	// Create preset calendar options
-//	this.presetCalendars();
+	this.presetCalendars();
 
 	// Create temp admin account if a real one doesn't yet exist; delete it if a real one does exist
-//	this.login.checkAdminTable();
+	this.login.checkAdminTable();
 
 	// Create the debug menu, assuming a header is provided for it to go in
 	// this.createDebug();
@@ -311,9 +311,19 @@ presetCalendars() {
 	// At the moment the only preset calendar is a dummy calendar that doesn't show events. This will change.
 	// DBREPLACE DB function: createNode
 	// JSON object: {type: "calendar"; details:{name: "dummy"; description: "dummy calendar"}; merge:true}
-	const query = `merge (dummy:calendar {name: "dummy", description: "dummy calendar"})`;
-	this.db.setQuery(query);
-	this.db.runQuery();
+
+	const obj = {};
+	obj.type = "calendar";
+	obj.properties = {};
+	obj.properties.name = "dummy";
+	obj.properties.description = "dummy calendar";
+	obj.merge = true;
+
+	this.nodeFunctions.createNode(obj);
+
+	// const query = `merge (dummy:calendar {name: "dummy", description: "dummy calendar"})`;
+	// this.db.setQuery(query);
+	// this.db.runQuery();
 }
 
 // refresh widget with new database call. domElement is the search button that triggered the search.

@@ -6,8 +6,13 @@ class checkEmpty {
   checkEmpty(button) {
     // DBREPLACE DB function: changeNode
     // JSON object: {name:"n"}
-    app.db.setQuery("match(n) return n");
-    app.db.runQuery(this, 'verifyEmpty');
+
+    const obj = {};
+    obj.node = {};
+    obj.node.name = "n";
+    app.nodeFunctions.changeNode(obj, this, 'verifyEmpty');
+    // app.db.setQuery("match(n) return n");
+    // app.db.runQuery(this, 'verifyEmpty');
   }
 
   // Checks whether any nodes were found. If so, alert the user that an empty database is needed,

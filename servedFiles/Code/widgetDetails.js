@@ -15,16 +15,25 @@ constructor(label, container, id) { // Label: the type of node described. ID: th
 
   // If we're editing, then the ID for the node was passed in.
   if (id) {
-    if (app.login.userID) { // If the user is logged in - they should be, at this point.
-      // DBREPLACE DB function: changePattern
-      // JSON object: {nodesFind: [{name:"n"; ID:id}, {name:"a"; ID:app.login.userID}],
-      //               relsFind: [{name:"r"; type:"Trash"; from:"a"; to:"n"}]}
-      this.db.setQuery(`match (n) where ID(n)=${id} match (a) where ID(a)=${app.login.userID}
-                        optional match (a)-[r:Trash]->(n)
-                        return n, r.reason as reason`);
-    }
-    this.db.runQuery(this, 'finishConstructor');
-  } else { // If no ID was passed in
+    const obj = {};
+    obj.required = {};
+    obj.required.name = "n";
+    obj.required.id = id;
+    obj.optional = {};
+    obj.optional.name = "a";
+    obj.optional.id = app.login.userID;
+    obj.rel = {};
+    obj.rel.name = "r";
+    obj.rel.type = "Trash";
+    obj.rel.direction = "left"; // (n)<-[rel]-(a)
+    app.nodeFunctions.findOptionalRelation(obj, this, 'finishConstructor');
+
+    // this.db.setQuery(`match (n) where ID(n)=${id} match (a) where ID(a)=${app.login.userID}
+    //                   optional match (a)-[r:Trash]->(n)
+    //                   return n, r.reason as reason`);
+    // this.db.runQuery(this, 'finishConstructor');
+  }
+  else { // If no ID was passed in
      this.finishConstructor();
    }
 }
@@ -150,50 +159,6 @@ buildDataNode() {   // put in one field label and input row for each field
 
   this.tableDOM.appendChild(trashRow);
   app.login.viewLoggedIn.push(trashRow);
-}
-
-trashNode(widgetElement) {
-  this.dataNode.properties.trash = true;
-  const user = app.login.userID;
-  const node = this.dataNode.identity;
-  const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
-  const reason = reasonInp.value;
-  reasonInp.setAttribute("class",""); // remove changedData class from reason
-
-  // DBREPLACE DB function: createRelation
-  // JSON object: {from: {ID:user}; to: {ID:node}; type:"Trash"; properties:{reason:app.stringEscape(reason)}; merge:true}
-  const query = `match (user), (node) where ID(user)=${user} and ID(node)=${node} merge (user)-[tRel:Trash {reason:"${app.stringEscape(reason)}"}]->(node)`
-  this.db.setQuery(query);
-  this.db.runQuery(this, "trashUntrash", widgetElement);
-}
-
-updateReason(widgetElement) {
-  const user = app.login.userID;
-  const node = this.dataNode.identity;
-  const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
-  const reason = reasonInp.value;
-  this.dataNode.properties.reason = reason;
-  reasonInp.setAttribute("class","");
-  // DBREPLACE DB function: changeRelation
-  // JSON object: {from: {ID:user}; to: {ID:node}; type:"Trash"; changes:{reason:app.stringEscape(reason)}}
-  const query = `match (user)-[rel:Trash]->(node) where ID(user) = ${user} and ID(node) = ${node} set rel.reason = "${app.stringEscape(reason)}"`;
-  this.db.setQuery(query);
-  this.db.runQuery(this, "trashUntrash", widgetElement);
-}
-
-untrashNode(widgetElement) {
-  this.dataNode.properties.trash = false;
-  const user = app.login.userID;
-  const node = this.dataNode.identity;
-  // DBREPLACE DB function: deleteRelation
-  // JSON object: {fromID: user; toID: node; type:Trash}
-  const query = `match (user)-[rel:Trash]->(node) where ID(user)=${user} and ID(node)=${node} delete rel`;
-  this.db.setQuery(query);
-  this.db.runQuery(this, "trashUntrash", widgetElement);
-}
-
-trashUntrash(data, widgetElement) {
-  this.save(widgetElement, data);
 }
 
 changed(input) { // Logs changes to fields, and highlights when they are different from saved fields

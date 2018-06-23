@@ -36,8 +36,9 @@ class widgetTableNodes {
   search() { // public - call when data changes
     // DBREPLACE DB function: changePattern
     // I would have to review the code more closely to see exactly what to look for, but this should just involve searching for a pattern.
-    this.db.setQuery(this.buildQuery());
-    this.db.runQuery(this,"buildData");
+    app.nodeFunctions.tableNodeSearch(this.buildQuery(), this, 'buildData');
+    // this.db.setQuery(this.buildQuery());
+    // this.db.runQuery(this,"buildData");
   }
 
   searchOnEnter(input, evnt) { // Makes hitting enter run a search
@@ -47,25 +48,33 @@ class widgetTableNodes {
   }
 
   buildQuery() { // public - called when search criteria change
+    const obj = {};
+    obj.name = "n";
+    obj.type = this.queryObject.nodeLabel;
+    obj.where = this.buildWhere();
+    obj.orderBy = this.queryObject.orderBy;
+    obj.limit = app.domFunctions.getChildByIdr(this.widget, "limit").value;
+    return obj;
+
     // init cypherQuery data
-    let match    = `(n:${this.queryObject.nodeLabel})`;
-    if (app.login.userID) {
-      match += `, (a)`;
-    }
-    const where    = this.buildWhere();
-    const orderBy  = this.queryObject.orderBy;
-    const limit    = app.domFunctions.getChildByIdr(this.widget, "limit").value;
-    const type = this.queryObjectName;
-
-    const query =
-  	    "match " + match
-  		+ (function(w){if(0<w.length) return " where "  + w + " "; else return " ";})(where)
-  		+ (function(t){if(t=="people") return "optional match (n)-[:Permissions]->(perm:LoginTable) return n, perm.name as permissions"; else return "return n";})(type)
-  		+ (function(o){if(0<o.length) return " order by "+ o + " "; else return " ";}) (orderBy)
-  		+ (function(l){if (l.trim === "") return ""; else return " limit " + l}) (limit)
-  		;
-
-    return(query);
+    // let match    = `(n:${this.queryObject.nodeLabel})`;
+    // if (app.login.userID) {
+    //   match += `, (a)`;
+    // }
+    // const where    = this.buildWhere();
+    // const orderBy  = this.queryObject.orderBy;
+    // const limit    = app.domFunctions.getChildByIdr(this.widget, "limit").value;
+    // const type = this.queryObjectName;
+    //
+    // const query =
+  	//     "match " + match
+  	// 	+ (function(w){if(0<w.length) return " where "  + w + " "; else return " ";})(where)
+  	// 	+ (function(t){if(t=="people") return "optional match (n)-[:Permissions]->(perm:LoginTable) return n, perm.name as permissions"; else return "return n";})(type)
+  	// 	+ (function(o){if(0<o.length) return " order by "+ o + " "; else return " ";}) (orderBy)
+  	// 	+ (function(l){if (l.trim === "") return ""; else return " limit " + l}) (limit)
+  	// 	;
+    //
+    // return(query);
   }
 
   buildWhere() {
@@ -73,38 +82,48 @@ class widgetTableNodes {
     */  // <tr><th><input>  must go up 2 levels to get to tr
     const th  = app.domFunctions.getChildByIdr(this.widget, "headerRow").firstElementChild.children; // get collection of th
 
-    let where = " ";
-    if (app.login.userID) {
-      where = `ID(a)=${app.login.userID} and not (a)-[:Trash]->(n) and `;
-    }
+    let where = {};
     // iterate siblings of input
-
     for(let i=2; i<th.length; i++) {
       const inputDOM = th[i].firstElementChild;  // <input>  tag
       const dropDown = inputDOM.nextElementSibling;
       if (0 < inputDOM.value.length) {
         // get value of search type
         const searchType = dropDown.options[dropDown.selectedIndex].value;
-        let w1 = "";
+
+        const field = this.getAtt(inputDOM,"fieldName");
+        where[field] = {};
+        where[field].value = inputDOM.value;
+        where[field].searchType = searchType;
+
         if (dropDown.options[0].value === "S") {
-          w1 = this.getSearchString(inputDOM, searchType);  // assume a string search
-        } else {
-          w1 = this.getSearchNumber(inputDOM, searchType);  // assume a number search
+          where[field].fieldType = "string";
         }
-        where += w1;
+        else {
+          where[field].fieldType = "number";
         }
+        // if (dropDown.options[0].value === "S") {
+        //   this.getSearchString(inputDOM, searchType, where);  // assume a string search
+        // } else {
+        //   this.getSearchNumber(inputDOM, searchType, where);  // assume a number search
+        // }
       }
-      return (where.substr(0, where.length-5)) ;
+    }
+    return where;
   }
 
-  getSearchNumber(inputDOM, searchType) {
-    // n.born <= 1958   match (n:Person) where n.name=~"(?i)ton.*" return n order by n.nameLast  limit 9
-    const w = "n."+ this.getAtt(inputDOM,"fieldName") +searchType + inputDOM.value +' and ';
-    return(w);
-  }
+  // getSearchNumber(inputDOM, searchType, where) {
+  //   // n.born <= 1958   match (n:Person) where n.name=~"(?i)ton.*" return n order by n.nameLast  limit 9
+  //   const field = this.getAtt(inputDOM,"fieldName");
+  //   where[field] = {};
+  //   where[field].value = inputDOM.value;
+  //   where[field].searchType = searchType;
+  //   // const w = "n."+ this.getAtt(inputDOM,"fieldName") +searchType + inputDOM.value +' and ';
+  //   // return(w);
+  // }
 
-  getSearchString(inputDOM, searchType) {
-    const w = "n."+ this.getAtt(inputDOM,"fieldName") +'=~"(?i)#s#' + inputDOM.value +'#E#" and ';
+  getSearchString(inputDOM, searchType, where) {
+    const w = `n.${this.getAtt(inputDOM,"fieldName")}=~"(?i).*${inputDOM.value}.*" and `;
 
     let w1="";
     switch(searchType) {
@@ -236,7 +255,7 @@ class widgetTableNodes {
       // Create a cell for ID and append it
       cell = document.createElement('td');
       row.appendChild(cell);
-      cell.outerHTML = `<td idr = "edit${i}" onClick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${r[i]["n"].identity}</td>`;
+      cell.outerHTML = `<td idr = "edit${i}" onClick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${r[i]["n"].ID}</td>`;
 
       // For each display field, create a cell and append it
       for (let j=0; j<this.fieldsDisplayed.length; j++) {
@@ -289,24 +308,24 @@ class widgetTableNodes {
 
         if (permissions == "None") {
           userButton.setAttribute("value", "Make User");
-          userButton.setAttribute("onclick", "app.widget('makeUser', this)");
+          userButton.setAttribute("onclick", "app.widget('givePermission', this)");
 
           adminButton.setAttribute("value", "Make Admin");
-          adminButton.setAttribute("onclick", "app.widget('makeAdmin', this)");
+          adminButton.setAttribute("onclick", "app.widget('findPermission', this)");
         }
         else if (permissions == "User") {
           userButton.setAttribute("value", "Remove User");
-          userButton.setAttribute("onclick", "app.widget('removeUser', this)");
+          userButton.setAttribute("onclick", "app.widget('removePermission', this)");
 
           adminButton.setAttribute("value", "Make Admin");
-          adminButton.setAttribute("onclick", "app.widget('makeAdmin', this)");
+          adminButton.setAttribute("onclick", "app.widget('findPermission', this)");
         }
         else if (permissions == "Admin") {
           userButton.setAttribute("value", "Remove User");
-          userButton.setAttribute("onclick", "app.widget('removeUser', this)");
+          userButton.setAttribute("onclick", "app.widget('removePermission', this)");
 
           adminButton.setAttribute("value", "Remove Admin");
-          adminButton.setAttribute("onclick", "app.widget('removeAdmin', this)");
+          adminButton.setAttribute("onclick", "app.widget('findPermission', this)");
         }
       }
 
@@ -441,57 +460,47 @@ class widgetTableNodes {
     app.regression.record(obj);
   }
 
-  makeUser(button) {
-    // Get ID of the person to promote
-    const row = button.parentElement.parentElement;
-    const ID = row.children[1].textContent;
-    // Get username and password
-    let password;
-    const username = prompt("Enter the username:", "");
-    if (username) {
-      password = prompt("Enter the password:", "");
-    }
-
-    // If they entered data, create a link from them to the User table
-    if (username && password) {
-      // DBREPLACE DB function: createRelation
-      // JSON object: {from: {id:ID}; to:{type:"LoginTable"; name:"User"}; details:{username:username; password:password}}
-      this.db.setQuery(`match (user:people), (permTable:LoginTable) where ID(user) = ${ID} and permTable.name = "User"
-                        create (user)-[:Permissions {username:"${username}", password:"${password}"}]->(permTable)`);
-      this.db.runQuery(this, 'search'); // Create the link and refresh the table
-    }
-  }
-
-  makeAdmin(button) {
-    // Get ID of the person to promote
+  findPermission(button) {
+    // Get ID of the person to check
     const row = button.parentElement.parentElement;
     const ID = row.children[1].textContent;
 
-    // Check if they are already a user
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; ID:ID},
-    //                          {name:"PermTable"; type:"LoginTable"; name:"User"}];
-    //                relsFind:[{name:"rel"; from:"user"; to:"PermTable"; type:"Permissions"}]
-    this.db.setQuery(`match (user:people)-[rel:Permissions]-(permTable:LoginTable {name:"User"}) where ID(user) = ${ID} return rel.username as name, rel.password as password`);
-    this.db.runQuery(this, 'finishAdmin', ID);
+    // Determine which permission to check for (and delete if found), and which to add
+    let toAdd = "";
+    let toRemove = "";
+
+    const space = button.value.indexOf(" ");
+    const addRemove = button.value.slice(0,space); // The button should be either "Make Admin" or "Remove Admin"
+    if (addRemove == "Make") {
+      toAdd = "Admin";
+    }
+    else if (addRemove == "Remove") {
+      toAdd = "User";
+    }
+
+    // Search for the relation to remove
+    const obj = {};
+    obj.from = {};
+    obj.from.name = "user";
+    obj.from.id = ID;
+    obj.to = {};
+    obj.to.type = "LoginTable"; // If this user has a relation to ANY login table, find it (and later, extract login details and delete it)
+    obj.rel = {};
+    obj.rel.name = "rel";
+    obj.rel.type = "Permissions";
+    app.nodeFunctions.changeRelation(obj, this, 'checkPermission', ID, button, toAdd);
   }
 
-  finishAdmin(data, ID) {
-    if (data.length > 0 && data[0].name && data[0].password) { // If a link between the person and the User table was found, remove it, and add a link to the Admin table
-      // DBREPLACE DB function: changePattern
-      // JSON object:{nodesFind:[{name:"user"; ID:ID},
-      //                         {name:"userTable"; type:"LoginTable"; details:{name:"User"}},
-      //                         {name:"adminTable"; type:"LoginTable"; details:"name:"Admin}];
-      //               relsFind:[{name:"relUser"; type:"Permissions"; from:"user"; to:"userTable"}];
-      //             relsCreate:[{type:"Permissions"; from:"user"; to:"adminTable"; details:{username:data[0].name; password:data[0].password}}];
-      //             relsDelete:["relUser"]}
-      this.db.setQuery(`match (user:people)-[relUser:Permissions]-(userTable:LoginTable {name:"User"}) where ID(user) = ${ID}
-                        delete relUser
-                        with user match (adminTable:LoginTable{name:"Admin"})
-                        create (user)-[:Permissions {username:"${data[0].name}", password:"${data[0].password}"}]->(adminTable)`)
-      this.db.runQuery(this, 'search');
+  checkPermission(data, ID, button, toAdd) {
+    if (data.length > 0 && data[0].rel.properties.username && data[0].rel.properties.password) { // If a relation to delete was found
+      const obj = {};
+      obj.rel = {};
+      obj.rel.name = "rel";
+      obj.rel.id = data[0].rel.ID;
+      app.nodeFunctions.deleteRelation(obj, this, 'givePermission', toAdd, ID, data[0].rel.properties.username, data[0].rel.properties.password);
     }
-    else { // If they weren't a user already...
+
+    else { // If there was no relation to delete, need to ask for a new username and password
       let password;
       const username = prompt("Enter the username:", "");
       if (username) {
@@ -500,43 +509,59 @@ class widgetTableNodes {
 
       // If they entered data, create a link from them to the Admin table
       if (username && password) {
-        // DBREPLACE DB function: createRelation
-        // JSON object: {from: {id:ID}; to:{type:LoginTable; name: Admin}; details:{username:username; password:password}}
-        this.db.setQuery(`match (user:people), (permTable:LoginTable) where ID(user) = ${ID} and permTable.name = "Admin"
-                          create (user)-[:Permissions {username:"${username}", password:"${password}"}]->(permTable)`);
-        this.db.runQuery(this, 'search'); // Create the link and refresh the table
+        this.givePermission(null, toAdd, ID, username, password);
       }
     }
   }
 
-  removeUser(button) {
-    // Get ID of the person to demote
+  givePermission(button, toAdd, ID, name, password) {
+    if (!(toAdd && ID && name && password)) { // if all information needed was NOT passed in
+      const row = button.parentElement.parentElement;
+      ID = row.children[1].textContent;
+
+      password;
+      name = prompt("Enter the username:", "");
+      if (name) {
+        password = prompt("Enter the password:", "");
+      }
+
+      // We should be making a new user, but check the button just in case.
+      if (button.value == "Make User") {
+        toAdd = "User";
+      }
+    }
+
+    const obj = {};
+    obj.from = {};
+    obj.from.name = "user";
+    obj.from.id = ID;
+    obj.to = {};
+    obj.to.name = "permTable";
+    obj.to.type = "LoginTable";
+    obj.to.properties = {};
+    obj.to.properties.name = toAdd;
+    obj.rel = {};
+    obj.rel.type = "Permissions";
+    obj.rel.properties = {};
+    obj.rel.properties.username = name;
+    obj.rel.properties.password = password;
+    app.nodeFunctions.createRelation(obj, this, 'search');
+  }
+
+  removePermission(button) { // Remove ALL permissions from this user
     const row = button.parentElement.parentElement;
     const ID = row.children[1].textContent;
 
-    // DBREPLACE DB function: deleteRelation
-    // JSON object: {from: {id:ID}; to: {type:LoginTable}}
-    this.db.setQuery(`match (user)-[rel:Permissions]->(permTable:LoginTable) where ID(user) = ${ID} delete rel`); // Delete the connection to either the User or Admin table
-    this.db.runQuery(this, 'search'); // Create the link and refresh the table
-
+    const obj = {};
+    obj.from = {};
+    obj.from.name = "user";
+    obj.from.id = ID; // From this user
+    obj.to = {};
+    obj.to.name = "permTable";
+    obj.to.type = "LoginTable"; // To any login table
+    obj.rel = {};
+    obj.rel.name = "rel";
+    obj.rel.type = "Permissions"; // Any permissions link
+    app.nodeFunctions.deleteRelation(obj, this, 'search');
   }
-
-  removeAdmin(button) {
-    const row = button.parentElement.parentElement;
-    const ID = row.children[1].textContent;
-
-    // Delete the connection to the admin table; replace with one to the User table.
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; ID:ID},
-    //                          {name:"AdminTable"; type:"LoginTable"; details:{name:"Admin"}},
-    //                          {name:"UserTable"; type:"LoginTable"; details:{name:"User"}}];
-    //                relsFind:[name:"oldRel"; type:"Permissions"; from:"user"; to:"AdminTable"];
-    //              relsDelete:["oldRel"];
-    //              relsCreate:[{type:"Permissions"; from:"user"; to:"UserTable"; details:{username:rel.username, password:rel.password}}]}
-    this.db.setQuery(`match (user)-[rel:Permissions]->(permTable:LoginTable {name:"Admin"}) where ID(user) = ${ID}
-                      with user, rel
-                      match (permTable:LoginTable {name:"User"})
-                      create (user)-[:Permissions {username:rel.username, password:rel.password}]->(permTable) delete rel`);
-    this.db.runQuery(this, 'search'); // Create the link and refresh the table
-  }
-  } ////////////////////////////////////////////////////// end class widgetTableNodes
+} ////////////////////////////////////////////////////// end class widgetTableNodes

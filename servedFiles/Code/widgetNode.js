@@ -42,15 +42,28 @@ constructor(callerID, label, id, name) {
 
   // If we're editing, then the ID for the node was passed in.
   if (id) {
-    if (app.login.userID) { // Just in case - really, the user should be logged in
-      // DBREPLACE DB function: changePattern
-      // JSON object: {nodesFind: [{name: n; id: id}, {name: a; id: app.login.userID}]
-      //               relsFind: [{name: r; from: a; to: n; type: Trash; optional: true}]}
-      this.db.setQuery(`match (n) where ID(n)=${id} match (a) where ID(a)=${app.login.userID}
-                        optional match (a)-[r:Trash]->(n)
-                        return n, r.reason as reason`);
-    }
-    this.db.runQuery(this, 'finishConstructor');
+    // DBREPLACE DB function: changePattern
+    // JSON object: {nodesFind: [{name: n; id: id}, {name: a; id: app.login.userID}]
+    //               relsFind: [{name: r; from: a; to: n; type: Trash; optional: true}]}
+    const obj = {};
+    obj.required = {};
+    obj.required.name = "n";
+    obj.required.id = id;
+    obj.optional = {};
+    obj.optional.name = "a";
+    obj.optional.id = app.login.userID;
+    obj.rel = {};
+    obj.rel.name = "r";
+    obj.rel.type = "Trash";
+    obj.rel.direction = "left"; // (n)<-[rel]-(a)
+    app.nodeFunctions.findOptionalRelation(obj, this, 'finishConstructor');
+
+
+    // this.db.setQuery(`match (n) where ID(n)=${id} match (a) where ID(a)=${app.login.userID}
+    //                   optional match (a)-[r:Trash]->(n)
+    //                   return n, r.reason as reason`);
+    //
+    // this.db.runQuery(this, 'finishConstructor');
   } else {
      this.finishConstructor();
    }
@@ -58,6 +71,9 @@ constructor(callerID, label, id, name) {
 
 finishConstructor(data) {
   if (data) { // If data were passed in, add them to the table
+    if (data[0].n.ID) {
+      data[0].n.identity = data[0].n.ID;
+    }
     this.dataNode = data[0].n;
 
     const obj = {};
@@ -155,7 +171,14 @@ buildDataNode() {   // put in one field label and input row for each field
     this.tableDOM.removeChild(this.tableDOM.firstChild);
   }
 
+  // NOTE: Kludge to be removed once all function calls return ID number instead of identity object
+  if (this.dataNode && ("id" in this.dataNode)) {
+    this.dataNode.identity = this.dataNode.id;
+    delete this.dataNode.id;
+  }
+
   for (let fieldName in this.fields) {
+
     // Create a table row
     const row = document.createElement('tr');
     this.tableDOM.appendChild(row);
@@ -262,6 +285,21 @@ trashNode(widgetElement) {
 
   // DBREPLACE DB function: createRelation
   // JSON object: {from: {ID:user}; to: {ID:node}; type:"Trash"; properties:{reason:app.stringEscape(reason)}; merge:true}
+
+  const obj = {};
+  obj.from = {};
+  obj.from.name = "user";
+  obj.from.id = user;
+  obj.to = {};
+  obj.to.name = "node";
+  obj.to.id = node;
+  obj.rel = {};
+  obj.rel.type = "Trash";
+  obj.rel.merge = true;
+  obj.rel.properties = {};
+  obj.rel.properties.reason = app.stringEscape(reason);
+  app.nodeFunctions.createRelation(obj, this, 'trashUntrash', widgetElement);
+
   const query = `match (user), (node) where ID(user)=${user} and ID(node)=${node} merge (user)-[tRel:Trash {reason:"${app.stringEscape(reason)}"}]->(node)`
   this.db.setQuery(query);
   this.db.runQuery(this, "trashUntrash", widgetElement);
@@ -274,22 +312,54 @@ updateReason(widgetElement) {
   const reason = reasonInp.value;
   this.dataNode.properties.reason = reason;
   reasonInp.setAttribute("class","");
+
   // DBREPLACE DB function: changeRelation
   // JSON object: {from: {ID:user}; to: {ID:node}; type:"Trash"; changes:{reason:app.stringEscape(reason)}}
-  const query = `match (user)-[rel:Trash]->(node) where ID(user) = ${user} and ID(node) = ${node} set rel.reason = "${reason}"`;
-  this.db.setQuery(query);
-  this.db.runQuery(this, "trashUntrash", widgetElement);
+  const obj = {};
+  obj.from = {};
+  obj.from.name = "user";
+  obj.from.id = user;
+  obj.to = {};
+  obj.to.name = "node";
+  obj.to.id = node;
+  obj.rel = {};
+  obj.rel.name = "rel";
+  obj.rel.type = "Trash";
+  obj.changes = [];
+  const change = {};
+  change.item = "rel";
+  change.property = "reason";
+  change.value = app.stringEscape(reason);
+  obj.changes.push(change);
+  app.nodeFunctions.changeRelation(obj, this, 'trashUntrash', widgetElement);
+
+  // const query = `match (user)-[rel:Trash]->(node) where ID(user) = ${user} and ID(node) = ${node} set rel.reason = "${reason}"`;
+  // this.db.setQuery(query);
+  // this.db.runQuery(this, "trashUntrash", widgetElement);
 }
 
 untrashNode(widgetElement) {
   this.dataNode.properties.trash = false;
   const user = app.login.userID;
   const node = this.dataNode.identity;
+
   // DBREPLACE DB function: deleteRelation
   // JSON object: {fromID: user; toID: node; type:Trash}
-  const query = `match (user)-[rel:Trash]->(node) where ID(user)=${user} and ID(node)=${node} delete rel`;
-  this.db.setQuery(query);
-  this.db.runQuery(this, "trashUntrash", widgetElement);
+  const obj = {};
+  obj.from = {};
+  obj.from.name = "user";
+  obj.from.id = user;
+  obj.to = {};
+  obj.to.name = "node";
+  obj.to.id = node;
+  obj.rel = {};
+  obj.rel.name = "rel";
+  obj.rel.type = "Trash";
+  app.nodeFunctions.deleteRelation(obj, this, 'trashUntrash', widgetElement);
+
+  // const query = `match (user)-[rel:Trash]->(node) where ID(user)=${user} and ID(node)=${node} delete rel`;
+  // this.db.setQuery(query);
+  // this.db.runQuery(this, "trashUntrash", widgetElement);
 }
 
 trashUntrash(data, widgetElement) {
@@ -303,28 +373,35 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
   let tr = this.tableDOM.firstElementChild;
 
   const create = "create (n:"+ this.label+" {#data#}) return n";
-  let data="";
+  let data={};
   while (tr) {
     const inp = tr.lastElementChild.firstElementChild;
 
     if (inp && inp.hasAttribute("db")) { // Only process input rows with a db value - not the trash div; that's done separately
-      data += inp.getAttribute("db") +':"' + app.stringEscape(inp.value) +'", ';
+      data[inp.getAttribute("db")] = app.stringEscape(inp.value);
+      // data += inp.getAttribute("db") +':"' + app.stringEscape(inp.value) +'", ';
     }
     tr=tr.nextElementSibling;
   }
 
+  const obj = {};
+  obj.name = "n";
+  obj.type = this.label;
+  obj.properties = data;
+  app.nodeFunctions.createNode(obj, this, 'addComplete');
 
-  const query = create.replace("#data#", data.substr(0,data.length-2) );
-  // DBREPLACE DB function: createNode
-  // JSON object (from example): {type:person; properties:{name: "David Bolt"; lives: "Knoxville"}}
-  this.db.setQuery(query);
-  this.db.runQuery(this,"addComplete");
+  // const query = create.replace("#data#", data.substr(0,data.length-2) );
+  // // DBREPLACE DB function: createNode
+  // // JSON object (from example): {type:person; properties:{name: "David Bolt"; lives: "Knoxville"}}
+  // this.db.setQuery(query);
+  // this.db.runQuery(this,"addComplete");
 }
 
 
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
   this.dataNode = data[0].n; // takes single nodes
-  const id = this.dataNode.identity;
+  const id = this.dataNode.ID;
+  this.dataNode.identity = this.dataNode.ID; // NOTE: Kludge; remove later
   const name = this.dataNode.properties.name;
   const nodeLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeLabel");
   nodeLabel.textContent=`${this.label}#${id}: ${name}`;
@@ -381,27 +458,27 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
   */
   let tr = this.tableDOM.firstElementChild;
 
-  let data="";
+  let data={};
   while (tr) {
     const inp = tr.lastElementChild.firstElementChild;  // find <input> element
     if(inp.getAttribute("class") === "changedData") {
       // create a set for this field
       const fieldName = inp.getAttribute("db");
-      const d1 = "n."+ fieldName +"=#value#, ";
-      let d2 = "";
+      // const d1 = "n."+ fieldName +"=#value#, ";
+      // let d2 = "";
       if (fieldName in this.fields) {
         if (this.fields[fieldName].type === "number") {
-          d2 = inp.value;  // number
+          data[fieldName] = inp.value;  // number
         } else {
-          d2 = '"' + app.stringEscape(inp.value) + '"';  // assume string
+          data[fieldName] = app.stringEscape(inp.value);  // assume string
         }
       }
-      data += d1.replace('#value#',d2)
+      // data += d1.replace('#value#',d2)
     }
     tr=tr.nextElementSibling;
   }
 
-  if (data==="") {
+  if (data==={}) {
     if (trashUntrash) { // If the node was trashed or untrashed, but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
       const obj = {};
       obj.id = this.idWidget;
@@ -415,8 +492,17 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
   } else {
     // DBREPLACE DB function: changeNode
     // JSON object: {name: "n"; id:this.dataNode.identity; changes:{data.substr(0,data.length-2)}}, or I may change how data is built.
-    this.db.setQuery( `match (n) where id(n)=${this.dataNode.identity} set ${data.substr(0,data.length-2)} return n` );
-    this.db.runQuery(this,"saveData");
+
+    const obj = {};
+    obj.node = {};
+    obj.node.name = "n";
+    obj.node.id = this.dataNode.identity;
+    obj.changes = data;
+
+    app.nodeFunctions.changeNode(obj, this, 'saveData');
+
+    // this.db.setQuery( `match (n) where id(n)=${this.dataNode.identity} set ${data.substr(0,data.length-2)} return n` );
+    // this.db.runQuery(this,"saveData");
   }
 }
 saveData(data) { // Refreshes the node table and logs that addSave was clicked

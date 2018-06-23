@@ -60,6 +60,8 @@ class widgetLogin {
       const headerExists = !(document.getElementById("regressionHeader") == null);
       if (headerExists) {
         app.regression.buildRegressionHeader();
+        app.login.viewAdmin.push(document.getElementById("debugButton"));
+        app.login.viewAdmin.push(document.getElementById("regressionButton"));
       }
 
       // The <p> containing the login fields is only visible when logged out
@@ -87,9 +89,40 @@ class widgetLogin {
     //                           {name:"admin", type:"LoginTable", details:{"name:"Admin"}, merge:true}];
     //              nodesFind:[{name:"user"; type:"people"}];
     //              relsFind:{type:"Permissions"; from:"user"; to:"admin"}}
-    this.db.setQuery(`merge (:LoginTable {name: "User"}) merge (admin:LoginTable {name: "Admin"})
-                      with admin match (user:people)-[:Permissions]->(admin) return user`);
-    this.db.runQuery(this, 'checkAdminUser');
+    const obj = {};
+    obj.merge = true;
+    obj.type = "LoginTable";
+    obj.properties = {};
+    obj.properties.name = "User";
+    app.nodeFunctions.createNode(obj, this, "mergeAdmin");
+
+    // this.db.setQuery(`merge (:LoginTable {name: "User"}) merge (admin:LoginTable {name: "Admin"})
+    //                   with admin match (user:people)-[:Permissions]->(admin) return user`);
+    // this.db.runQuery(this, 'checkAdminUser');
+  }
+
+  mergeAdmin(data) {
+    const obj = {};
+    obj.merge = true;
+    obj.type = "LoginTable";
+    obj.properties = {};
+    obj.properties.name = "Admin";
+    app.nodeFunctions.createNode(obj, this, "checkAdmin");
+  }
+
+  checkAdmin(data) { // Now we know that the admin table exists. Search for any person with a link to it.
+    const obj = {};
+    obj.from = {};
+    obj.from.name = "user";
+    obj.from.type = "people";
+    obj.to = {};
+    obj.to.name = "admin";
+    obj.to.type = "LoginTable";
+    obj.to.properties = {};
+    obj.to.properties.name = "Admin";
+    obj.rel = {};
+    obj.rel.type = "Permissions";
+    app.nodeFunctions.changeRelation(obj, this, "checkAdminUser");
   }
 
   // If there are no real admins, create a temporary admin account with username and password of "admin".
@@ -100,15 +133,45 @@ class widgetLogin {
       // JSON object: {nodesFind: [name:"admin"; type:"LoginTable"; details:{name:"Admin"}];
       //               nodesCreate: [{name:"tempAdmin"; type:"tempAdmin"; details:{name:"Temporary Admin Account"}; merge:true}];
       //               relsCreate: [{from:"tempAdmin"; to:"admin"; type:"Permissions"; details:{username:"admin"; password:"admin"}; merge:true}]}
-      this.db.setQuery(`match (admin:LoginTable {name: "Admin"}) merge (tempAdmin:tempAdmin {name: "Temporary Admin Account"})-[temp:Permissions {username:"admin", password:"admin"}]->(admin)`);
-      this.db.runQuery();
+      const obj = {};
+      obj.name = "tempAdmin";
+      obj.type = "tempAdmin";
+      obj.properties = {};
+      obj.properties.name = "Temporary Admin Account";
+      obj.merge = true;
+      app.nodeFunctions.createNode(obj, this, 'linkTempAdmin');
+
+      // this.db.setQuery(`match (admin:LoginTable {name: "Admin"}) merge (tempAdmin:tempAdmin {name: "Temporary Admin Account"})-[temp:Permissions {username:"admin", password:"admin"}]->(admin)`);
+      // this.db.runQuery();
     }
     else { // if at least one user is an admin, delete the temporary admin node if it exists
       // DBREPLACE DB function: deleteNode
       // JSON object: {type: tempAdmin}
-      this.db.setQuery(`match (tempAdmin:tempAdmin) detach delete tempAdmin`);
-      this.db.runQuery();
+
+      const obj = {};
+      obj.name = "tempAdmin";
+      obj.type = "tempAdmin";
+      app.nodeFunctions.deleteNode(obj);
     }
+  }
+
+  linkTempAdmin(data) {
+    const id = data[0].tempAdmin.ID;
+    const obj = {};
+    obj.from = {};
+    obj.from.name = "tempAdmin";
+    obj.from.id = id;
+    obj.to = {};
+    obj.to.type = "LoginTable";
+    obj.to.properties = {};
+    obj.to.properties.name = "Admin";
+    obj.rel = {};
+    obj.rel.type = "Permissions";
+    obj.rel.merge = true;
+    obj.rel.properties = {};
+    obj.rel.properties.username = "admin";
+    obj.rel.properties.password = "admin";
+    app.nodeFunctions.createRelation(obj);
   }
 
   // Checks to make sure the user entered both a name and password, then searches for a user with that name and password.
@@ -148,7 +211,7 @@ class widgetLogin {
   	}
 
   	else if (data.length == 1) { // Can actually log in
-      this.userID = data[0].user.identity.low; // Log the user in
+      this.userID = data[0].user.ID; // Log the user in
       this.userName = data[0].user.properties.name;
       this.permissions = data[0].table.properties.name;
   		this.info.textContent = `Logged in as ${this.userName} -- Role: ${this.permissions}`;

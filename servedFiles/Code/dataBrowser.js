@@ -66,18 +66,66 @@ class dataBrowser {
       //                        {name:"outRel"; from: "n"; to: "out"; optional:true}]}
       // This still wouldn't do the collecting, but we could take the raw data and do collecting in the program
 
-      const query = `match (n) where ID(n) = ${data.nodeID}
-      with n optional match (in)-[inRel]->(n)
-      with n, collect(in) as ins, collect(inRel) as inRels optional match (out)<-[outRel]-(n)
-      return n, inRels, ins, collect(outRel) as outRels, collect(out) as outs`;
-      this.db.setQuery(query);
-      this.db.runQuery(this, 'loadNode', cell);
+      const obj = {};
+      obj.required = {};
+      obj.required.name = "n";
+      obj.required.id = data.nodeID;
+      obj.optional = {};
+      obj.optional.name = "in";
+      obj.rel = {};
+      obj.rel.name = "inRel";
+      obj.rel.direction = "left"; // (required)<-[rel]-(optional)
+      app.nodeFunctions.findOptionalRelation(obj, this, 'findOuts', data.nodeID, cell);
+
+      // const query = `match (n) where ID(n) = ${data.nodeID}
+      // with n optional match (in)-[inRel]->(n)
+      // with n, collect(in) as ins, collect(inRel) as inRels optional match (out)<-[outRel]-(n)
+      // return n, inRels, ins, collect(outRel) as outRels, collect(out) as outs`;
+      // this.db.setQuery(query);
+      // this.db.runQuery(this, 'loadNode', cell);
     }
+  }
+
+  findOuts(data, ID, cell) {
+    const obj = {};
+    obj.required = {};
+    obj.required.name = "n";
+    obj.required.id = ID;
+    obj.optional = {};
+    obj.optional.name = "out";
+    obj.rel = {};
+    obj.rel.name = "outRel";
+    app.nodeFunctions.findOptionalRelation(obj, this, 'processData', data, cell);
+  }
+
+  processData(outData, inData, cell) {
+    const data = {};
+    // There will always be at least one entry in inData and one in outData
+    // (even if there are no relations, there will be an entry with n and "null" for everything else).
+    // ANY entry should have the same, valid information for n, so it doesn't matter which we use.
+    data.n = outData[0].n;
+    data.ins = [];
+    data.inRels = [];
+    data.outs = [];
+    data.outRels = [];
+    if (inData[0].in) { // If the first incoming relation is not null (means there IS at least one incoming relation)
+      for (let i = 0; i < inData.length; i++) { // Go through all rows in inData - each row represents one relation to one node
+        data.ins.push(inData[i].in);
+        data.inRels.push(inData[i].inRel);
+      }
+    }
+    if (outData[0].out) { // If the first outgoing relation is not null (means there IS at least one outgoing relation)
+      for (let i = 0; i < outData.length; i++) { // Go through all rows in outData - each row represents one relation to one node
+        data.outs.push(outData[i].out);
+        data.outRels.push(outData[i].outRel);
+      }
+    }
+    this.loadNode(data, cell);
   }
 
   loadNode(data, cell) {
     // store data for later use
-    this.nodeData[data[0].n.identity] = data;
+    this.nodeData[data.n.ID] = data;
 
     // Make sure cell is blank
     while (cell.firstElementChild) {
@@ -94,7 +142,7 @@ class dataBrowser {
     cell.appendChild(detailTable);
 
     // Populate table
-    for (let fieldName in data[0].n.properties) {
+    for (let fieldName in data.n.properties) {
       // Create a table row
       const row = document.createElement('tr');
       detailTable.appendChild(row); // Edit this
@@ -107,7 +155,7 @@ class dataBrowser {
 
       const dataField = document.createElement('td');
       row.appendChild(dataField);
-      const valueText = document.createTextNode(data[0].n.properties[fieldName]);
+      const valueText = document.createTextNode(data.n.properties[fieldName]);
       dataField.appendChild(valueText);
     }
     // Create next cell and populate
@@ -116,10 +164,10 @@ class dataBrowser {
 
     const relTable = document.createElement("table");
     relCell.appendChild(relTable);
-    const ins = data[0].ins;
-    const inRels = data[0].inRels;
-    const outs = data[0].outs;
-    const outRels = data[0].outRels;
+    const ins = data.ins;
+    const inRels = data.inRels;
+    const outs = data.outs;
+    const outRels = data.outRels;
 
     for (let i = 0; i < ins.length; i++) { // for every incoming relation
       const row = document.createElement("tr");
@@ -137,7 +185,7 @@ class dataBrowser {
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       arrowCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      arrowCell.setAttribute("idr", `arrow${ins[i].identity}`);
+      arrowCell.setAttribute("idr", `arrow${ins[i].ID}`);
 
       const nameCell = document.createElement("td");
       nameCell.setAttribute("class", "dataBrowserCell");
@@ -154,7 +202,7 @@ class dataBrowser {
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       nameCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      nameCell.setAttribute("idr", `name_${ins[i].identity}`);
+      nameCell.setAttribute("idr", `name_${ins[i].ID}`);
     }
 
     for (let i = 0; i < outs.length; i++) { // for every outgoing relation
@@ -176,7 +224,7 @@ class dataBrowser {
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       nameCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      nameCell.setAttribute("idr", `name_${outs[i].identity}`);
+      nameCell.setAttribute("idr", `name_${outs[i].ID}`);
 
       const arrowCell = document.createElement("td");
       arrowCell.setAttribute("class", "dataBrowserCell");
@@ -189,7 +237,7 @@ class dataBrowser {
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       arrowCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      arrowCell.setAttribute("idr", `arrow${outs[i].identity}`);
+      arrowCell.setAttribute("idr", `arrow${outs[i].ID}`);
     }
 
     cell.setAttribute("class", "dataBrowser");
@@ -303,12 +351,24 @@ class dataBrowser {
         //              relsFind:[{name:"inRel"; from: "in"; to: "n"; optional:true};
         //                        {name:"outRel"; from: "n"; to: "out"; optional:true}]}
         // This still wouldn't do the collecting, but we could take the raw data and do collecting in the program
-        const query = `match (n) where ID(n) = ${ID}
-        with n optional match (in)-[inRel]->(n)
-        with n, collect(in) as ins, collect(inRel) as inRels optional match (out)<-[outRel]-(n)
-        return n, inRels, ins, collect(outRel) as outRels, collect(out) as outs`;
-        this.db.setQuery(query);
-        this.db.runQuery(this, 'loadNode', newCell);
+        const obj = {};
+        obj.required = {};
+        obj.required.name = "n";
+        obj.required.id = ID;
+        obj.optional = {};
+        obj.optional.name = "in";
+        obj.rel = {};
+        obj.rel.name = "inRel";
+        obj.rel.direction = "left"; // (required)<-[rel]-(optional)
+        app.nodeFunctions.findOptionalRelation(obj, this, 'findOuts', ID, newCell);
+
+        //
+        // const query = `match (n) where ID(n) = ${ID}
+        // with n optional match (in)-[inRel]->(n)
+        // with n, collect(in) as ins, collect(inRel) as inRels optional match (out)<-[outRel]-(n)
+        // return n, inRels, ins, collect(outRel) as outRels, collect(out) as outs`;
+        // this.db.setQuery(query);
+        // this.db.runQuery(this, 'loadNode', newCell);
       }
     }
   }
