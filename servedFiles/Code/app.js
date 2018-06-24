@@ -23,8 +23,8 @@ buildApp() {
 	// Create instances of other classes needed to run the page. Called here because some of them require app to exist
 	// before their constructors can run.
 	this.metaData  			= new metaData();
-	this.db        			= new db();
 	this.domFunctions 	= new domFunctions();
+	this.nodeFunctions 	= new nodeFunctions();
 	this.login 					= new widgetLogin();
 	this.regression 		= new regressionTesting();
 	this.checkEmpty 		= new checkEmpty();
@@ -51,13 +51,10 @@ buildApp() {
 	this.menuNodesInit();
 
 	// Create preset calendar options
-//	this.presetCalendars();
+	this.presetCalendars();
 
 	// Create temp admin account if a real one doesn't yet exist; delete it if a real one does exist
-//	this.login.checkAdminTable();
-
-	// Create the debug menu, assuming a header is provided for it to go in
-	this.createDebug();
+	this.login.checkAdminTable();
 
 	// Run any test code currently in app
 	this.test();
@@ -108,7 +105,7 @@ hideRegression(button) {
 // Removes all widgets other than the login div and regression header from both the screen and the widgets array
 clearWidgets() {
 	for (let id in this.widgets) { // For every widget...
-		if (id != "loginDiv" && id != "regHeader") { // (except for the login div and regression header)...
+		if (id != "loginDiv" && id != "regressionHeader") { // (except for the login div and regression header)...
 			// Remove widget objects
 			delete this.widgets[id];
 
@@ -308,11 +305,14 @@ menuDBstats(dropDown){
 // Runs when the page loads. Ensures all preset calendars exist in the database.
 presetCalendars() {
 	// At the moment the only preset calendar is a dummy calendar that doesn't show events. This will change.
-	// DBREPLACE DB function: createNode
-	// JSON object: {type: "calendar"; details:{name: "dummy"; description: "dummy calendar"}; merge:true}
-	const query = `merge (dummy:calendar {name: "dummy", description: "dummy calendar"})`;
-	this.db.setQuery(query);
-	this.db.runQuery();
+	const obj = {};
+	obj.type = "calendar";
+	obj.properties = {};
+	obj.properties.name = "dummy";
+	obj.properties.description = "dummy calendar";
+	obj.merge = true;
+
+	this.nodeFunctions.createNode(obj);
 }
 
 // refresh widget with new database call. domElement is the search button that triggered the search.

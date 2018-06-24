@@ -25,11 +25,12 @@ class widgetSVG {
     this.notesLabel = null;
 
     if (this.mapID) {
-      // DBREPLACE DB function: changeNode
-      // JSON object: {name:"mindmap"; id:this.mapID}
-      const query = `match (mindmap:mindmap) where ID(mindmap) = ${this.mapID} return mindmap.roots as roots, mindmap.count as count, mindmap.name as name`;
-      app.db.setQuery(query);
-      app.db.runQuery(this, 'buildWidget');
+      const obj = {};
+      obj.node = {};
+      obj.node.name = "mindmap";
+      obj.node.type = "mindmap";
+      obj.node.id = this.mapID;
+      app.nodeFunctions.changeNode(obj, this, 'buildWidget');
     }
 
     else {
@@ -106,8 +107,8 @@ class widgetSVG {
       alert ("Error: Multiple mind maps found with same name");
     }
     else { // If one result was returned - which should always happen
-      if (data[0].roots) {
-        this.d3Functions.roots = JSON.parse(data[0].roots);
+      if (data[0].mindmap.properties.roots) {
+        this.d3Functions.roots = JSON.parse(data[0].mindmap.properties.roots);
 
         // Go through all objects, make them reference d3Functions, add to objects array
         let nonRootObjs = [];
@@ -156,11 +157,11 @@ class widgetSVG {
         }
       }
 
-      if (data[0].count) {
-        this.d3Functions.count = data[0].count;
+      if (data[0].mindmap.properties.count) {
+        this.d3Functions.count = data[0].mindmap.properties.count;
       }
-      if (data[0].name) {
-        this.name = data[0].name;
+      if (data[0].mindmap.properties.name) {
+        this.name = data[0].mindmap.properties.name;
         const nameText = app.domFunctions.getChildByIdr(this.widgetDOM, 'name');
         nameText.textContent = this.name;
       }
@@ -368,7 +369,6 @@ class widgetSVG {
       this.d3Functions.update();
     }
   }
-
 
   keyPressed(evnt) {
     this.keys.keyPressed(evnt);
@@ -653,6 +653,9 @@ class widgetSVG {
         root.y = parseFloat(transform[1]);
     }
 
+    // Update name in title, if necessary
+    app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
+
     // Write save query.  If saving as (making a copy), create new node.
     // If just saving but the map ID is null (this map didn't already exist), create new node.
     // If just saving and the map ID is not null (did already exist), overwrite.
@@ -660,28 +663,39 @@ class widgetSVG {
     let query = "";
 
     if (newMap) { // Creating a new map, either because we're saving a copy or this map has never been saved before
-      // DBREPLACE DB function: createNode
-      // JSON object: {name:"mindmap"; type:"mindmap"; details:{name:name; roots:app.stringEscape(JSON.stringify(rootsCopy)); count:this.d3Functions.count}; merge:false}
-      query = `create (mindmap:mindmap
-          {roots:"${app.stringEscape(JSON.stringify(rootsCopy))}",
-          count:${this.d3Functions.count},
-          name:"${name}"}) return ID(mindmap) as ID`;
+      const obj = {};
+      obj.name = "mindmap";
+      obj.type = "mindmap";
+      obj.properties = {};
+      obj.properties.roots = app.stringEscape(JSON.stringify(rootsCopy));
+      obj.properties.count = this.d3Functions.count;
+      obj.properties.name = name;
+      app.nodeFunctions.createNode(obj, this.d3Functions, 'update');
     }
     else { // Updating an existing map
-      // DBREPLACE DB function: changeNode
-      // JSON object:{ID:this.mapID; changes:{ roots:app.stringEscape(JSON.stringify(rootsCopy)); count:this.d3Functions.count; name:name}}
-      query = `match (mindmap:mindmap) where ID(mindmap) = ${this.mapID} set
-                mindmap.roots="${app.stringEscape(JSON.stringify(rootsCopy))}",
-                mindmap.count = ${this.d3Functions.count},
-                mindmap.name = "${name}"`
+      const obj = {};
+      obj.node = {};
+      obj.node.name = "mindmap";
+      obj.node.type = "mindmap";
+      obj.node.id = this.mapID;
+      obj.changes = [];
+      const roots = {};
+      roots.property = "roots";
+      roots.value = app.stringEscape(JSON.stringify(rootsCopy));
+      obj.changes.push(roots);
+      // obj.changes.roots = app.stringEscape(JSON.stringify(rootsCopy));
+      const count = {};
+      count.property = "count";
+      count.value = this.d3Functions.count;
+      obj.changes.push(count);
+      // obj.changes.count = this.d3Functions.count;
+      const name = {};
+      name.property = "name";
+      name.value = name;
+      obj.changes.push(name);
+      // obj.changes.name = name;
+      app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
     }
-
-    // Update name in title, if necessary
-    app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
-
-
-    app.db.setQuery(query);
-    app.db.runQuery(this.d3Functions, 'update');
   }
 
   lookForEnter(input, evnt) { // Makes hitting enter do the same thing as blurring (e. g. inserting a new node or changing an existing one)

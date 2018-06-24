@@ -28,18 +28,21 @@ class widgetView {
     this.relCell = null; // The cell of this.widgetTable which contains the active view (if any), and any previously active views (hidden)
     this.add = null; // The "Add Me" button, which is visible when a user is logged in but doesn't have a view of this node
 
-    this.db = new db();
-
-    // Get the IDs and names of all the people with views of this node, and pass them to buildViews.
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; type:"people"},
-    //                          {name:"view"; type:"View"; details:"direction:relationType"},
-    //                          {name:"node"; ID:nodeID}];
-    //                relsFind:[{type:"Owner"; from:"user"; to:"view"},
-    //                          {type:"Subject"; from:"view"; to:"node"}]}
-    const query = `match (user)-[:Owner]->(view:View {direction:"${relationType}"})-[:Subject]->(node) where id(node) = ${nodeID} return ID(user) as ID, user.name as name order by name, ID`;
-    this.db.setQuery(query);
-    this.db.runQuery(this, "buildViews");
+    const obj = {};
+    obj.start = {};
+    obj.start.name = "user";
+    obj.middle = {};
+    obj.middle.type = "View";
+    obj.middle.properties = {};
+    obj.middle.properties.direction = relationType;
+    obj.end = {};
+    obj.end.name = "node";
+    obj.end.id = nodeID;
+    obj.rel1 = {};
+    obj.rel1.type = "Owner";
+    obj.rel2 = {};
+    obj.rel2.type = "Subject";
+    app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
   }
 
   // Adds the view widget to the page: A list of views, possibly an active view,
@@ -137,13 +140,13 @@ class widgetView {
 
       // Each row contains the person's ID...
       const IDcell = document.createElement('td');
-      const ID = document.createTextNode(`${data[i].ID}`);
+      const ID = document.createTextNode(`${data[i].user.ID}`);
       IDcell.appendChild(ID);
       IDcell.setAttribute("idr", `id${i}`);
 
       // their name...
       const nameCell = document.createElement('td');
-      const name = document.createTextNode(`${data[i].name}`)
+      const name = document.createTextNode(`${data[i].user.properties.name}`)
       nameCell.appendChild(name);
 
       // and a button to toggle their view.
@@ -168,8 +171,8 @@ class widgetView {
       }
       innerTbody.appendChild(innerRow);
 
-      const dataID = data[i].ID.low;
-      if (app.login.userID && app.login.userID.low == dataID) {      // if this row represents the logged-in user...
+      const dataID = data[i].user.ID;
+      if (app.login.userID && app.login.userID == dataID) {      // if this row represents the logged-in user...
         innerRow.classList.add("loggedIn", "activeView");            // format it...
         nameCell.setAttribute("idr", "loggedInView");                // give the cell with their name an idr, so it can be logged and replayed...
         nameCell.setAttribute("ondrop", "app.widget('drop', this, event)")  // give the cell with their name an ondrop, so data can be dropped in...
@@ -270,25 +273,29 @@ class widgetView {
   refresh(button) {
     this.relations = {}; // reset list of existing relation DOM objects
     // Get the IDs and names of all the people with views of this node, and pass them to buildViews.
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; type:"people"},
-    //                          {name:"view"; type:"View"; details:"direction:relationType"},
-    //                          {name:"node"; ID:nodeID}];
-    //                relsFind:[{type:"Owner"; from:"user"; to:"view"},
-    //                          {type:"Subject"; from:"view"; to:"node"}]}
-    // Consider: Can this be combined with the version in constructor?
-    const query = `match (user)-[:Owner]->(view:View {direction:"${this.relationType}"})-[:Subject]->(node) where id(node) = ${this.nodeID} return ID(user) as ID, user.name as name order by name, ID`;
-    this.db.setQuery(query);
+    const obj = {};
+    obj.start = {};
+    obj.start.name = "user";
+    obj.middle = {};
+    obj.middle.type = "View";
+    obj.middle.properties = {};
+    obj.middle.properties.direction = this.relationType;
+    obj.end = {};
+    obj.end.name = "node";
+    obj.end.id = this.nodeID;
+    obj.rel1 = {};
+    obj.rel1.type = "Owner";
+    obj.rel2 = {};
+    obj.rel2.type = "Subject";
+    app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
 
     // log click
-    const obj = {};
-    obj.id = app.domFunctions.widgetGetId(button);
-    obj.idr = button.getAttribute("idr");
-    obj.action = "click";
-    app.regression.log(JSON.stringify(obj));
-    app.regression.record(obj);
-
-    this.db.runQuery(this, "buildViews");
+    const recordObj = {};
+    recordObj.id = app.domFunctions.widgetGetId(button);
+    recordObj.idr = button.getAttribute("idr");
+    recordObj.action = "click";
+    app.regression.log(JSON.stringify(recordObj));
+    app.regression.record(recordObj);
   }
 
   // Expands or collapses the whole widget.
@@ -395,25 +402,48 @@ class widgetView {
   // Adds a new view to the database linked to the node being viewed and the logged-in user, then calls addComplete
   addUser(button) {
     // Create a view of this node for this user
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user"; ID:app.login.userID},
-    //                          {name:"subject"; ID:this.nodeID}];
-    //             nodesCreate:[{name:"view"; type:"View"; details:{direction:this.relationType}}];
-    //              relsCreate:[{type:"Owner"; from:"user"; to:"view"},
-    //                          {type:"Subject"; from:"view"; to:"subject"}]}
-    const query = `match (user), (subject) where ID(user) = ${app.login.userID} and ID(subject) = ${this.nodeID}
-                   create (user)-[:Owner]->(:View {direction: "${this.relationType}"})-[:Subject]->(subject)`;
-    this.db.setQuery(query);
-
-    // Log click before running - just to be sure it will log BEFORE the data does
     const obj = {};
-    obj.id = app.domFunctions.widgetGetId(button);
-    obj.idr = button.getAttribute("idr");
-    obj.action = "click";
-    app.regression.log(JSON.stringify(obj));
-    app.regression.record(obj);
+    obj.name = "view";
+    obj.type = "View";
+    obj.properties = {};
+    obj.properties.direction = this.relationType;
+    app.nodeFunctions.createNode(obj, this, 'linkViewUser');
 
-    this.db.runQuery(this, 'addComplete');
+    // Log click
+    const recordObj = {};
+    recordObj.id = app.domFunctions.widgetGetId(button);
+    recordObj.idr = button.getAttribute("idr");
+    recordObj.action = "click";
+    app.regression.log(JSON.stringify(recordObj));
+    app.regression.record(recordObj);
+  }
+
+  linkViewUser(data) { // Take the newly-created node and connect it to the user
+    const viewID = data[0].view.ID;
+
+    const obj = {};
+    obj.from = {};
+    obj.from.name = "user";
+    obj.from.id = app.login.userID;
+    obj.to = {};
+    obj.to.name = "view";
+    obj.to.id = viewID;
+    obj.rel = {};
+    obj.rel.type = "Owner";
+    app.nodeFunctions.createRelation(obj, this, 'linkViewNode', viewID);
+  }
+
+  linkViewNode(data, viewID) { // Connect the new view to the node and move on to addComplete
+    const obj = {};
+    obj.from = {};
+    obj.from.name = "view";
+    obj.from.id = viewID;
+    obj.to = {};
+    obj.to.name = "node";
+    obj.to.id = this.nodeID;
+    obj.rel = {};
+    obj.rel.type = "Subject";
+    app.nodeFunctions.createRelation(obj, this, 'addComplete');
   }
 
   // Updates the page after a new view is added, by adding a row for the new view to the table of views,

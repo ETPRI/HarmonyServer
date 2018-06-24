@@ -20,13 +20,9 @@ class widgetCalendar {
     this.shortDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     this.months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     this.shortMonths = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sept", "Oct", "Nov", "Dec"];
-    // this.daysInMonth = [31,28,31,30,31,30,31,31,30,31,30,31];
 
     this.mode = "day";
     this.day = new Date();
-    // if (this.isLeapYear(this.day)) {
-    //   this.daysInMonth[1] = 29;
-    // }
     this.buildHeader();
   }
 

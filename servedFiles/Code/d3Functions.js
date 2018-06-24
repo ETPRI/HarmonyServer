@@ -49,11 +49,11 @@ class d3Functions {
     return newObj;
   }
 
-  update(mapID) { // Creates a group for each item in the array of roots, then calls buildTree to make a tree for each group.
-    // If a map ID was passed in, that means this was called right after saving a map under a new ID.
+  update(data) { // Creates a group for each item in the array of roots, then calls buildTree to make a tree for each group.
+    // If data was passed in, that means this was called right after saving a map under a new ID.
     // Update this.parent.mapID accordingly.
-    if (mapID && mapID.length > 0) {
-      this.parent.mapID = mapID[0].ID;
+    if (data && data.length > 0) {
+      this.parent.mapID = data[0].mindmap.ID;
     }
 
     const groups = d3.select(`#svg${this.widgetID}`).selectAll("g.tree")

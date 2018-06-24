@@ -27,25 +27,42 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
   app.widgets[app.idCounter++] = this;
   this.containedWidgets = [];
 
-  this.db          = new db();
   this.refresh()
 }
 
 // Refreshes the widget by running the query to get all nodes in this user's view, then calling this.rComplete().
 refresh() {
-  const query = `match (per)-[:Owner]->(view:View {direction:"${this.relationType}"})-[:Subject]->(node)
-                 where ID(per) = ${this.viewID} and ID(node) = ${this.nodeID}
-                 match (view)-[r:Link]->(a) return r, a, view.order as ordering order by r.comment, a.name, a.labels[0]`;
-  // DBREPLACE DB function: changePattern
-  // JSON object: {nodesFind:[{name:"per"; id:this.viewID},
-  //                          {name:"view"; type:"View"; details:[{direction:this.relationType}]},
-  //                          {name:"node"; ID: this.nodeID},
-  //                          {name:"a"}];
-  //                relsFind:[{type:"Owner"; from:"per"; to:"view"},
-  //                          {type:"Subject"; from:"view"; to:"node"},
-  //                          {name: "r"; type:"Link"; from:"view"; to:"a"}]}
-  this.db.setQuery(query);
-  this.db.runQuery(this,"rComplete");
+  const obj = {};
+  obj.start = {};
+  obj.start.name = "per";
+  obj.start.id = this.viewID;
+  obj.middle = {};
+  obj.middle.name = "view";
+  obj.middle.type = "View";
+  obj.middle.properties = {};
+  obj.middle.properties.direction = this.relationType;
+  obj.end = {};
+  obj.end.name = "node";
+  obj.end.id = this.nodeID;
+  obj.rel1 = {};
+  obj.rel1.type = "Owner";
+  obj.rel2 = {};
+  obj.rel2.type = "Subject";
+  app.nodeFunctions.changeTwoRelPattern(obj, this, 'findLinks');
+}
+
+findLinks(data) { // data should include the view found by the previous function. Find all nodes that it is linked to.
+  const viewID = data[0].view.ID;
+  const obj = {};
+  obj.from = {};
+  obj.from.name = "view";
+  obj.from.id = viewID;
+  obj.to = {};
+  obj.to.name = "a";
+  obj.rel = {};
+  obj.rel.name = "r";
+  obj.rel.type = "Link";
+  app.nodeFunctions.changeRelation(obj, this, 'rComplete');
 }
 
 // Takes the list of nodes in this user's view and begins building the widget by adding a "Save" or "Sync" button,
@@ -76,14 +93,15 @@ rComplete(data) {
 
 // Builds HTML for a table. Each row is a single relation and shows the number,
 // the id, the other end and the type of that relation. Calls this.addLine() to add individual lines.
-// NOTE: Numbers don't update when you move items! I should work on that.
-complete(nodes) {  // "nodes" is the array of nodes to be shown which was returned by the database.
+// "nodes" is the data returned from the database. Each line shows the view (which is the same for every line),
+// a (the node), and r (the relation to that node).
+complete(nodes) {
   const logNodes = JSON.parse(JSON.stringify(nodes)); // Need a copy that WON'T have stuff deleted, in order to log it later
   app.stripIDs(logNodes); // May as well go ahead and remove the IDs now
   let ordering = []; // Stores the ordered IDs, as stored in the table
   const orderedNodes = []; // Stores ordered DATA, which is reproducible and human-readable, for testing
-  if (nodes[0] && nodes[0].ordering) { // If at least one node and an ordering were returned...
-    ordering = nodes[0].ordering;
+  if (nodes[0] && nodes[0].view.properties.order) { // If at least one node and an ordering were returned...
+    ordering = nodes[0].view.properties.order;
   }
 
   // Start building HTML for the table. Note the ondrop event in the template, which causes all rows to have the same ondrop event.
@@ -99,7 +117,7 @@ complete(nodes) {  // "nodes" is the array of nodes to be shown which was return
   // in the link to the node.
   for (let i = 0; i < ordering.length; i++) {
     // Find the item in nodes which matches, if any
-    const relation = nodes.filter(node => node.r.identity == ordering[i]);
+    const relation = nodes.filter(node => node.r.ID == ordering[i]);
     if (relation[0]) { // If that relation still exists, add it to the table and delete it from the list of relations
       html = this.addLine(relation[0], html, orderedNodes);
       // Remove from array
@@ -141,7 +159,7 @@ complete(nodes) {  // "nodes" is the array of nodes to be shown which was return
 addLine(relation, html, orderedNodes) {
   const rel = relation.r; // The relation described in this row of the table
   const node = relation.a; // The node which that relation links to
-  let nodeID = node.identity; // The ID of said node...
+  let nodeID = node.ID; // The ID of said node...
   let name = node.properties.name; // its name...
   let type = node.labels[0]; // and its type.
   let comment = ""; // The comment, if any, that the user who created this view left for this node.
@@ -165,7 +183,7 @@ addLine(relation, html, orderedNodes) {
     }
 
     // Add this node's data to the list of relations that already exist.
-    this.existingRelations[rel.identity] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
+    this.existingRelations[rel.ID] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
 
     // Default is that this is NOT the logged-in user's view. The row can only be dragged,
     // the cells can't be interacted with at all and the delete button is not needed.
@@ -182,7 +200,7 @@ addLine(relation, html, orderedNodes) {
       editHTML = `ondblclick="app.widget('edit', this, event)"`
     }
 
-    html += trHTML + `<td>${++this.idrRow}</td> <td>${rel.identity}</td>
+    html += trHTML + `<td>${++this.idrRow}</td> <td>${rel.ID}</td>
                       <td idr="content${this.idrContent++}">${nodeID}</td>
                       <td idr="content${this.idrContent++}">${name}</td>
                       <td>${type}</td>
@@ -397,12 +415,12 @@ saveSync(button) {
 // replace it in the DB (needed for changing the node - relations can't change their endpoints), edit it or nothing.
 // Then calls the appropriate function - deleteNode(), addNode(), replaceNode(), modifyNode(), or processNext()
 // to skip a row that doesn't need to change the DB. (All other functions this can call eventually call processNext() again).
-processNext(data, rows) {
+processNext(data, rows, prevFunction) {
   // The only processing function that returns data is addNode, which returns ID(r). Check for existence of data[0] to distinguish from an empty array, which deletion returns
   // If processNext gets data, it is the ID from an addNode call. Extract the ID and add it to the order array.
-  if (data && data[0]) {
-    // example of data from addNode: [{"ID(r)":{"low":3,"high":0}}]
-    const id = data[0]["ID(r)"].low;
+  if (prevFunction == "add") {
+    // example of data from addNode: [{link:{identity:{high:0, low:xxxx}}}]
+    const id = data[0].link.ID;
     this.order.push(id.toString());
   }
 
@@ -437,19 +455,30 @@ processNext(data, rows) {
   else { // when all rows are processed
     this.order.reverse();
 
-    // Update the view's order property and refresh the widget.
-    // DBREPLACE DB function: changePattern
-    // JSON object: {nodesFind:[{name:"user", id:this.viewID},
-    //                          {name:"node"; id:this.nodeID},
-    //                          {name:"view"; type:"View"; details:{direction:this.relationType};
-    //                              changes:{order:JSON.stringify(this.order)}};
-    //               relsFind: [{from:"user"; to:"view"; type:"Owner"},
-    //                          {from:"view"; to:"node"; type:"Subject"}}
-    const query = `match (user)-[:Owner]->(view:View {direction:"${this.relationType}"})-[:Subject]->(node)
-                   where ID(user) = ${this.viewID} and ID(node) = ${this.nodeID}
-                   set view.order = ${JSON.stringify(this.order)}`;
-    this.db.setQuery(query);
-    this.db.runQuery(this,'refresh');
+    const obj = {};
+    obj.start = {};
+    obj.start.name = "user";
+    obj.start.id = this.viewID;
+    obj.middle = {};
+    obj.middle.name = "view";
+    obj.middle.type = "View";
+    obj.middle.properties = {};
+    obj.middle.properties.direction = this.relationType;
+    obj.end = {};
+    obj.end.name = "node";
+    obj.end.id = this.nodeID;
+    obj.rel1 = {};
+    obj.rel1.type = "Owner";
+    obj.rel2 = {};
+    obj.rel2.type = "Subject";
+    obj.changes = [];
+    const change = {};
+    change.item = "view";
+    change.property = "order";
+    change.value = JSON.stringify(this.order);
+    change.string = false;
+    obj.changes.push(change);
+    app.nodeFunctions.changeTwoRelPattern(obj, this, 'refresh');
 
     this.order = []; // Finally, reset this.order.
   }
@@ -465,6 +494,20 @@ deleteNode(row, rows) {
   const idCell = cells[1];
   const id = idCell.textContent;
 
+  // delete the relation going to the other node in the view of this node,
+  // find the user's view of the other node, and delete the relation from that view to this node.
+  // ("user" is the user, "node" is the other node, "this" is this node, and "view" is the user's view of the other node.)
+  // Then call processNext() to do the next row.
+  const obj = {};
+  obj.to = {};
+  obj.to.name = "node";
+  obj.rel = {};
+  obj.rel.name = "r";
+  obj.rel.id = id;
+  app.nodeFunctions.deleteRelation(obj, this, 'findReverse', rows);
+}
+
+findReverse(data, rows) {
   // Get the type of the other relation to delete - it will be the "mirror image" of this one
   let otherRelType;
   switch (this.relationType) {
@@ -473,24 +516,39 @@ deleteNode(row, rows) {
     case "peer":  otherRelType = "peer"; break;
   }
 
-  // delete the relation going to the other node in the view of this node,
-  // find the user's view of the other node, and delete the relation from that view to this node.
-  // ("user" is the user, "node" is the other node, "this" is this node, and "view" is the user's view of the other node.)
-  // Then call processNext() to do the next row.
-  // DBREPLACE DB function: changePattern
-  // JSON object: {nodesFind:[{name:"user"; ID:this.viewID},
-  //                          {name:"node"},
-  //                          {name:"this"; ID:this.nodeID},
-  //                          {name:"view"; type:"View"; details:{direction:otherRelType}}];
-  //                relsFind:[{name:"r"; ID:id; to:"node"};
-  //                          {type:"Owner"; from:"user"; to:"view"}
-  //                          {type:"Subject"; from:"view"; to:"node"}
-  //                          {name:"r2"; type:"Link"; from:"view"; to:"this"}
-  //               relsDelete:["r", "r2"]}
-  this.db.setQuery(`match ()-[r]->(node) where ID(r) = ${id} delete r with node
-                    match (user)-[:Owner]->(view:View {direction:"${otherRelType}"})-[:Subject]->(node) where ID(user) = ${this.viewID}
-                    match (view)-[r2:Link]->(this) where ID(this) = ${this.nodeID} delete r2`);
-  this.db.runQuery(this, "processNext", rows);
+  const nodeID = data[0].node.ID;
+  const obj = {};
+  obj.start = {};
+  obj.start.name = "user";
+  obj.start.id = this.viewID;
+  obj.middle = {};
+  obj.middle.name = "view";
+  obj.middle.type = "View";
+  obj.middle.properties = {};
+  obj.middle.properties.direction = otherRelType;
+  obj.end = {};
+  obj.end.name = "node";
+  obj.end.id = nodeID;
+  obj.rel1 = {};
+  obj.rel1.type = "Owner";
+  obj.rel2 = {};
+  obj.rel2.type = "Subject";
+  app.nodeFunctions.changeTwoRelPattern(obj, this, 'deleteReverse', rows);
+}
+
+deleteReverse(data, rows) {
+  const viewID = data[0].view.ID;
+  const obj = {};
+  obj.from = {};
+  obj.from.name = "view";
+  obj.from.id = viewID;
+  obj.to = {};
+  obj.to.name = "this";
+  obj.to.id = this.nodeID;
+  obj.rel = {};
+  obj.rel.name = "rel";
+  obj.rel.type = "Link";
+  app.nodeFunctions.deleteRelation(obj, this, 'processNext', rows);
 }
 
 // A workaround for the fact that Neo4j doesn't let you change the nodes a relationship is attached to.
@@ -515,10 +573,17 @@ modifyNode (row, rows) {
   const commentCell = cells[5];
   const comment = commentCell.textContent;
 
-  // DBREPLACE DB function: changeRelation
-  // JSON object: {id:id; changes:{comment: app.stringEscape(comment)}}
-  this.db.setQuery(`match ()-[r]-() where ID(r) = ${id} set r.comment = "${app.stringEscape(comment)}"`);
-  this.db.runQuery(this, "processNext", rows);
+  const obj = {};
+  obj.rel = {};
+  obj.rel.name = "r";
+  obj.rel.id = id;
+  obj.changes = [];
+  const change = {};
+  change.item = "r";
+  change.property = "comment";
+  change.value = app.stringEscape(comment);
+  obj.changes.push(change);
+  app.nodeFunctions.changeRelation(obj, this, 'processNext', rows, "modify");
 }
 
 // Adds a new relation to the node being viewed. If a destination node was specified for the relation,
@@ -538,7 +603,7 @@ addNode(row, rows) {
   const relID = relIDcell.textContent;
   const nodeIDcell = cells[2];
   let otherNodeID;
-  let attributes = "";
+  let attributes = {};
 
   // Get the ID of the other node, if one was specified
   if (nodeIDcell.textContent != "") {
@@ -547,34 +612,33 @@ addNode(row, rows) {
   // If no other node was specified, make a placeholder relationship with the original node, and give it a direction to mark it as a placeholder and show which way it goes
   else {
     otherNodeID = this.nodeID;
-    attributes = `direction:'${this.relationType}', `; // Not sure this is needed anymore
+    attributes.direction = this.relationType; // Not sure this is needed anymore
   }
 
-  // Build a string of attributes for the relation. Each attribute takes the form name:"value", and they're comma-separated.
+  // Build a string of attributes for the relation. Each attribute takes the form name:value.
   // Start at i = 5 because the first 5 columns describe the node or are auto-generated - they aren't attributes of the relation.
   // Stop at headers.length-1 because the last cell just holds the delete button.
   for (let i = 5; i < headers.length-1; i++) {
     const text = cells[i].textContent;
     if (text != "") {
-      attributes += `${headers[i].textContent.toLowerCase()}:"${app.stringEscape(text)}", `
+      attributes[headers[i].textContent.toLowerCase()] = app.stringEscape(text);
     }
-  }
-
-  if (attributes.length > 2) { // If any attributes were generated, the string will end with a comma and space.
-    attributes = attributes.substr(0, attributes.length-2); // remove the final comma and space.
   }
 
   // Get the IDs of the start and end nodes for the relation
   let startID;
   let endID;
+  let relation;
   switch (this.relationType) {
     case "start":
       startID = this.nodeID;
       endID = otherNodeID;
+      relation = "endLink";
       break;
     case "end":
       startID = otherNodeID;
       endID = this.nodeID;
+      relation = "startLink";
       break;
     case "peer": // Not yet implemented
       break;
@@ -582,28 +646,14 @@ addNode(row, rows) {
 
   // Write the actual query: find the person whose view this is and the start and end nodes.
   // Then add the relation to the person's view of each node.
-  // Need to think about how to indicate that an ENTIRE PATTERN should be merged vs. individual items - mergeGROUP?
-  // DBREPLACE DB function: changePattern
-  // JSON object: {nodesFind:[{name:"per"; ID:this.viewID},
-  //                          {name: "start"; ID:startID},
-  //                          {name:"end"; ID:endID}];
-  //             nodesCreate:[{name:"view1"; type:"View"; details:{direction:"start"}; merge:true},
-  //                          {name:"view2"; type:"View"; details:{direction:"end"}; merge:true}];
-  //              relsCreate:[{from:"per"; to:"view"; type:"Owner"; merge:true},
-  //                          {from:"view"; to:"start"; type:"Subject"; merge:true},
-  //                          {from:"view"; to:"end"; type:"Link"; merge:true},
-  //                          {from:"per"; to:"view2"; type:"Owner"; merge:true},
-  //                          {from:"view2"; to:"end"; type:"Subject"; merge:true},
-  //                          {from:"view2"; to:"start"; type:"Link"; merge:true}}
-  const query = `match (per), (start), (end)
-               where ID(per) = ${this.viewID} and ID(start) = ${startID} and ID(end)=${endID}
-               merge (per)-[:Owner]->(view:View {direction:"start"})-[:Subject]->(start)
-               merge (view)-[:Link {${attributes}}]->(end)
-               merge (per)-[:Owner]->(view2:View {direction:"end"})-[:Subject]->(end)
-               merge (view2)-[:Link {${attributes}}]->(start)`;
 
-  this.db.setQuery(query);
-  this.db.runQuery(this, "processNext", rows);
+  const obj = {};
+  obj.personID = this.viewID;
+  obj.startID = startID;
+  obj.endID = endID;
+  obj.attributes = attributes;
+  obj.relation = relation;
+  app.nodeFunctions.addNodeToView(obj, this, 'processNext', rows, "add");
 }
 
 // Fires when a row from any relations table - whether it's the fully interactive table for a logged-in user,

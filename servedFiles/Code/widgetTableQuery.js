@@ -19,16 +19,9 @@ constructor (nameQueryObject, id) {
   this.dropdownId = id;
   this.widgetID = app.idCounter;
 
-  this.db        = new db();   // create object to make query
-  this.db.setQuery(this.queryObj.query);
-  this.queryData = {};                       // where returned data will be stored
-
-  // runQuery is asynchronous - it will read data in the background and call the method "queryComplete" when done
-  this.db.runQuery(this,"queryComplete");         // make query, when done run method queryComplete
+  app.nodeFunctions.getMetadata(nameQueryObject, this, 'queryComplete');
 }
 
-
-// this.db has finished building data
 queryComplete(data) {
   this.queryData = data ;
   this.buildHeader();  // add to this.html
@@ -132,22 +125,14 @@ getatt(fieldName){
 queryObjectsInit() {
 
 this.queryObjects.nodes = {
-  nameTable: "nodes"
-  // DBREPLACE DB function: changeNode
-  // JSON object: {name:"n"}
-  // Won't do the unwinding or collecting - that will have to be done in program
-  ,query: "MATCH (n) unwind labels(n) as L RETURN  distinct L, count(L) as count"
+  nameTable: "Nodes"
   ,fields: {
   	"L":       {label: "Labels"} // Removed ", att: 'onclick="app.widgetNewClick(this)"'"
    ,"count":  {label: "Count"  }
   }}
 
 this.queryObjects.keysNode = {
-   nameQuery: ""
-   // DBREPLACE DB function: changeNode
-   // JSON object: {name:"p"}
-   // Won't do the unwinding or collecting - that will have to be done in program
-  ,query: "MATCH (p) unwind keys(p) as key RETURN  distinct key, labels(p) as label,  count(key) as count  order by key"
+   nameTable: "Node Keys"
   ,fields: {
   		"key":     {label: "Key"   , comment: "like fields"}
   	 ,"label":   {label: "Node"  , comment: "Like a table in RDBS"}
@@ -155,24 +140,16 @@ this.queryObjects.keysNode = {
    }}
 
 this.queryObjects.relations = {
-	nameTable: "relations"
-  // DBREPLACE DB function: changePattern
-  // JSON object: {nodesFind:[{name:"a"}, {name:"b"}]; relsFind:[{name:"r"; from:"a"; to:"b"}]}
-  // Won't do the unwinding or collecting - that will have to be done in program
-	,query: "MATCH (a)-[r]->(b)  return distinct labels(a), type(r), labels(b), count(r)  order by type(r)"
+	nameTable: "Relations"
 	,fields: {
 		"labels(a)":  {label: "Node"        , comment: "Like a table in RDBS"}
 	 ,"type(r)":    {label: "-Relation->" , comment: "like fields"}
 	 ,"labels(b)":  {label: "Node"        , comment: ""}
-	 ,"count(r)":   {label: "Count"       , comment: ""}
+	 ,"count":   {label: "Count"       , comment: ""}
 	}}
 
 this.queryObjects.keysRelation = {
-   nameTable: "keys"
-   // DBREPLACE DB function: changeRelation
-   // JSON object: {name:"r"}
-   // Won't do the unwinding or collecting - that will have to be done in program
-  ,query: "match ()-[r]->() unwind keys(r) as key return distinct key, type(r), count(key) as count"
+   nameTable: "Relation Keys"
   ,fields: {
   		"key":     {label: "Key"          , comment: "like fields"}
   	 ,"type(r)": {label: "-Relation->"  , comment: "Like a table in RDBS"}
@@ -182,11 +159,6 @@ this.queryObjects.keysRelation = {
 
 this.queryObjects.myTrash = {
    nameTable: "myTrash"
-   // DBREPLACE DB function: changePattern
-   // JSON object: {nodesFind:[{name:"user"; ID:app.login.userID},
-   //                          {name:"node"}];
-   //                relsFind:[{name:"rel"; type:"Trash"; from:"user"; to:"node"}]}
-   ,query: `match (user)-[rel:Trash]->(node) where ID(user)=${app.login.userID} return id(node) as id, node.name as name, labels(node) as labels, rel.reason as reason, node`
    ,fields: {
        "id":     {label: "ID",   att: `onclick="app.widget('edit',this)"`}
      ,"name":   {label:"Name"}
@@ -196,13 +168,10 @@ this.queryObjects.myTrash = {
 
 this.queryObjects.allTrash = {
    nameTable: "allTrash"
-   // DBREPLACE DB function: changePattern
-   // JSON object: {nodesFind:[{name:"node"}]; relsFind:[{name:"rel"; to:"node"}]}
-   ,query: `match ()-[rel:Trash]->(node) return ID(node) as id, node.name as name, count(rel) as times`
    ,fields: {
        "id":     {label: "ID",   att: `onclick="app.widget('showReasons',this)"`}
      ,"name":   {label:"Name"}
-   	 ,"times": {label: "Times trashed"}
+   	 ,"count": {label: "Times trashed"}
     }}
 } /// end method
 
@@ -220,23 +189,27 @@ edit(element){
 
 showReasons(element) {
   const id = element.innerHTML;
-  // DBREPLACE DB function: changePattern
-  // JSON object:{nodesFind:[{name:"user"}, {name:"node"; ID:id}];
-  //              relsFind:[{name:"rel"; type:"Trash"; from:"user"; to:"node"}]}
-  const query = `match (user)-[rel:Trash]->(node) where ID(node) = ${id} return user.name as userName, ID(user) as userID, rel.reason as reason, node.name as nodeName, ID(node) as nodeID`;
-  this.db.setQuery(query);
-  this.db.runQuery(this, "buildReasons");
+  const obj = {};
+  obj.from = {};
+  obj.from.name = "user";
+  obj.to = {};
+  obj.to.name = "node";
+  obj.to.id = id;
+  obj.rel = {};
+  obj.rel.name = "rel";
+  obj.rel.type = "Trash";
+  app.nodeFunctions.changeRelation(obj, this, 'buildReasons');
 }
 
 buildReasons(data) {
   if (data) { // assuming some trash relations were found
     let html = app.widgetHeader();
     html += `<table><thead>
-    <tr><th colspan=3>${data[0].nodeName} (node#${data[0].nodeID})</th></tr>
+    <tr><th colspan=3>${data[0].node.properties.name} (node#${data[0].node.ID})</th></tr>
     <tr><th>UserID</th><th>User Name</th><th>Reason for trashing</th></tr></thead><tbody>`
 
     for (let i=0; i<data.length; i++) {
-      html += `<tr><td>${data[i].userID}</td><td>${data[i].userName}</td><td>${data[i].reason}</td></tr>`
+      html += `<tr><td>${data[i].user.ID}</td><td>${data[i].user.properties.name}</td><td>${data[i].rel.properties.reason}</td></tr>`
     }
 
     html+='</tbody></table></div>';

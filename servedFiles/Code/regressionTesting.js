@@ -14,10 +14,6 @@ class regressionTesting {
     this.regHeader = document.getElementById("regressionHeader");
     this.dragData = {};
 
-    if (!(this.regHeader == null)) {
-      this.buildRegressionHeader();
-    }
-
     this.playDOM = document.getElementById("replay");
     this.stepDOM = document.getElementById("stepThrough");
     this.delayMS = document.getElementById("delayMS");
@@ -330,11 +326,9 @@ class regressionTesting {
       app.clearWidgets();
 
   		// Remove nodes and relationships
-      // DBREPLACE DB command: deleteNode
-      // JSON object: {} (assume empty means no restrictions)
-  		const command = "MATCH (n) DETACH DELETE n";
-  		app.db.setQuery(command);
-  		app.db.runQuery(this, "dummy");
+      const obj = {};
+      obj.name = "n";
+      app.nodeFunctions.deleteNode(obj);
 
   		// reset all variables to ensure same state every time "Clear All" is chosen
   		app.idCounter = 0; // reset ID counter
@@ -356,6 +350,4 @@ class regressionTesting {
       this.delayMS.disabled=true;
     }
   }
-
-  dummy() {} // Empty method, only here because runQuery has to have SOMETHING for its method argument (not anymore, find where this is called and get rid of it)
 } // end class
