@@ -53,7 +53,7 @@ class d3Functions {
     // If data was passed in, that means this was called right after saving a map under a new ID.
     // Update this.parent.mapID accordingly.
     if (data && data.length > 0) {
-      this.parent.mapID = data[0].mindmap.ID;
+      this.parent.mapID = data[0].mindmap.id;
     }
 
     const groups = d3.select(`#svg${this.widgetID}`).selectAll("g.tree")

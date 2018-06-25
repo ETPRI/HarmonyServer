@@ -327,7 +327,7 @@ class regressionTesting {
 
   		// Remove nodes and relationships
       const obj = {};
-      obj.name = "n";
+      obj.return = false;
       app.nodeFunctions.deleteNode(obj);
 
   		// reset all variables to ensure same state every time "Clear All" is chosen

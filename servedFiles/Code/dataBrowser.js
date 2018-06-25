@@ -108,7 +108,7 @@ class dataBrowser {
 
   loadNode(data, cell) {
     // store data for later use
-    this.nodeData[data.n.ID] = data;
+    this.nodeData[data.n.id] = data;
 
     // Make sure cell is blank
     while (cell.firstElementChild) {
@@ -168,7 +168,7 @@ class dataBrowser {
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       arrowCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      arrowCell.setAttribute("idr", `arrow${ins[i].ID}`);
+      arrowCell.setAttribute("idr", `arrow${ins[i].id}`);
 
       const nameCell = document.createElement("td");
       nameCell.setAttribute("class", "dataBrowserCell");
@@ -185,7 +185,7 @@ class dataBrowser {
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       nameCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      nameCell.setAttribute("idr", `name_${ins[i].ID}`);
+      nameCell.setAttribute("idr", `name_${ins[i].id}`);
     }
 
     for (let i = 0; i < outs.length; i++) { // for every outgoing relation
@@ -207,7 +207,7 @@ class dataBrowser {
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       nameCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      nameCell.setAttribute("idr", `name_${outs[i].ID}`);
+      nameCell.setAttribute("idr", `name_${outs[i].id}`);
 
       const arrowCell = document.createElement("td");
       arrowCell.setAttribute("class", "dataBrowserCell");
@@ -220,7 +220,7 @@ class dataBrowser {
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       arrowCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      arrowCell.setAttribute("idr", `arrow${outs[i].ID}`);
+      arrowCell.setAttribute("idr", `arrow${outs[i].id}`);
     }
 
     cell.setAttribute("class", "dataBrowser");

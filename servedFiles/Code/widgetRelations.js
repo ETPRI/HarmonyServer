@@ -12,6 +12,7 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
   this.containerDOM = containerDOM
   this.nodeID       = nodeID;
   this.viewID       = viewID;
+  this.viewNodeID   = null; // ID of the view node in the DB
   this.id           = app.idCounter; // ID of the widget being built
   this.relationType = relationType;
   this.existingRelations = {};      // contains objects that are already in the table (from a previous save).
@@ -32,31 +33,38 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
 
 // Refreshes the widget by running the query to get all nodes in this user's view, then calling this.rComplete().
 refresh() {
-  const obj = {};
-  obj.start = {};
-  obj.start.name = "per";
-  obj.start.id = this.viewID;
-  obj.middle = {};
-  obj.middle.name = "view";
-  obj.middle.type = "View";
-  obj.middle.properties = {};
-  obj.middle.properties.direction = this.relationType;
-  obj.end = {};
-  obj.end.name = "node";
-  obj.end.id = this.nodeID;
-  obj.rel1 = {};
-  obj.rel1.type = "Owner";
-  obj.rel2 = {};
-  obj.rel2.type = "Subject";
-  app.nodeFunctions.changeTwoRelPattern(obj, this, 'findLinks');
+  if (this.viewNodeID == null) {
+    const obj = {};
+    obj.start = {};
+    obj.start.id = this.viewID;
+    obj.start.return = false;
+    obj.middle = {};
+    obj.middle.name = "view";
+    obj.middle.type = "View";
+    obj.middle.properties = {};
+    obj.middle.properties.direction = this.relationType;
+    obj.end = {};
+    obj.end.id = this.nodeID;
+    obj.end.return = false;
+    obj.rel1 = {};
+    obj.rel1.type = "Owner";
+    obj.rel1.return = false;
+    obj.rel2 = {};
+    obj.rel2.type = "Subject";
+    obj.rel2.return = false;
+    app.nodeFunctions.changeTwoRelPattern(obj, this, 'findLinks');
+  }
+  else this.findLinks();
 }
 
 findLinks(data) { // data should include the view found by the previous function. Find all nodes that it is linked to.
-  const viewID = data[0].view.ID;
+  if (data && this.viewNodeID == null) {
+    this.viewNodeID = data[0].view.id;
+  }
   const obj = {};
   obj.from = {};
   obj.from.name = "view";
-  obj.from.id = viewID;
+  obj.from.id = this.viewNodeID;
   obj.to = {};
   obj.to.name = "a";
   obj.rel = {};
@@ -117,7 +125,7 @@ complete(nodes) {
   // in the link to the node.
   for (let i = 0; i < ordering.length; i++) {
     // Find the item in nodes which matches, if any
-    const relation = nodes.filter(node => node.r.ID == ordering[i]);
+    const relation = nodes.filter(node => node.r.id == ordering[i]);
     if (relation[0]) { // If that relation still exists, add it to the table and delete it from the list of relations
       html = this.addLine(relation[0], html, orderedNodes);
       // Remove from array
@@ -159,7 +167,7 @@ complete(nodes) {
 addLine(relation, html, orderedNodes) {
   const rel = relation.r; // The relation described in this row of the table
   const node = relation.a; // The node which that relation links to
-  let nodeID = node.ID; // The ID of said node...
+  let nodeID = node.id; // The ID of said node...
   let name = node.properties.name; // its name...
   let type = node.labels[0]; // and its type.
   let comment = ""; // The comment, if any, that the user who created this view left for this node.
@@ -183,7 +191,7 @@ addLine(relation, html, orderedNodes) {
     }
 
     // Add this node's data to the list of relations that already exist.
-    this.existingRelations[rel.ID] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
+    this.existingRelations[rel.id] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
 
     // Default is that this is NOT the logged-in user's view. The row can only be dragged,
     // the cells can't be interacted with at all and the delete button is not needed.
@@ -200,7 +208,7 @@ addLine(relation, html, orderedNodes) {
       editHTML = `ondblclick="app.widget('edit', this, event)"`
     }
 
-    html += trHTML + `<td>${++this.idrRow}</td> <td>${rel.ID}</td>
+    html += trHTML + `<td>${++this.idrRow}</td> <td>${rel.id}</td>
                       <td idr="content${this.idrContent++}">${nodeID}</td>
                       <td idr="content${this.idrContent++}">${name}</td>
                       <td>${type}</td>
@@ -420,7 +428,7 @@ processNext(data, rows, prevFunction) {
   // If processNext gets data, it is the ID from an addNode call. Extract the ID and add it to the order array.
   if (prevFunction == "add") {
     // example of data from addNode: [{link:{identity:{high:0, low:xxxx}}}]
-    const id = data[0].link.ID;
+    const id = data[0].link.id;
     this.order.push(id.toString());
   }
 
@@ -455,30 +463,18 @@ processNext(data, rows, prevFunction) {
   else { // when all rows are processed
     this.order.reverse();
 
+    // Update view ordering and refresh
     const obj = {};
-    obj.start = {};
-    obj.start.name = "user";
-    obj.start.id = this.viewID;
-    obj.middle = {};
-    obj.middle.name = "view";
-    obj.middle.type = "View";
-    obj.middle.properties = {};
-    obj.middle.properties.direction = this.relationType;
-    obj.end = {};
-    obj.end.name = "node";
-    obj.end.id = this.nodeID;
-    obj.rel1 = {};
-    obj.rel1.type = "Owner";
-    obj.rel2 = {};
-    obj.rel2.type = "Subject";
+    obj.node = {};
+    obj.node.name = "view";
+    obj.node.id = this.viewNodeID;
     obj.changes = [];
     const change = {};
-    change.item = "view";
     change.property = "order";
     change.value = JSON.stringify(this.order);
     change.string = false;
     obj.changes.push(change);
-    app.nodeFunctions.changeTwoRelPattern(obj, this, 'refresh');
+    app.nodeFunctions.changeNode(obj, this, 'findLinks'); // Can skip the refresh method since we know viewNodeID already
 
     this.order = []; // Finally, reset this.order.
   }
@@ -502,8 +498,8 @@ deleteNode(row, rows) {
   obj.to = {};
   obj.to.name = "node";
   obj.rel = {};
-  obj.rel.name = "r";
   obj.rel.id = id;
+  obj.rel.return = false;
   app.nodeFunctions.deleteRelation(obj, this, 'findReverse', rows);
 }
 
@@ -516,38 +512,40 @@ findReverse(data, rows) {
     case "peer":  otherRelType = "peer"; break;
   }
 
-  const nodeID = data[0].node.ID;
+  const nodeID = data[0].node.id;
   const obj = {};
   obj.start = {};
-  obj.start.name = "user";
   obj.start.id = this.viewID;
+  obj.start.return = false;
   obj.middle = {};
   obj.middle.name = "view";
   obj.middle.type = "View";
   obj.middle.properties = {};
   obj.middle.properties.direction = otherRelType;
   obj.end = {};
-  obj.end.name = "node";
   obj.end.id = nodeID;
+  obj.end.return = false;
   obj.rel1 = {};
   obj.rel1.type = "Owner";
+  obj.rel1.return = false;
   obj.rel2 = {};
   obj.rel2.type = "Subject";
+  obj.rel2.return = false;
   app.nodeFunctions.changeTwoRelPattern(obj, this, 'deleteReverse', rows);
 }
 
 deleteReverse(data, rows) {
-  const viewID = data[0].view.ID;
+  const viewID = data[0].view.id;
   const obj = {};
   obj.from = {};
-  obj.from.name = "view";
   obj.from.id = viewID;
+  obj.from.return = false;
   obj.to = {};
-  obj.to.name = "this";
   obj.to.id = this.nodeID;
+  obj.to.return = false;
   obj.rel = {};
-  obj.rel.name = "rel";
   obj.rel.type = "Link";
+  obj.rel.return = false;
   app.nodeFunctions.deleteRelation(obj, this, 'processNext', rows);
 }
 
@@ -575,11 +573,11 @@ modifyNode (row, rows) {
 
   const obj = {};
   obj.rel = {};
-  obj.rel.name = "r";
   obj.rel.id = id;
+  obj.rel.return = false;
   obj.changes = [];
   const change = {};
-  change.item = "r";
+  change.item = "rel";
   change.property = "comment";
   change.value = app.stringEscape(comment);
   obj.changes.push(change);

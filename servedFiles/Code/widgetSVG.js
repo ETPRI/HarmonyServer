@@ -668,7 +668,7 @@ class widgetSVG {
       obj.type = "mindmap";
       obj.properties = {};
       obj.properties.roots = app.stringEscape(JSON.stringify(rootsCopy));
-      obj.properties.count = this.d3Functions.count;
+      obj.properties.count = this.d3Functions.count.low;
       obj.properties.name = name;
       app.nodeFunctions.createNode(obj, this.d3Functions, 'update');
     }
@@ -683,17 +683,14 @@ class widgetSVG {
       roots.property = "roots";
       roots.value = app.stringEscape(JSON.stringify(rootsCopy));
       obj.changes.push(roots);
-      // obj.changes.roots = app.stringEscape(JSON.stringify(rootsCopy));
       const count = {};
       count.property = "count";
-      count.value = this.d3Functions.count;
+      count.value = this.d3Functions.count.low;
       obj.changes.push(count);
-      // obj.changes.count = this.d3Functions.count;
-      const name = {};
-      name.property = "name";
-      name.value = name;
-      obj.changes.push(name);
-      // obj.changes.name = name;
+      const nameObj = {};
+      nameObj.property = "name";
+      nameObj.value = name;
+      obj.changes.push(nameObj);
       app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
     }
   }

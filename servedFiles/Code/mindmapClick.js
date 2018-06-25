@@ -4,10 +4,10 @@ class mindmapClick {
     this.d3Functions = d3Functions;
     this.parent = parent;
 
+    this.draggingNode = null;
     this.initialPosition = null;
     this.currentX = null;
     this.currentY = null;
-
 
     this.currentParent = null;
     this.parentNode = null;
@@ -66,7 +66,7 @@ class mindmapClick {
     if (evnt.which == 1) {
       const group = element.parentElement;
 
-      // Should select the label whether it itself, or a button in it, was clicked - IF it wasn't selected already
+      // Should select the label if it wasn't selected already
       if (!(this.parent.selectedNodes.has(group))) {
         this.parent.makeSelectedNode(group);
       }
@@ -91,6 +91,10 @@ class mindmapClick {
       }
 
       if (!inAnything) { // Now we get ready to actually move.
+        // The node actually being dragged - the one the mouse is over -
+        // will be A selected node, but not necessarily the ONLY one
+        this.draggingNode = element;
+
         // Because THIS is the closest SVG gets to a goddamn "Bring to front" command!
         // It just draws everything in whatever order it's listed in the DOM,
         // so to move something to the front you have to actually move the HTML that generates it forward!
@@ -205,7 +209,11 @@ class mindmapClick {
     }
 
     // Highlight the prospective parent. Add/remove highlighting from current parent if needed.
-    this.highlightParent(evnt.clientX, evnt.clientY, element.parentElement);
+    // Rather than the current MOUSE position, use the current position of the middle of the left side of the label
+    // const clientX = evnt.clientX;
+    // const clientY = evnt.clientY;
+    const nodeDetails = this.draggingNode.getBoundingClientRect();
+    this.highlightParent(nodeDetails.x, nodeDetails.y + this.d3Functions.nodeHeight/2, element.parentElement);
 
     if (this.initialPosition) { // If any of the labels being dragged were children, this variable will be defined.
       if (Math.abs(this.currentX - this.initialPosition[0]) < this.detachDistance
@@ -345,7 +353,6 @@ class mindmapClick {
       // If the element ISN'T about to disappear, just restore its onmouseout attribute.
       element.setAttribute("onmouseout", "app.widget('checkHideButtons', this, event)");
     }
-    // element.setAttribute("onmousedown", "app.widget('click', this, event, 'selectNode')");
 
     /* If a child became a root, a root became a child, or a child moved from one tree to another,
      then its DOM element will be removed and replaced. Remove it from the set of selected nodes,

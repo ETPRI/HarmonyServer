@@ -196,7 +196,6 @@ showReasons(element) {
   obj.to.name = "node";
   obj.to.id = id;
   obj.rel = {};
-  obj.rel.name = "rel";
   obj.rel.type = "Trash";
   app.nodeFunctions.changeRelation(obj, this, 'buildReasons');
 }
@@ -205,11 +204,11 @@ buildReasons(data) {
   if (data) { // assuming some trash relations were found
     let html = app.widgetHeader();
     html += `<table><thead>
-    <tr><th colspan=3>${data[0].node.properties.name} (node#${data[0].node.ID})</th></tr>
+    <tr><th colspan=3>${data[0].node.properties.name} (node#${data[0].node.id})</th></tr>
     <tr><th>UserID</th><th>User Name</th><th>Reason for trashing</th></tr></thead><tbody>`
 
     for (let i=0; i<data.length; i++) {
-      html += `<tr><td>${data[i].user.ID}</td><td>${data[i].user.properties.name}</td><td>${data[i].rel.properties.reason}</td></tr>`
+      html += `<tr><td>${data[i].user.id}</td><td>${data[i].user.properties.name}</td><td>${data[i].rel.properties.reason}</td></tr>`
     }
 
     html+='</tbody></table></div>';

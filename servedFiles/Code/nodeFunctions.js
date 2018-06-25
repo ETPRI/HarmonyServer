@@ -3,16 +3,20 @@ class nodeFunctions {
   }
 
   // HELPER FUNCTIONS
-  buildSearchString(obj, strings, whereString) {
-    let string =  "";
+  buildSearchString(obj, strings, whereString, defaultName) {
+    let string = defaultName;
 
-    if (obj.name) {
-      string += obj.name;
+    if (!(obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
       if (strings.ret == "") {
-        strings.ret = `return ${obj.name}`;
+        strings.ret = `return ${defaultName}`;
       }
-      else strings.ret += `, ${obj.name}`;
+      else strings.ret += `, ${defaultName}`;
+
+      if (obj.name) {
+        strings.ret += ` as ${obj.name}`;
+      }
     }
+
     if (obj.type) {
       string += `:${obj.type}`;
     }
@@ -28,14 +32,30 @@ class nodeFunctions {
       string += `{${props}}`;
     }
 
-    if (obj.id && obj.name && whereString) { // You can't (or at least I don't know how to) request an item by ID without naming it
+    if (obj.id && whereString) {
       if (strings[whereString] == "") {
-        strings[whereString] = `where ID(${obj.name}) = ${obj.id}`;
+        strings[whereString] = `where ID(${defaultName}) = ${obj.id}`;
       }
-      else strings[whereString] += ` and ID(${obj.name}) = ${obj.id}`;
+      else strings[whereString] += ` and ID(${defaultName}) = ${obj.id}`;
     }
 
     return string;
+  }
+
+  buildChangesString(changeArray) {
+    let changes = "";
+    for (let i = 0; i < changeArray.length; i++) {
+      let value = `"${changeArray[i].value}"`;
+      if (changeArray[i].string === false) { // default is that the new value is a string, but can be overridden
+        value = `${changeArray[i].value}`;
+      }
+
+      if (changes == "") {
+        changes = `set ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
+      }
+      else changes += `, ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
+    }
+    return changes;
   }
 
   sendQuery(query, methodObj, methodName, ...args) {
@@ -61,7 +81,7 @@ class nodeFunctions {
             if (entry && entry.identity) {
               const IDobj = entry.identity;
               const ID = IDobj.low;
-              entry.ID = ID;
+              entry.id = ID;
               delete entry.identity;
             }
           }
@@ -82,9 +102,9 @@ class nodeFunctions {
   // object represents node.  May include name, type, or properties (object). May include merge boolean.
   createNode(dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""}; // where won't be used here, but I'm including it for consistency
-    const node = this.buildSearchString(dataObj, strings, "where");
+    const node = this.buildSearchString(dataObj, strings, "where", "node");
     let command = "create";
-    if (dataObj.merge && dataObj.merge == true) {
+    if (dataObj.merge === true) {
       command = "merge";
     }
 
@@ -92,12 +112,12 @@ class nodeFunctions {
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
-  // object represents node.  May include type, ID, or properties (object). Must include name.
+  // object represents node.  May include type, ID, or properties (object).
   deleteNode(dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""};
-    const node = this.buildSearchString(dataObj, strings, "where");
+    const node = this.buildSearchString(dataObj, strings, "where", "node");
 
-    const query = `match (${node}) detach delete ${dataObj.name}`;
+    const query = `match (${node}) detach delete node`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -109,7 +129,7 @@ class nodeFunctions {
   changeNode(dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""};
     // Build the string representing the node - what goes in the parentheses
-    const node = this.buildSearchString(dataObj.node, strings, "where");
+    const node = this.buildSearchString(dataObj.node, strings, "where", "node");
 
     // Build the string representing the changes - what comes after the SET keyword
     // dataObj.changes should be an array, each entry in which includes a property, a value and possibly a string boolean
@@ -122,9 +142,9 @@ class nodeFunctions {
         }
 
         if (changes == "") {
-          changes = `set ${dataObj.node.name}.${dataObj.changes[i].property} = ${value}`;
+          changes = `set node.${dataObj.changes[i].property} = ${value}`;
         }
-        else changes += `, ${dataObj.node.name}.${dataObj.changes[i].property} = ${value}`;
+        else changes += `, node.${dataObj.changes[i].property} = ${value}`;
       }
     }
 
@@ -144,27 +164,27 @@ class nodeFunctions {
     // Build the string representing the "from" node - what goes in the first set of parentheses
     let from = "";
     if (dataObj.from) {
-      from = this.buildSearchString(dataObj.from, strings, "where");
+      from = this.buildSearchString(dataObj.from, strings, "where", "from");
     }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let to = "";
     if (dataObj.to) {
-      to = this.buildSearchString(dataObj.to, strings, "where");
+      to = this.buildSearchString(dataObj.to, strings, "where", "to");
     }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
-      rel = this.buildSearchString(dataObj.rel, strings, "where");
+      rel = this.buildSearchString(dataObj.rel, strings, "where", "rel");
     }
 
     let command = "create";
-    if (dataObj.rel.merge && dataObj.rel.merge == true) {
+    if (dataObj.rel.merge === true) {
       command = "merge";
     }
 
-    const query = `match (${from}), (${to}) ${strings.where} ${command} (${dataObj.from.name})-[${rel}]->(${dataObj.to.name})`;
+    const query = `match (${from}), (${to}) ${strings.where} ${command} (from)-[${rel}]->(to) ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -181,22 +201,22 @@ class nodeFunctions {
     // Build the string representing the "from" node - what goes in the first set of parentheses
     let from = "";
     if (dataObj.from) {
-      from = this.buildSearchString(dataObj.from, strings, "where");
+      from = this.buildSearchString(dataObj.from, strings, "where", "from");
     }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let to = "";
     if (dataObj.to) {
-      to = this.buildSearchString(dataObj.to, strings, "where");
+      to = this.buildSearchString(dataObj.to, strings, "where", "to");
     }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
-      rel = this.buildSearchString(dataObj.rel, strings, "where");
+      rel = this.buildSearchString(dataObj.rel, strings, "where", "rel");
     }
 
-    const query = `match (${from})-[${rel}]->(${to}) ${strings.where} delete ${dataObj.rel.name} ${strings.ret}`;
+    const query = `match (${from})-[${rel}]->(${to}) ${strings.where} delete rel ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -214,39 +234,25 @@ class nodeFunctions {
     // Build the string representing the "from" node - what goes in the first set of parentheses
     let from = "";
     if (dataObj.from) {
-      from = this.buildSearchString(dataObj.from, strings, "where");
+      from = this.buildSearchString(dataObj.from, strings, "where", "from");
     }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let to = "";
     if (dataObj.to) {
-      to = this.buildSearchString(dataObj.to, strings, "where");
+      to = this.buildSearchString(dataObj.to, strings, "where", "to");
     }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
-      rel = this.buildSearchString(dataObj.rel, strings, "where");
+      rel = this.buildSearchString(dataObj.rel, strings, "where", "rel");
     }
 
     // Build the string representing the changes - what comes after the SET keyword
-    // Rewrite this to allow changes to nodes as well as relation
-    // Current structure: dataObj.changes = {prop:"prop", prop2:"prop2"...} and just assumes the item is the relation
-    // New structure: dataObj.changes =
-    // [{item:"item", property:"property", value:"value"}, {item:"item2", property:"property2", value:"value2"}...]
-    let changes ="";
+    let changes = "";
     if (dataObj.changes) {
-      for (let i = 0; i < dataObj.changes.length; i++) {
-        let value = `"${dataObj.changes[i].value}"`;
-        if (dataObj.changes[i].string === false) { // default is that the new value is a string, but can be overridden
-          value = `${dataObj.changes[i].value}`;
-        }
-
-        if (changes == "") {
-          changes = `set ${dataObj.changes[i].item}.${dataObj.changes[i].property} = ${value}`;
-        }
-        else changes += `, ${dataObj.changes[i].item}.${dataObj.changes[i].property} = ${value}`;
-      }
+     changes = this.buildChangesString(dataObj.changes);
     }
 
     const query = `match (${from})-[${rel}]->(${to}) ${strings.where} ${changes} ${strings.ret}`;
@@ -262,34 +268,25 @@ class nodeFunctions {
     // Build the string representing the "from" node - what goes in the first set of parentheses
     let required = "";
     if (dataObj.required) {
-      required = this.buildSearchString(dataObj.required, strings, "reqWhere");
+      required = this.buildSearchString(dataObj.required, strings, "reqWhere", "required");
     }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let optional = "";
     if (dataObj.optional) {
-      optional = this.buildSearchString(dataObj.optional, strings, "optWhere");
+      optional = this.buildSearchString(dataObj.optional, strings, "optWhere", "optional");
     }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
-      rel = this.buildSearchString(dataObj.rel, strings, "optWhere");
+      rel = this.buildSearchString(dataObj.rel, strings, "optWhere", "rel");
     }
 
     // Build the string representing the changes - what comes after the SET keyword
-    let changes ="";
+    let changes = "";
     if (dataObj.changes) {
-      for (let i = 0; i < dataObj.changes.length; i++) {
-        let value = `"${dataObj.changes[i].value}"`;
-        if (dataObj.changes[i].string === false) { // default is that the new value is a string, but can be overridden
-          value = `${dataObj.changes[i].value}`;
-        }
-        if (changes == "") {
-          changes = `set ${dataObj.changes[i].item}.${dataObj.changes[i].property} = ${value}`;
-        }
-        else changes += `, ${dataObj.changes[i].item}.${dataObj.changes[i].property} = ${value}`;
-      }
+     changes = this.buildChangesString(dataObj.changes);
     }
 
     // default is that the relation starts on the required node, but if the direction is specified, it can go backward
@@ -299,7 +296,7 @@ class nodeFunctions {
     }
 
     const query = `match (${required}) ${strings.reqWhere}
-                   optional match (${dataObj.required.name})${arrow}(${optional}) ${changes} ${strings.ret}`;
+                   optional match (required)${arrow}(${optional}) ${changes} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -309,47 +306,39 @@ class nodeFunctions {
     // Build the string representing the "start" node - what goes in the first set of parentheses
     let start = "";
     if (dataObj.start) {
-      start = this.buildSearchString(dataObj.start, strings, "where");
+      start = this.buildSearchString(dataObj.start, strings, "where", "start");
     }
 
     // Build the string representing the "middle" node - what goes in the second set of parentheses
     let middle = "";
     if (dataObj.middle) {
-      middle = this.buildSearchString(dataObj.middle, strings, "where");
+      middle = this.buildSearchString(dataObj.middle, strings, "where", "middle");
     }
 
     // Build the string representing the "end" node - what goes in the third set of parentheses
     let end = "";
     if (dataObj.end) {
-      end = this.buildSearchString(dataObj.end, strings, "where");
+      end = this.buildSearchString(dataObj.end, strings, "where", "end");
     }
 
     // Build the string representing the first relation - what goes in the first set of brackets
     let rel1 = "";
     if (dataObj.rel1) {
-      rel1 = this.buildSearchString(dataObj.rel1, strings, "where");
+      rel1 = this.buildSearchString(dataObj.rel1, strings, "where", "rel1");
     }
 
     // Build the string representing the second relation - what goes in the first set of brackets
     let rel2 = "";
     if (dataObj.rel2) {
-      rel2 = this.buildSearchString(dataObj.rel2, strings, "where");
+      rel2 = this.buildSearchString(dataObj.rel2, strings, "where", "rel2");
     }
 
     // Build the string representing the changes - what comes after the SET keyword
-    let changes =``;
+    let changes = "";
     if (dataObj.changes) {
-      for (let i = 0; i < dataObj.changes.length; i++) {
-        let value = `"${dataObj.changes[i].value}"`;
-        if (dataObj.changes[i].string === false) { // default is that the new value is a string, but can be overridden
-          value = `${dataObj.changes[i].value}`;
-        }
-        if (changes == ``) {
-          changes = `set ${dataObj.changes[i].item}.${dataObj.changes[i].property} = ${value}`;
-        }
-        else changes += `, ${dataObj.changes[i].item}.${dataObj.changes[i].property} = ${value}`;
-      }
+     changes = this.buildChangesString(dataObj.changes);
     }
+
     const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where} ${changes} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
@@ -369,19 +358,25 @@ class nodeFunctions {
 
     for (let field in dataObj.where) {
       if (dataObj.where[field].fieldType == "string") {
+        // =~: regex; (?i): case insensitive; #s# and #E#: placeholders for start and end variables
+        // (start and end variables can be ".*", meaning "any string", or "", meaning "nothing")
         const w = `${dataObj.name}.${field}=~"(?i)#s#${dataObj.where[field].value}#E#" and `;
         let w1="";
         switch(dataObj.where[field].searchType) {
           case "S":    // start
+            // Anything can come AFTER the specified value, but nothing BEFORE it (it starts the desired string)
             w1 = w.replace('#s#',"").replace('#E#','.*');    break;
           case "M":    // middle
+            // Anything can come before or after the specified value (as long as it appears anywhere in the string)
             w1 = w.replace('#s#',".*").replace('#E#','.*');  break;
           case "E":    // end
+            // Anything can come BEFORE the specified value, but nothing AFTER it (it ends the desired string)
             w1 = w.replace('#s#',".*").replace('#E#','');    break;
           case "=":    // equal to
+            // NOTHING can come before OR after the specified value (string must match it exactly)
             w1 = w.replace('#s#',"").replace('#E#','');      break;
           default:
-            alert("Error: search type for a string field is not S, M, E or =.");
+            alert("Error: search type for a string field is not 'S', 'M', 'E' or '='.");
         }
         where += w1;
       }
@@ -396,7 +391,7 @@ class nodeFunctions {
     let permCheck = "";
     let ret = `return ${dataObj.name}`;
     if (dataObj.type == "people") {
-      permCheck = "optional match (n)-[:Permissions]->(perm:LoginTable)";
+      permCheck = `optional match (${dataObj.name})-[:Permissions]->(perm:LoginTable)`;
       ret += `, perm.name as permissions`;
     }
 

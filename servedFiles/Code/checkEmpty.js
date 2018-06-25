@@ -6,7 +6,6 @@ class checkEmpty {
   checkEmpty(button) {
     const obj = {};
     obj.node = {};
-    obj.node.name = "n";
     app.nodeFunctions.changeNode(obj, this, 'verifyEmpty');
   }
 
