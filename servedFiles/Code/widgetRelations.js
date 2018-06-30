@@ -646,7 +646,6 @@ addNode(row, rows) {
   // Then add the relation to the person's view of each node.
 
   const obj = {};
-  obj.personID = this.viewID;
   obj.startID = startID;
   obj.endID = endID;
   obj.attributes = attributes;
