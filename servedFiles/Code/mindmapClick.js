@@ -252,7 +252,7 @@ class mindmapClick {
     }
 
     if (!parent) { // If no parent was found in the last step, next check for being near enough to link to other elements
-      parent = this.checkNear(element, x, y);
+      parent = this.checkNear(group, x, y);
     }
 
     if (parent && parent != this.parentNode) { // If a new parent (not the one already marked) has been found
