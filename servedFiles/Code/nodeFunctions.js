@@ -64,7 +64,7 @@ class nodeFunctions {
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         // Results should be an array of row objects. Each row object will contain one object per item to return.
-        // Each of THOSE may contain an identity object which should be rewritten as a simple number.
+        // Each of THOSE may contain an identity object or a count object which should be rewritten as a simple number.
         // Also, row objects from metadata queries may include an id or count variable, which should also be rewritten.
         const result = JSON.parse(this.responseText);
         for (let i = 0; i < result.length; i++) {
@@ -83,6 +83,9 @@ class nodeFunctions {
               const ID = IDobj.low;
               entry.id = ID;
               delete entry.identity;
+            }
+            if (entry && entry.properties && entry.properties.count) {
+              entry.properties.count = entry.properties.count.low;
             }
           }
         }

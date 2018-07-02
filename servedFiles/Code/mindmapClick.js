@@ -438,6 +438,7 @@ class mindmapClick {
     this.d3Functions.update();
     this.nextSibling = null;
     this.prevSibling = null;
+    this.selectedRoots = [];
     if (this.parentNode) {
       this.parentNode.classList.remove("parent");
       this.parentNode = null;
