@@ -97,7 +97,14 @@ class d3Functions {
         let high = length;
         while (low <= high) {
           let mid = Math.ceil((low + high)/2);
-          if (savedIndices.indexOf(commonChildren[indices[mid].id]) < savedIndices.indexOf(commonChildren[i].id)) {
+          const thisObj = commonChildren[i];
+          const thisID = thisObj.id;
+          const thisSavedIndex = savedIndices.indexOf(thisID);
+          const indexToCompare = indices[mid];
+          const compareObject = commonChildren[indexToCompare];
+          const compareID = compareObject.id;
+          const compareSavedIndex = savedIndices.indexOf(compareID);
+          if (compareSavedIndex < thisSavedIndex) {
             low = mid + 1;
           }
           else {
@@ -131,6 +138,22 @@ class d3Functions {
     } // end if (at least two common children; need to find LIS)
   }
 
+  isRearranged(d) {
+    const d3 = d.data.instance;
+    const current = d3.objects[d.data.id].JSobj;
+    const saved = d3.savedObjects[d.data.id];
+    const currentParentID = current.parent;
+    const savedParentID = saved.parent;
+    const currentParent = d3.objects[currentParentID];
+    //  If this label still has the same non-null parent, and that parent has a LIS array which doesn't include this label
+    // (meaning that it has at least two children and this label is NOT one of the ones which is considered "in order"),
+    // then this node should be marked as rearranged, so return true. Otherwise, return false.
+    if (currentParentID == savedParentID && currentParent && currentParent.JSobj.LIS && !(currentParent.JSobj.LIS.includes(d.data.id))) {
+      return true;
+    }
+    else return false;
+  }
+
   update(data) { // Creates a group for each item in the array of roots, then calls buildTree to make a tree for each group.
     // If data was passed in, that means this was called right after saving a map under a new ID.
     // Update this.parent.mapID accordingly.
@@ -139,7 +162,7 @@ class d3Functions {
     }
 
     const groups = d3.select(`#svg${this.widgetID}`).selectAll("g.tree")
-      .data(this.roots, function(d) {return d.name;});
+      .data(this.roots, function(d) {return d.id;});
 
     const newTrees = groups.enter()
       .append("g")
@@ -202,7 +225,7 @@ class d3Functions {
     // Finally, see if there's a new (blank) node. If so, append a text box to it to get the name,
     // then make it NOT the new node anymore. Similarly, check for a new object (whether attached to a blank node or not).
     // If there is one, make it the selected node.
-    if (this.editNode) {
+    if (this.editNode != null) {
       const newNode = app.domFunctions.getChildByIdr(this.SVG_DOM, `node${this.editNode}`);
       this.SVG_DOM.parentElement.appendChild(this.editDOM);
       this.editDOM.hidden=false;
@@ -559,7 +582,6 @@ class d3Functions {
 
     allNodes.each(this.__data__.instance.createLongestIncreasingSubsequence);
 
-
     allNodes.selectAll(".nodeRect")
       .classed("changedData", function(d) {
         const saved = d.data.instance.savedObjects[d.data.id];
@@ -568,7 +590,8 @@ class d3Functions {
           if (saved.type != d.data.type) return true; // type...
           if (saved.nodeID != d.data.nodeID) return true; // node ID...
           if (saved.parent != d.data.parent) return true; // parent...
-          if (saved.notes != d.data.notes) return true; // or notes have changed, it's changed data.
+          if (saved.notes != d.data.notes) return true; // or notes have changed...
+          if (d.data.instance.isRearranged(d)) return true; // or it's been rearranged, it's changed data.
         }
         return false; // Otherwise it's not changed (it's either new or the same as it was before).
       })

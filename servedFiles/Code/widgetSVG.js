@@ -702,7 +702,7 @@ class widgetSVG {
   }
 
   saveInput(edit) {
-    if (this.d3Functions.editNode) { // This SHOULD only run when there's a node being edited, but it doesn't hurt to check
+    if (this.d3Functions.editNode != null) { // This SHOULD only run when there's a node being edited, but it doesn't hurt to check
       const editObj = this.d3Functions.objects[this.d3Functions.editNode].JSobj;
       editObj.name = edit.value;
       this.d3Functions.editNode = null;
