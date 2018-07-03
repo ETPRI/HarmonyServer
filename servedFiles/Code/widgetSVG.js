@@ -236,25 +236,9 @@ class widgetSVG {
     const relX = x - left + parseInt(viewBox[0]);
     const relY = y - top + parseInt(viewBox[1]);
 
-    const newObj = this.d3Functions.newObj();
-    newObj.x = relX;
-    newObj.y = relY;
-    newObj.nodeID = data.nodeID;
-    newObj.name = name;
-    newObj.type = data.type;
-    newObj.details = data.details;
-    this.d3Functions.editNode = null; // NOTE: Fix this; we shouldn't be assigning a variable just to unassign it later
-
-    // Trying to get reference to this object into the data, where anonymous functions can use it
-    newObj.instance = this.d3Functions;
-    for (let i = 0; i < newObj.details.length; i++) {
-      newObj.details[i].instance = this.d3Functions;
-    }
-
     let group = null;
-
-    //  Check whether user dropped ONTO a nodeRect.
-    // If so, instead of adding the new node as a root, call connectNode.
+    //  Check whether user dropped ONTO an existing label.
+    // If so, instead of adding the new node as a new label, call connectNode to connect it to that existing label.
     const rects = this.clicks.checkClickedNode(null, x, y);
     if (rects) {
       for (let i = 0; i < rects.length; i++) {
@@ -263,28 +247,46 @@ class widgetSVG {
         }
       }
     }
-
-    if (group) {
-      this.connectNode(group, newObj);
+    if (group) { // If there is some group such that the data was dropped onto its main rectangle
+      // Don't make a new object - just add "instance" to each details row and pass data to connectNode
+      for (let i = 0; i < data.details.length; i++) {
+        data.details[i].instance = this.d3Functions;
+      }
+      this.connectNode(group, data);
     }
 
-    // now check if user dropped NEAR a label. This can be determined by checking parentNode in clicks.
-    // If so, add the new node as a child of that label, then reset clicks variables.
-    else if (this.clicks.parentNode) {
-      this.clicks.dropConnect(this.clicks.parentNode, newObj);
-      // Remove parent node and formatting
-      this.clicks.parentNode.classList.remove("parent");
-      this.clicks.parentNode = null;
-      this.clicks.nextSibling = null;
-      this.clicks.prevSibling = null;
+    else { // If we didn't drop onto an existing label, we're making a new one, so call newObj.
+      const newObj = this.d3Functions.newObj();
+      newObj.x = relX;
+      newObj.y = relY;
+      newObj.nodeID = data.nodeID;
+      newObj.name = name;
+      newObj.type = data.type;
+      newObj.details = data.details;
+      this.d3Functions.editNode = null; // NOTE: Fix this; we shouldn't be assigning a variable just to unassign it later
 
-    }
+      // Trying to get reference to this object into the data, where anonymous functions can use it
+      newObj.instance = this.d3Functions;
+      for (let i = 0; i < newObj.details.length; i++) {
+        newObj.details[i].instance = this.d3Functions;
+      }
 
-    // If it wasn't dropped on or near a label, add it as a root.
-    else {
-      this.d3Functions.roots.push(newObj);
-    }
+      // now check if user dropped NEAR a label. This can be determined by checking parentNode in clicks.
+      // If so, add the new node as a child of that label, then reset clicks variables.
+      if (this.clicks.parentNode) {
+        this.clicks.dropConnect(this.clicks.parentNode, newObj);
+        // Remove parent node and formatting
+        this.clicks.parentNode.classList.remove("parent");
+        this.clicks.parentNode = null;
+        this.clicks.nextSibling = null;
+        this.clicks.prevSibling = null;
+      }
 
+      // If it wasn't dropped on or near a label, add it as a root.
+      else {
+        this.d3Functions.roots.push(newObj);
+      }
+    } // end else (didn't drop onto an existing label)
     this.d3Functions.update();
 
     // Make this the active widget
@@ -523,16 +525,18 @@ class widgetSVG {
       if (this.d3Functions.objects[i]) { // If the label still exists
         // Check whether it overlaps the select box, and add it to the list of selected nodes if it does
         const label = this.d3Functions.objects[i].DOMelements.node;
-        const box = label.getBoundingClientRect();
-        const inHorizontal = (select.left < box.left && box.left < select.right)
-                          || (select.left < box.right && box.right < select.right);
-        const inVertical = (select.top < box.top && box.top < select.bottom)
-                        || (select.top < box.bottom && box.bottom < select.bottom);
-        if (inVertical && inHorizontal) {
-          this.selectedNodes.add(label.parentElement);
-          label.parentElement.classList.add("selected");
+        if (label) {
+          const box = label.getBoundingClientRect();
+          const inHorizontal = (select.left < box.left && box.left < select.right)
+                            || (select.left < box.right && box.right < select.right);
+          const inVertical = (select.top < box.top && box.top < select.bottom)
+                          || (select.top < box.bottom && box.bottom < select.bottom);
+          if (inVertical && inHorizontal) {
+            this.selectedNodes.add(label.parentElement);
+            label.parentElement.classList.add("selected");
+          }
         }
-      }
+      } //
     }
 
     // Remove box
