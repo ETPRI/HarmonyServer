@@ -672,7 +672,7 @@ class widgetSVG {
       obj.type = "mindmap";
       obj.properties = {};
       obj.properties.roots = app.stringEscape(JSON.stringify(rootsCopy));
-      obj.properties.count = this.d3Functions.count.low;
+      obj.properties.count = this.d3Functions.count;
       obj.properties.name = name;
       app.nodeFunctions.createNode(obj, this.d3Functions, 'update');
     }
@@ -689,7 +689,7 @@ class widgetSVG {
       obj.changes.push(roots);
       const count = {};
       count.property = "count";
-      count.value = this.d3Functions.count.low;
+      count.value = this.d3Functions.count;
       obj.changes.push(count);
       const nameObj = {};
       nameObj.property = "name";
