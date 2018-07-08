@@ -7,40 +7,63 @@ class mindmapKeypress {
   }
 
   keyPressed(evnt) {
-    if (evnt.target != this.d3Functions.editDOM) {
       switch (evnt.which) {
-        case 9:
+        case 9: // Tab key
+          // If a node was being edited, stop editing first, then apply keypress
+          if (evnt.target == this.d3Functions.editDOM) {
+            this.parent.saveInput(this.d3Functions.editDOM);
+          }
           evnt.preventDefault();  // Don't jump around the page
           this.tabFunction();
           break;
-        case 13:
-          this.enterFunction();
+        case 13: // This is the Enter key. It should NOT trigger if the user is editing a label, because Enter means STOP EDITING.
+          if (evnt.target != this.d3Functions.editDOM) {
+            this.enterFunction();
+          }
           break;
-        case 27:
+        case 27: // Escape key
+          // If a node was being edited, stop editing first, then apply keypress
+          if (evnt.target == this.d3Functions.editDOM) {
+            this.parent.saveInput(this.d3Functions.editDOM);
+          }
           this.escapeKey();
           break;
-        case 37:
-          evnt.preventDefault(); // don't scroll
-          this.leftArrow();
+        case 37: // Arrow keys should NOT trigger while editing a label, because the user may want to move through what they've typed
+          if (evnt.target != this.d3Functions.editDOM) {
+            evnt.preventDefault(); // don't scroll
+            this.leftArrow();
+          }
           break;
-        case 38:
+        case 38: // Up arrow
+          // If a node was being edited, stop editing first, then apply keypress
+          if (evnt.target == this.d3Functions.editDOM) {
+            this.parent.saveInput(this.d3Functions.editDOM);
+          }
           evnt.preventDefault(); // Don't scroll
           this.upDownArrow(-1); // On an up arrow, go to the previous sibling - SUBTRACT 1 from current index
           break;
-        case 39:
-          evnt.preventDefault(); // don't scroll
-          this.rightArrow();
+        case 39: // Arrow keys should NOT trigger while editing a label, because the user may want to move through what they've typed
+          if (evnt.target != this.d3Functions.editDOM) {
+            evnt.preventDefault(); // don't scroll
+            this.rightArrow();
+          }
           break;
-        case 40:
+        case 40: // Down arrow
+          // If a node was being edited, stop editing first, then apply keypress
+          if (evnt.target == this.d3Functions.editDOM) {
+            this.parent.saveInput(this.d3Functions.editDOM);
+          }
           evnt.preventDefault(); // Don't scroll
           this.upDownArrow(1); // on a down arrow, go to the next sibling -- ADD 1 to current index
           break;
-        case 46:
-        case 8:
-          this.deleteKey();
+        case 46: // These are the backspace and delete keys. They should NOT trigger while editing a label,
+        case 8: // because the user may want to correct a mistake.
+          if (evnt.target != this.d3Functions.editDOM) {
+            this.deleteKey();
+          }
           break;
       }
-    }
+    // }
   }
 
   // deselects the selected node

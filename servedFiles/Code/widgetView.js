@@ -35,13 +35,16 @@ class widgetView {
     obj.middle.type = "View";
     obj.middle.properties = {};
     obj.middle.properties.direction = relationType;
+    obj.middle.return = false;
     obj.end = {};
-    obj.end.name = "node";
     obj.end.id = nodeID;
+    obj.end.return = false;
     obj.rel1 = {};
     obj.rel1.type = "Owner";
+    obj.rel1.return = false;
     obj.rel2 = {};
     obj.rel2.type = "Subject";
+    obj.rel2.return = false;
     app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
   }
 
@@ -140,7 +143,7 @@ class widgetView {
 
       // Each row contains the person's ID...
       const IDcell = document.createElement('td');
-      const ID = document.createTextNode(`${data[i].user.ID}`);
+      const ID = document.createTextNode(`${data[i].user.id}`);
       IDcell.appendChild(ID);
       IDcell.setAttribute("idr", `id${i}`);
 
@@ -171,7 +174,7 @@ class widgetView {
       }
       innerTbody.appendChild(innerRow);
 
-      const dataID = data[i].user.ID;
+      const dataID = data[i].user.id;
       if (app.login.userID && app.login.userID == dataID) {      // if this row represents the logged-in user...
         innerRow.classList.add("loggedIn", "activeView");            // format it...
         nameCell.setAttribute("idr", "loggedInView");                // give the cell with their name an idr, so it can be logged and replayed...
@@ -280,13 +283,16 @@ class widgetView {
     obj.middle.type = "View";
     obj.middle.properties = {};
     obj.middle.properties.direction = this.relationType;
+    obj.middle.return = false;
     obj.end = {};
-    obj.end.name = "node";
     obj.end.id = this.nodeID;
+    obj.end.return = false;
     obj.rel1 = {};
     obj.rel1.type = "Owner";
+    obj.rel1.return = false;
     obj.rel2 = {};
     obj.rel2.type = "Subject";
+    obj.rel2.return = false;
     app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
 
     // log click
@@ -419,30 +425,32 @@ class widgetView {
   }
 
   linkViewUser(data) { // Take the newly-created node and connect it to the user
-    const viewID = data[0].view.ID;
+    const viewID = data[0].view.id;
 
     const obj = {};
     obj.from = {};
-    obj.from.name = "user";
     obj.from.id = app.login.userID;
+    obj.from.return = false;
     obj.to = {};
-    obj.to.name = "view";
     obj.to.id = viewID;
+    obj.to.return = false;
     obj.rel = {};
     obj.rel.type = "Owner";
+    obj.rel.return = false;
     app.nodeFunctions.createRelation(obj, this, 'linkViewNode', viewID);
   }
 
   linkViewNode(data, viewID) { // Connect the new view to the node and move on to addComplete
     const obj = {};
     obj.from = {};
-    obj.from.name = "view";
     obj.from.id = viewID;
+    obj.from.return = false;
     obj.to = {};
-    obj.to.name = "node";
     obj.to.id = this.nodeID;
+    obj.to.return = false;
     obj.rel = {};
     obj.rel.type = "Subject";
+    obj.rel.return = false;
     app.nodeFunctions.createRelation(obj, this, 'addComplete');
   }
 

@@ -310,6 +310,7 @@ presetCalendars() {
 	obj.properties = {};
 	obj.properties.name = "dummy";
 	obj.properties.description = "dummy calendar";
+	obj.return = false;
 	obj.merge = true;
 
 	this.nodeFunctions.createNode(obj);
