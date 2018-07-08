@@ -1,0 +1,43 @@
+<html>
+   <body>
+
+      <table>
+        <tr>
+          <td>Gremlin steps <input type = "button" value = "Submit" onclick="sendRequest()">
+            <a href="GremlinExamples.html">Examples</a></td>
+          <td>Step Stack <input type="button" onclick="document.getElementById('StepStack').innerHTML=''" value="Clear"></td>
+        <tr>
+          <td><textarea id = "gremlinSteps" rows="20" cols="60">g.V()</textarea></td>
+          <td><textarea id = "StepStack" rows="20" cols="60"></textarea></td>
+       </tr>
+      </table>
+
+      <h2>Gremlin Responce</h2>
+      <div id="gremlinResponse">
+      </div>
+
+      <script>
+
+      function sendRequest() {
+        var xhttp = new XMLHttpRequest();
+
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            // update page with result from server
+          document.getElementById("gremlinResponse").innerHTML = this.responseText;
+          }
+        };
+
+        xhttp.open("POST", "gremlin");
+        var f = document.getElementById("gremlinSteps");
+        const steps = f.value;
+        obj = {"gremlinSteps": steps};
+        xhttp.send(JSON.stringify(obj));         // send request to server
+        f = document.getElementById("StepStack");
+        f.innerHTML += steps+"&#10;";  //.&#13;
+      }
+      </script>
+
+
+   </body>
+</html>
