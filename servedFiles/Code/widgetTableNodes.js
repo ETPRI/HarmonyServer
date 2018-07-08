@@ -196,7 +196,7 @@ class widgetTableNodes {
       // Create a cell for ID and append it
       cell = document.createElement('td');
       row.appendChild(cell);
-      cell.outerHTML = `<td idr = "edit${i}" onClick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${r[i]["n"].ID}</td>`;
+      cell.outerHTML = `<td idr = "edit${i}" onClick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${r[i]["n"].id}</td>`;
 
       // For each display field, create a cell and append it
       for (let j=0; j<this.fieldsDisplayed.length; j++) {
@@ -422,12 +422,12 @@ class widgetTableNodes {
     // Search for the relation to remove
     const obj = {};
     obj.from = {};
-    obj.from.name = "user";
     obj.from.id = ID;
+    obj.from.return = false;
     obj.to = {};
     obj.to.type = "LoginTable"; // If this user has a relation to ANY login table, find it (and later, extract login details and delete it)
+    obj.to.return = false;
     obj.rel = {};
-    obj.rel.name = "rel";
     obj.rel.type = "Permissions";
     app.nodeFunctions.changeRelation(obj, this, 'checkPermission', ID, button, toAdd);
   }
@@ -436,8 +436,8 @@ class widgetTableNodes {
     if (data.length > 0 && data[0].rel.properties.username && data[0].rel.properties.password) { // If a relation to delete was found
       const obj = {};
       obj.rel = {};
-      obj.rel.name = "rel";
-      obj.rel.id = data[0].rel.ID;
+      obj.rel.id = data[0].rel.id;
+      obj.rel.return = false;
       app.nodeFunctions.deleteRelation(obj, this, 'givePermission', toAdd, ID, data[0].rel.properties.username, data[0].rel.properties.password);
     }
 
@@ -474,18 +474,19 @@ class widgetTableNodes {
 
     const obj = {};
     obj.from = {};
-    obj.from.name = "user";
     obj.from.id = ID;
+    obj.from.return = false;
     obj.to = {};
-    obj.to.name = "permTable";
     obj.to.type = "LoginTable";
     obj.to.properties = {};
     obj.to.properties.name = toAdd;
+    obj.to.return = false;
     obj.rel = {};
     obj.rel.type = "Permissions";
     obj.rel.properties = {};
     obj.rel.properties.username = name;
     obj.rel.properties.password = password;
+    obj.rel.return = false;
     app.nodeFunctions.createRelation(obj, this, 'search');
   }
 
@@ -495,14 +496,14 @@ class widgetTableNodes {
 
     const obj = {};
     obj.from = {};
-    obj.from.name = "user";
     obj.from.id = ID; // From this user
+    obj.from.return = false;
     obj.to = {};
-    obj.to.name = "permTable";
     obj.to.type = "LoginTable"; // To any login table
+    obj.to.return = false;
     obj.rel = {};
-    obj.rel.name = "rel";
     obj.rel.type = "Permissions"; // Any permissions link
+    obj.rel.return = false;
     app.nodeFunctions.deleteRelation(obj, this, 'search');
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes

@@ -45,8 +45,8 @@ constructor(callerID, label, id, name) {
     obj.required.name = "n";
     obj.required.id = id;
     obj.optional = {};
-    obj.optional.name = "a";
     obj.optional.id = app.login.userID;
+    obj.optional.return = false;
     obj.rel = {};
     obj.rel.name = "r";
     obj.rel.type = "Trash";
@@ -59,9 +59,6 @@ constructor(callerID, label, id, name) {
 
 finishConstructor(data) {
   if (data) { // If data were passed in, add them to the table
-    // if (data[0].n.ID) {
-    //   data[0].n.identity = data[0].n.ID;
-    // }
     this.dataNode = data[0].n;
 
     const obj = {};
@@ -94,12 +91,12 @@ finishConstructor(data) {
 
 buildStart() {
   this.containedWidgets.push(app.idCounter);
-  new widgetView(this.startDOM, this.dataNode.ID, "start", this, 'buildEnd');
+  new widgetView(this.startDOM, this.dataNode.id, "start", this, 'buildEnd');
 }
 
 buildEnd() {
   this.containedWidgets.push(app.idCounter);
-  new widgetView(this.endDOM, this.dataNode.ID, "end");
+  new widgetView(this.endDOM, this.dataNode.id, "end");
 }
 
 buildWidget() { // public - build table header
@@ -111,7 +108,7 @@ buildWidget() { // public - build table header
 
   if (this.dataNode) {
     // we are edit mode
-    id = this.dataNode.ID;
+    id = this.dataNode.id;
     name = this.dataNode.properties.name;
   }
 
@@ -275,29 +272,30 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
 trashNode(widgetElement) {
   this.dataNode.properties._trash = true;
   const user = app.login.userID;
-  const node = this.dataNode.ID;
+  const node = this.dataNode.id;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
   reasonInp.setAttribute("class",""); // remove changedData class from reason
 
   const obj = {};
   obj.from = {};
-  obj.from.name = "user";
   obj.from.id = user;
+  obj.from.return = false;
   obj.to = {};
-  obj.to.name = "node";
   obj.to.id = node;
+  obj.to.return = false;
   obj.rel = {};
   obj.rel.type = "Trash";
   obj.rel.merge = true;
   obj.rel.properties = {};
   obj.rel.properties.reason = app.stringEscape(reason);
+  obj.rel.return = false;
   app.nodeFunctions.createRelation(obj, this, 'trashUntrash', widgetElement);
 }
 
 updateReason(widgetElement) {
   const user = app.login.userID;
-  const node = this.dataNode.ID;
+  const node = this.dataNode.id;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
   this.dataNode.properties.reason = reason;
@@ -305,14 +303,14 @@ updateReason(widgetElement) {
 
   const obj = {};
   obj.from = {};
-  obj.from.name = "user";
   obj.from.id = user;
+  obj.from.return = false;
   obj.to = {};
-  obj.to.name = "node";
   obj.to.id = node;
+  obj.to.return = false;
   obj.rel = {};
-  obj.rel.name = "rel";
   obj.rel.type = "Trash";
+  obj.rel.return = false;
   obj.changes = [];
   const change = {};
   change.item = "rel";
@@ -325,18 +323,18 @@ updateReason(widgetElement) {
 untrashNode(widgetElement) {
   this.dataNode.properties._trash = false;
   const user = app.login.userID;
-  const node = this.dataNode.ID;
+  const node = this.dataNode.id;
 
   const obj = {};
   obj.from = {};
-  obj.from.name = "user";
   obj.from.id = user;
+  obj.from.return = false;
   obj.to = {};
-  obj.to.name = "node";
   obj.to.id = node;
+  obj.to.return = false;
   obj.rel = {};
-  obj.rel.name = "rel";
   obj.rel.type = "Trash";
+  obj.rel.return = false;
   app.nodeFunctions.deleteRelation(obj, this, 'trashUntrash', widgetElement);
 }
 
@@ -369,8 +367,7 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
 
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
   this.dataNode = data[0].n; // takes single nodes
-  const id = this.dataNode.ID;
-  // this.dataNode.identity = this.dataNode.ID; // NOTE: Kludge; remove later
+  const id = this.dataNode.id;
   const name = this.dataNode.properties.name;
   const nodeLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeLabel");
   nodeLabel.textContent=`${this.label}#${id}: ${name}`;
@@ -465,7 +462,7 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     const obj = {};
     obj.node = {};
     obj.node.name = "n";
-    obj.node.id = this.dataNode.ID;
+    obj.node.id = this.dataNode.id;
     obj.changes = data;
 
     app.nodeFunctions.changeNode(obj, this, 'saveData');

@@ -18,8 +18,8 @@ constructor(label, container, id) { // Label: the type of node described. ID: th
     obj.required.name = "n";
     obj.required.id = id;
     obj.optional = {};
-    obj.optional.name = "a";
     obj.optional.id = app.login.userID;
+    obj.optional.return = false;
     obj.rel = {};
     obj.rel.name = "r";
     obj.rel.type = "Trash";
@@ -47,9 +47,9 @@ finishConstructor(data) {
 
   if (data) { // I hate to do this twice, but I have to create dataNode before I can call buildWidget or buildDataNode,
               // and I have to call buildWidget before changing and using DOM elements.
-    if (data[0].reason) { // If a reason for trashing was returned (meaning that the node was already trashed by this user)...
+    if (data[0].r) { // If a reason for trashing was returned (meaning that the node was already trashed by this user)...
       this.dataNode.properties.trash=true;
-      this.dataNode.properties.reason = data[0].reason;             // Record in the dataNode that it was trashed already...
+      this.dataNode.properties.reason = data[0].r.properties.reason; // Record in the dataNode that it was trashed already...
       const trashCheck = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
       trashCheck.checked=true;
 
@@ -57,7 +57,7 @@ finishConstructor(data) {
       const reasonText = app.domFunctions.getChildByIdr(this.widgetDOM, 'reasonText');      // Show the reason prompt and textbox...
       reason.removeAttribute("hidden");
       reasonText.removeAttribute("hidden");
-      reason.setAttribute("value", data[0].reason);  // And prefill that textbox with the reason.
+      reason.setAttribute("value", data[0].r.properties.reason);  // And prefill that textbox with the reason.
     }
   }
 }

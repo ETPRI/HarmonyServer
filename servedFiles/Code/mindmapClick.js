@@ -4,10 +4,10 @@ class mindmapClick {
     this.d3Functions = d3Functions;
     this.parent = parent;
 
+    this.draggingNode = null;
     this.initialPosition = null;
     this.currentX = null;
     this.currentY = null;
-
 
     this.currentParent = null;
     this.parentNode = null;
@@ -21,7 +21,7 @@ class mindmapClick {
     this.frontCushion = 40;
   }
 
-  checkClickedNode(element, x, y) { // element is a group representing a node
+  checkClickedNode(group, x, y) { // element is a group representing a node
     const rects = this.SVG_DOM.getElementsByTagName("rect"); // Get all rectangles in the mind map
     const clickedRects = [];
 
@@ -34,18 +34,22 @@ class mindmapClick {
       const right = bound.right;
 
       let contains = false;
-      if (element != null) {
-        contains = element.contains(rect);
+      if (group != null) {
+        contains = group.contains(rect);
       }
 
       let hidden = false;
-      let ancestor = rect;
+      let ancestor = rect; // Go up through the rect's parents until either you hit something hidden (indicating that
+                           // the rect is hidden) or you reach the SVG (indicating that the rect is NOT part of something
+                           // hidden, and is therefore visible)
       while (ancestor.parentElement != this.SVG_DOM && !(ancestor.classList.contains("hidden"))) {
         ancestor = ancestor.parentElement;
       }
       hidden = ancestor.classList.contains("hidden");
 
-      if (top < y && y < bottom && left < x && x < right && !contains && !hidden) { // If the mouse is inside this element, and this is NOT the element being dragged or that element doesn't exist
+      if (top < y && y < bottom && left < x && x < right && !contains && !hidden) { // If the mouse is inside this element,
+                                                  // and this is NOT the element being dragged or that element doesn't exist,
+                                                  // and this element is visible
         clickedRects.push(rect);
       }
     }
@@ -66,7 +70,7 @@ class mindmapClick {
     if (evnt.which == 1) {
       const group = element.parentElement;
 
-      // Should select the label whether it itself, or a button in it, was clicked - IF it wasn't selected already
+      // Should select the label if it wasn't selected already
       if (!(this.parent.selectedNodes.has(group))) {
         this.parent.makeSelectedNode(group);
       }
@@ -91,6 +95,10 @@ class mindmapClick {
       }
 
       if (!inAnything) { // Now we get ready to actually move.
+        // The node actually being dragged - the one the mouse is over -
+        // will be A selected node, but not necessarily the ONLY one
+        this.draggingNode = element;
+
         // Because THIS is the closest SVG gets to a goddamn "Bring to front" command!
         // It just draws everything in whatever order it's listed in the DOM,
         // so to move something to the front you have to actually move the HTML that generates it forward!
@@ -189,7 +197,7 @@ class mindmapClick {
     }
   }
 
-  moveNode(element, evnt) { // Compares current to previous mouse position to see how much the element should have moved, then moves it by that much and updates the mouse position.
+  moveNode(rect, evnt) { // Compares current to previous mouse position to see how much the element should have moved, then moves it by that much and updates the mouse position.
     // Get amount of mouse movement, and update mouse position
     const dx = evnt.clientX - this.currentX;
     const dy = evnt.clientY - this.currentY;
@@ -205,7 +213,10 @@ class mindmapClick {
     }
 
     // Highlight the prospective parent. Add/remove highlighting from current parent if needed.
-    this.highlightParent(evnt.clientX, evnt.clientY, element.parentElement);
+    // Rather than the current MOUSE position, use the current position of the middle of the left side of the label
+    // NOTE: code walkthrough starts here
+    const nodeDetails = this.draggingNode.getBoundingClientRect();
+    this.highlightParent(nodeDetails.x, nodeDetails.y + this.d3Functions.nodeHeight/2, rect.parentElement);
 
     if (this.initialPosition) { // If any of the labels being dragged were children, this variable will be defined.
       if (Math.abs(this.currentX - this.initialPosition[0]) < this.detachDistance
@@ -226,12 +237,12 @@ class mindmapClick {
     }
   }
 
-  highlightParent(x, y, element) {
+  highlightParent(x, y, group) {
     // Check for parent and highlight it if found
     let parent = null;
-    if (element) { // Check for hovering over something first, but ONLY if moving an existing box!
-      const rectArray = this.checkClickedNode(element, x, y);
-      if (rectArray) { // If the mouse was over any rectangles, then check whether any of them was a nodeRect.
+    if (group) { // Check for hovering over something first, but ONLY if moving an existing box!
+      const rectArray = this.checkClickedNode(group, x, y);
+      if (rectArray) { // If the edge of the box was over any rectangles, then check whether any of them was a nodeRect.
         for (let i = 0; i < rectArray.length; i++) {
           if (rectArray[i].classList.contains("nodeRect")) {
             parent = rectArray[i].parentElement;
@@ -240,17 +251,18 @@ class mindmapClick {
       }
     }
 
-    if (!parent) {
-      parent = this.checkNear(element, x, y); // Then for being near enough to link to other elements
+    if (!parent) { // If no parent was found in the last step, next check for being near enough to link to other elements
+      parent = this.checkNear(group, x, y);
     }
 
-    if (parent && parent != this.parentNode) { // If a new parent has been found
+    if (parent && parent != this.parentNode) { // If a new parent (not the one already marked) has been found
       parent.classList.add("parent"); // Format it as the new parent, and remove formatting from the old parent
       if (this.parentNode) {
         this.parentNode.classList.remove("parent");
       }
       this.parentNode = parent;
     }
+
     if (!parent && this.parentNode) { // If there's an existing parent node, but no node should be the parent node
       this.parentNode.classList.remove("parent"); // remove parent formatting
       this.parentNode = null;
@@ -262,14 +274,14 @@ class mindmapClick {
     let prev = null;
     let next = null;
     let parent = null;
-    for (let i = 0; i < groups.length; i++) { // Loop through all rectangles
+    for (let i = 0; i < groups.length; i++) { // Loop through all labels
       const group=groups[i];
       const bound = group.getBoundingClientRect(); // Get bounds of each rectangle
       const top = bound.top;
       const bottom = bound.bottom;
       const left = bound.left;
       const right = bound.right;
-      let contains = false;
+      let contains = false; // determine whether this rectangle is the one being dragged
       if (element) {
         contains = element.contains(group);
       }
@@ -277,13 +289,19 @@ class mindmapClick {
       // Check for prospective parent...
       const kids = group.__data__.data.children;
       const noKids = (kids == null || kids.length < 1); // true if the group represents a node with no chldren visible
+      // If the point that was passed in is between the top and bottom of the rectangle,
+      // and within this.frontCushion of the right edge of the rectangle,
+      // and the rectangle isn't part of the group being dragged and has no children,
+      // then the group being dragged will become its child and there's no need to worry about order
       if (top < y && y < bottom && right < x && x < right + this.frontCushion && !contains && noKids) {
         parent = group;
       }
 
-      // Then check for prospective sibling
+      // Then check for prospective sibling. Note that to be a sibling, the group must have a parent
+      // (which will become the new parent of the group being dragged)
       if (!parent) {
         const notRoot = !(group.__data__.data.parent == "null"); // true if the group represents a node that isn't a root
+        // Check for next sibling (the point that was passed in is just ABOVE this group, and this group has a parent)
         const topBound = top - 20;
         const bottomBound = top;
         if (topBound < y && y < bottomBound && left < x && x < right && !contains && notRoot) {
@@ -295,6 +313,7 @@ class mindmapClick {
 
       if (!parent) {
         const notRoot = !(group.__data__.data.parent == "null"); // true if the group represents a node that isn't a root
+        // Now check for previous sibling (the point that was passed in is just BELOW this group, and there's a parent)
         const topBound = bottom;
         const bottomBound = bottom + 20;
         if (topBound < y && y < bottomBound && left < x && x < right && !contains && notRoot) {
@@ -304,6 +323,10 @@ class mindmapClick {
         } // end if (group is previous sibling)
       } // end if (parent not found)
     } // end for (all labels)
+
+    // At this point, the prospective parent has been found, and so has the next or previous sibling, if any.
+    // Set the siblings for later use and return the parent.
+
     this.prevSibling = prev;
     this.nextSibling = next;
     return parent;
@@ -345,7 +368,6 @@ class mindmapClick {
       // If the element ISN'T about to disappear, just restore its onmouseout attribute.
       element.setAttribute("onmouseout", "app.widget('checkHideButtons', this, event)");
     }
-    // element.setAttribute("onmousedown", "app.widget('click', this, event, 'selectNode')");
 
     /* If a child became a root, a root became a child, or a child moved from one tree to another,
      then its DOM element will be removed and replaced. Remove it from the set of selected nodes,
@@ -416,6 +438,7 @@ class mindmapClick {
     this.d3Functions.update();
     this.nextSibling = null;
     this.prevSibling = null;
+    this.selectedRoots = [];
     if (this.parentNode) {
       this.parentNode.classList.remove("parent");
       this.parentNode = null;
