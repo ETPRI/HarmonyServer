@@ -22,19 +22,22 @@
         var xhttp = new XMLHttpRequest();
 
         xhttp.onreadystatechange = function() {
+          // call back funtion when state of send changes
           if (this.readyState == 4 && this.status == 200) {
-            // update page with result from server
+            // update page with result from server, server is done
           document.getElementById("gremlinResponse").innerHTML = this.responseText;
           }
         };
 
-        xhttp.open("POST", "gremlin");
+        xhttp.open("POST", "");
         var f = document.getElementById("gremlinSteps");
         const steps = f.value;
-        obj = {"gremlinSteps": steps};
+        obj = {"server": "gremlin", "query": steps};
+
         xhttp.send(JSON.stringify(obj));         // send request to server
-        f = document.getElementById("StepStack");
-        f.innerHTML += steps+"&#10;";  //.&#13;
+
+        f = document.getElementById("StepStack");// add new line to steps
+        f.innerHTML += steps+"&#10;";
       }
       </script>
 
