@@ -1,6 +1,7 @@
 /*
 
-change it back to branchDavid
+small web server that serves static files and a
+REST API into a database
 
 */
 
@@ -22,6 +23,7 @@ http.createServer(function (request, response) {
       runGremlin(q.query.gremlinSteps, response);
       return;
     } else if (request.method === "POST") {
+      // REST API
       let body = '';
       request.on('data', chunk => {
           body += chunk.toString(); // convert Buffer to string
@@ -29,17 +31,15 @@ http.createServer(function (request, response) {
       request.on('end', () => {
         response.statusCode = 200;
         response.setHeader('Content-Type', 'text/plain');
-        var query= JSON.parse(body).query;
-        if (query === 'server:exit') {
-            // stop the node server
-            driver.close();
-            process.exit(0);
+        var obj = JSON.parse(body);
+        if (obj.server === "neo4j") {
+          runNeo4j(obj.query, response);
+        } else if (obj.server === "gremlin") {
+          runGremlin2(obj.query, response);
         } else {
-          // query Neo4j
-          runNeo4j(query, response);
+          console.log("Error server = %s\n", obj.server );
         }
       });
-
       return;
     }
 
@@ -118,6 +118,14 @@ const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo
 function runNeo4j(query, response)
 {
     console.log('runNeo4j - %s',query);
+
+    if (query === 'server:exit') {
+        // stop the node server
+        driver.close();
+        process.exit(0);
+        return;
+    }
+
     const session = driver.session();
     var ret = [];
 
@@ -141,3 +149,53 @@ function runNeo4j(query, response)
         }
       });
 }
+
+
+// ------------------------------------------ Gremlin stuff ---------
+
+const Gremlin = require('gremlin');
+const config  = require('./config');
+const async   = require('async');
+
+const client = Gremlin.createClient(
+    443,
+    config.endpoint,
+    {
+        "session": false,
+        "ssl": true,
+        "user": `/dbs/${config.database}/colls/${config.collection}`,
+        "password": config.primaryKey
+    }
+);
+
+function runGremlin2(query, response)
+{
+    console.log('runGremlin - %s',query);
+    return(client.execute(query, { }, (err, results) => {
+        if (err) {
+          console.error(err);
+          response.end(err);
+        } else {
+          const ret = JSON.stringify(results,null,4);
+          console.log("Result: %s\n", ret);
+          response.end(ret);
+        }
+    })) ;
+}
+//
+// // this is sequential code, add asyc back, not sure the best way
+// function runGremlin(query, response)
+// {
+//     console.log('runGremlin - %s',query);
+//     client.execute(query, { }, (err, results) => {
+//         if (err) {
+//           console.error(err);
+//           response.end(err);
+//         } else {
+//           const ret = JSON.stringify(results);
+//           console.log("Result: %s\n", ret);
+//           response.end(ret);
+//         }
+//
+//     });
+// }
