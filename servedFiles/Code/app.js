@@ -12,6 +12,8 @@ constructor() {
 	this.idCounter = 0;  // init id counter - used get getElementById, is the id of the widget
 
 	// used by class DB to access neo4j database
+	// this.authToken = neo4j.v1.auth.basic("neo4j", "paleo3i");
+	// this.driver    = neo4j.v1.driver("bolt://localhost", this.authToken, {encrypted:false});
 
 	this.activeWidget = null; // widget being dragged
 }
