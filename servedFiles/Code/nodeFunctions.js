@@ -96,8 +96,8 @@ class nodeFunctions {
       }
     };
 
-    xhttp.open("POST", "query");
-    const queryObject = {"query": query};
+    xhttp.open("POST","");
+    const queryObject = {"server": "neo4j", "query": query};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
