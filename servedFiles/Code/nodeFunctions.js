@@ -2,105 +2,6 @@ class nodeFunctions {
   constructor() {
   }
 
-  // HELPER FUNCTIONS
-  buildSearchString(obj, strings, whereString, defaultName) {
-    let string = defaultName;
-
-    if (!(obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
-      if (strings.ret == "") {
-        strings.ret = `return ${defaultName}`;
-      }
-      else strings.ret += `, ${defaultName}`;
-
-      if (obj.name) {
-        strings.ret += ` as ${obj.name}`;
-      }
-    }
-
-    if (obj.type) {
-      string += `:${obj.type}`;
-    }
-
-    if (obj.properties) {
-      let props = "";
-      for (let prop in obj.properties) {
-        if (props == "") {
-          props = `${prop}: "${obj.properties[prop]}"`;
-        }
-        else props += `, ${prop}: "${obj.properties[prop]}"`;
-      }
-      string += `{${props}}`;
-    }
-
-    if (obj.id && whereString) {
-      if (strings[whereString] == "") {
-        strings[whereString] = `where ID(${defaultName}) = ${obj.id}`;
-      }
-      else strings[whereString] += ` and ID(${defaultName}) = ${obj.id}`;
-    }
-
-    return string;
-  }
-
-  buildChangesString(changeArray) {
-    let changes = "";
-    for (let i = 0; i < changeArray.length; i++) {
-      let value = `"${changeArray[i].value}"`;
-      if (changeArray[i].string === false) { // default is that the new value is a string, but can be overridden
-        value = `${changeArray[i].value}`;
-      }
-
-      if (changes == "") {
-        changes = `set ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
-      }
-      else changes += `, ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
-    }
-    return changes;
-  }
-
-  sendQuery(query, methodObj, methodName, ...args) {
-    const xhttp = new XMLHttpRequest();
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        // Results should be an array of row objects. Each row object will contain one object per item to return.
-        // Each of THOSE may contain an identity object or a count object which should be rewritten as a simple number.
-        // Also, row objects from metadata queries may include an id or count variable, which should also be rewritten.
-        const result = JSON.parse(this.responseText);
-        for (let i = 0; i < result.length; i++) {
-          const row = result[i];
-          if (row.count) {
-            row.count = row.count.low;
-          }
-          if (row.id) {
-            row.id = row.id.low;
-          }
-
-          for (let item in row) {
-            const entry = row[item];
-            if (entry && entry.identity) {
-              const IDobj = entry.identity;
-              const ID = IDobj.low;
-              entry.id = ID;
-              delete entry.identity;
-            }
-            if (entry && entry.properties && entry.properties.count) {
-              entry.properties.count = entry.properties.count.low;
-            }
-          }
-        }
-        // send results to desired function
-        if (methodObj && methodName) {
-          methodObj[methodName](result, ...args);
-        }
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "neo4j", "query": query};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
-  }
-
   // BASIC FUNCTIONS
   /*
   Creates or merges a new node
@@ -517,7 +418,7 @@ class nodeFunctions {
             // NOTHING can come before OR after the specified value (string must match it exactly)
             w1 = w.replace('#s#',"").replace('#E#','');      break;
           default:
-            alert("Error: search type for a string field is not 'S', 'M', 'E' or '='.");
+            app.error("Error: search type for a string field is not 'S', 'M', 'E' or '='.");
         }
         where += w1;
       }
@@ -590,5 +491,104 @@ class nodeFunctions {
     }
 
     this.sendQuery(metadataQueries[queryName], methodObj, methodName, ...args);
+  }
+
+  // HELPER FUNCTIONS BELOW THIS POINT
+  buildSearchString(obj, strings, whereString, defaultName) {
+    let string = defaultName;
+
+    if (!(obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
+      if (strings.ret == "") {
+        strings.ret = `return ${defaultName}`;
+      }
+      else strings.ret += `, ${defaultName}`;
+
+      if (obj.name) {
+        strings.ret += ` as ${obj.name}`;
+      }
+    }
+
+    if (obj.type) {
+      string += `:${obj.type}`;
+    }
+
+    if (obj.properties) {
+      let props = "";
+      for (let prop in obj.properties) {
+        if (props == "") {
+          props = `${prop}: "${obj.properties[prop]}"`;
+        }
+        else props += `, ${prop}: "${obj.properties[prop]}"`;
+      }
+      string += `{${props}}`;
+    }
+
+    if (obj.id && whereString) {
+      if (strings[whereString] == "") {
+        strings[whereString] = `where ID(${defaultName}) = ${obj.id}`;
+      }
+      else strings[whereString] += ` and ID(${defaultName}) = ${obj.id}`;
+    }
+
+    return string;
+  }
+
+  buildChangesString(changeArray) {
+    let changes = "";
+    for (let i = 0; i < changeArray.length; i++) {
+      let value = `"${changeArray[i].value}"`;
+      if (changeArray[i].string === false) { // default is that the new value is a string, but can be overridden
+        value = `${changeArray[i].value}`;
+      }
+
+      if (changes == "") {
+        changes = `set ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
+      }
+      else changes += `, ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
+    }
+    return changes;
+  }
+
+  sendQuery(query, methodObj, methodName, ...args) {
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        // Results should be an array of row objects. Each row object will contain one object per item to return.
+        // Each of THOSE may contain an identity object or a count object which should be rewritten as a simple number.
+        // Also, row objects from metadata queries may include an id or count variable, which should also be rewritten.
+        const result = JSON.parse(this.responseText);
+        for (let i = 0; i < result.length; i++) {
+          const row = result[i];
+          if (row.count) {
+            row.count = row.count.low;
+          }
+          if (row.id) {
+            row.id = row.id.low;
+          }
+
+          for (let item in row) {
+            const entry = row[item];
+            if (entry && entry.identity) {
+              const IDobj = entry.identity;
+              const ID = IDobj.low;
+              entry.id = ID;
+              delete entry.identity;
+            }
+            if (entry && entry.properties && entry.properties.count) {
+              entry.properties.count = entry.properties.count.low;
+            }
+          }
+        }
+        // send results to desired function
+        if (methodObj && methodName) {
+          methodObj[methodName](result, ...args);
+        }
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "neo4j", "query": query};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 }

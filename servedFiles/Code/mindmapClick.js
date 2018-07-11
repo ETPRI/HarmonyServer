@@ -214,9 +214,8 @@ class mindmapClick {
 
     // Highlight the prospective parent. Add/remove highlighting from current parent if needed.
     // Rather than the current MOUSE position, use the current position of the middle of the left side of the label
-    // NOTE: code walkthrough starts here
     const nodeDetails = this.draggingNode.getBoundingClientRect();
-    this.highlightParent(nodeDetails.x, nodeDetails.y + this.d3Functions.nodeHeight/2, rect.parentElement);
+    this.highlightParent(nodeDetails, rect.parentElement);
 
     if (this.initialPosition) { // If any of the labels being dragged were children, this variable will be defined.
       if (Math.abs(this.currentX - this.initialPosition[0]) < this.detachDistance
@@ -237,11 +236,15 @@ class mindmapClick {
     }
   }
 
-  highlightParent(x, y, group) {
+  highlightParent(draggingNodeRect, group) {
     // Check for parent and highlight it if found
     let parent = null;
-    if (group) { // Check for hovering over something first, but ONLY if moving an existing box!
-      const rectArray = this.checkClickedNode(group, x, y);
+    let centerX = (draggingNodeRect.left + draggingNodeRect.right)/2;
+    let centerY = (draggingNodeRect.top + draggingNodeRect.bottom)/2;
+    // Check for hovering over something first, but ONLY if moving an existing box!
+    // Check whether the CENTER of the node being dragged is over another node.
+    if (group) {
+      const rectArray = this.checkClickedNode(group, centerX, centerY);
       if (rectArray) { // If the edge of the box was over any rectangles, then check whether any of them was a nodeRect.
         for (let i = 0; i < rectArray.length; i++) {
           if (rectArray[i].classList.contains("nodeRect")) {
@@ -251,8 +254,9 @@ class mindmapClick {
       }
     }
 
-    if (!parent) { // If no parent was found in the last step, next check for being near enough to link to other elements
-      parent = this.checkNear(group, x, y);
+    // If no parent was found in the last step, next check for being near enough to link to other elements.
+    if (!parent) {
+      parent = this.checkNear(group, draggingNodeRect);
     }
 
     if (parent && parent != this.parentNode) { // If a new parent (not the one already marked) has been found
@@ -269,7 +273,11 @@ class mindmapClick {
     }
   }
 
-  checkNear(element, x, y) {
+  checkNear(element, draggingNodeRect) {
+    const centerX = (draggingNodeRect.left + draggingNodeRect.right)/2;
+    const centerY = (draggingNodeRect.top + draggingNodeRect.bottom)/2;
+    const leftX = draggingNodeRect.left;
+
     const groups = this.SVG_DOM.getElementsByClassName("node"); // Get all rectangles in the mind map
     let prev = null;
     let next = null;
@@ -289,22 +297,23 @@ class mindmapClick {
       // Check for prospective parent...
       const kids = group.__data__.data.children;
       const noKids = (kids == null || kids.length < 1); // true if the group represents a node with no chldren visible
-      // If the point that was passed in is between the top and bottom of the rectangle,
-      // and within this.frontCushion of the right edge of the rectangle,
+      // If the vertical center of the dragging node in is between the top and bottom of the rectangle,
+      // and the left edge of the dragging node is within this.frontCushion of the right edge of the rectangle,
       // and the rectangle isn't part of the group being dragged and has no children,
       // then the group being dragged will become its child and there's no need to worry about order
-      if (top < y && y < bottom && right < x && x < right + this.frontCushion && !contains && noKids) {
+      if (top < centerY && centerY < bottom && right < leftX && leftX < right + this.frontCushion && !contains && noKids) {
         parent = group;
       }
 
       // Then check for prospective sibling. Note that to be a sibling, the group must have a parent
-      // (which will become the new parent of the group being dragged)
+      // (which will become the new parent of the group being dragged).
+      // Check whether the CENTER of the node being dragged is just above or below the group being checked.
       if (!parent) {
         const notRoot = !(group.__data__.data.parent == "null"); // true if the group represents a node that isn't a root
         // Check for next sibling (the point that was passed in is just ABOVE this group, and this group has a parent)
         const topBound = top - 20;
         const bottomBound = top;
-        if (topBound < y && y < bottomBound && left < x && x < right && !contains && notRoot) {
+        if (topBound < centerY && centerY < bottomBound && left < centerX && centerX < right && !contains && notRoot) {
           next = group;
           const parentID = group.__data__.data.parent;
           parent = this.d3Functions.objects[parentID].DOMelements.group;
@@ -316,7 +325,7 @@ class mindmapClick {
         // Now check for previous sibling (the point that was passed in is just BELOW this group, and there's a parent)
         const topBound = bottom;
         const bottomBound = bottom + 20;
-        if (topBound < y && y < bottomBound && left < x && x < right && !contains && notRoot) {
+        if (topBound < centerY && centerY < bottomBound && left < centerX && centerX < right && !contains && notRoot) {
           prev = group;
           const parentID = group.__data__.data.parent;
           parent = this.d3Functions.objects[parentID].DOMelements.group;
@@ -402,7 +411,7 @@ class mindmapClick {
 
       if (this.parentNode) { // If we dropped the selected label onto another label, we should connect them.
         if (labelObj == null) {
-          alert("Error: The child object was not found.");
+          app.error("Could not link two labels because the child object could not be found.");
         }
         else this.dropConnect(this.parentNode, labelObj, object);
       } // end if (the label was dragged onto another label)
