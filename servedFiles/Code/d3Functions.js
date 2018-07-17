@@ -155,12 +155,6 @@ class d3Functions {
   }
 
   update(data) { // Creates a group for each item in the array of roots, then calls buildTree to make a tree for each group.
-    // If data was passed in, that means this was called right after saving a map under a new ID.
-    // Update this.parent.mapID accordingly.
-    if (data && data.length > 0) {
-      this.parent.mapID = data[0].mindmap.id;
-    }
-
     const groups = d3.select(`#svg${this.widgetID}`).selectAll("g.tree")
       .data(this.roots, function(d) {return d.id;});
 
@@ -463,7 +457,7 @@ class d3Functions {
 
     nodeEnter.append("text") // Edit button text
       .attr("idr", function(d) {return `editText1${d.data.id}`})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")*5/4} ${this.getAttribute("nodeHeight") *0.5 + 3})`)
+      .attr("transform", `translate (${this.getAttribute("nodeHeight")*5/4} ${this.getAttribute("nodeHeight") * 0.5 + 3})`)
       .attr("class", "editText unselectable hidden")
       .text("E")
       .each(function(d) {
@@ -489,7 +483,46 @@ class d3Functions {
         d.data.instance.objects[d.data.id].DOMelements.editExpln = this;
       })
 
+    nodeEnter.append("rect") // restore rectangle
+      .attr("width", this.getAttribute("nodeWidth")/2)
+      .attr("height", this.getAttribute("nodeHeight") - 10)
+      .attr("idr", function(d) {return `restore${d.data.id}`})
+      .attr("transform", `translate (${this.getAttribute("nodeWidth")/4} 5)`)
+      .attr("onmouseover", "app.widget('toggleExplain', this, event, 'restore')")
+      .attr("onmouseout", "app.widget('toggleExplain', this, event, 'restore'); app.widget('checkHideButtons', this, event)")
+      .attr("mousedownObj", '{"subclass":"clicks", "method":"restore"}')
+      .attr("class", "restoreRect hidden")
+      .each(function(d) {
+        d.data.instance.objects[d.data.id].DOMelements.restore = this;
+      });
 
+    nodeEnter.append("text") // Restore rectangle text
+      .attr("idr", function(d) {return `restoreText${d.data.id}`})
+      .attr("transform", `translate (${this.getAttribute("nodeWidth")/2} 20)`)
+      .attr("class", "restoreText unselectable hidden")
+      .text("Restore")
+      .each(function(d) {
+        d.data.instance.objects[d.data.id].DOMelements.restoreText = this;
+      });
+
+    nodeEnter.append("rect") // Restore explanation box...
+      .attr("width", 440)
+      .attr("height", 20)
+      .attr("idr", function(d) {return `restoreExpBox${d.data.id}`})
+      .attr("transform", `translate (${this.getAttribute("nodeWidth")/2 - 220} ${this.getAttribute("nodeHeight") *-0.5 - 10})`)
+      .attr("class", "editExpBox hidden")
+      .each(function(d) {
+        d.data.instance.objects[d.data.id].DOMelements.restoreExpBox = this;
+      });
+
+    nodeEnter.append("text") // ... and text
+      .attr("idr", function(d) {return `restoreExpln${d.data.id}`;})
+      .attr("transform", `translate (${this.getAttribute("nodeWidth")/2} ${this.getAttribute("nodeHeight") *-0.5 + 4})`)
+      .attr("class", "editExpln unselectable hidden")
+      .text("Restore this label and its children (remove red formatting and don't delete at next save)")
+      .each(function(d) {
+        d.data.instance.objects[d.data.id].DOMelements.restoreExpln = this;
+      })
 
     nodeEnter.append("g") // Create a detail popup group with a rectangle in it
       .attr("idr", function(d) {return `popupGroup${d.data.id}`})
@@ -572,14 +605,6 @@ class d3Functions {
 
     const allNodes = nodeEnter.merge(node);
 
-
-    /* NOTE: This is where I should probably put the rearranging logic.
-    First, go through all labels and create the LIS array if needed.
-    Then, go through all labels again. If the label has a parent with an LIS array,
-    and it had the same parent at last save, and it ISN'T in the LIS array, highlight it.
-    These should probably both be functions.
-    */
-
     allNodes.each(this.__data__.instance.createLongestIncreasingSubsequence);
 
     allNodes.selectAll(".nodeRect")
@@ -595,7 +620,8 @@ class d3Functions {
         }
         return false; // Otherwise it's not changed (it's either new or the same as it was before).
       })
-      .classed("newData", function(d) {if (d.data.instance.savedObjects[d.data.id]) return false; else return true;})
+      .classed("deletedData", function(d) {if (d.data.deleted) return d.data.deleted; else return false;})
+      .classed("newData", function(d) {if (d.data.instance.savedObjects[d.data.id]) return false; else return true;});
 
     allNodes.selectAll(".notesRect")
       .classed("noNotes", function(d) {if (d.data.notes) return false; else return true;})

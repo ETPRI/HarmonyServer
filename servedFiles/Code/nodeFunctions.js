@@ -65,7 +65,7 @@ class nodeFunctions {
     // Build the string representing the changes - what comes after the SET keyword
     // dataObj.changes should be an array, each entry in which includes a property, a value and possibly a string boolean
     let changes ="";
-    if (dataObj.changes && dataObj.node.name) {
+    if (dataObj.changes) {
       for (let i = 0; i < dataObj.changes.length; i++) {
         let value = `"${dataObj.changes[i].value}"`;
         if (dataObj.changes[i].string === false) { // default is that the new value is a string, but can be overridden
@@ -111,11 +111,17 @@ class nodeFunctions {
     if (dataObj.from) {
       from = this.buildSearchString(dataObj.from, strings, "where", "from");
     }
+    else {
+      from = this.buildSearchString({}, strings, "where", "from");
+    }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let to = "";
     if (dataObj.to) {
       to = this.buildSearchString(dataObj.to, strings, "where", "to");
+    }
+    else {
+      to = this.buildSearchString({}, strings, "where", "to");
     }
 
     // Build the string representing the relation - what goes in the brackets
@@ -123,9 +129,13 @@ class nodeFunctions {
     if (dataObj.rel) {
       rel = this.buildSearchString(dataObj.rel, strings, "where", "rel");
     }
+    else {
+      rel = this.buildSearchString({}, strings, "where", "rel");
+    }
+
 
     let command = "create";
-    if (dataObj.rel.merge === true) {
+    if (dataObj.rel && dataObj.rel.merge === true) {
       command = "merge";
     }
 
@@ -160,17 +170,26 @@ class nodeFunctions {
     if (dataObj.from) {
       from = this.buildSearchString(dataObj.from, strings, "where", "from");
     }
+    else {
+      from = this.buildSearchString({}, strings, "where", "from");
+    }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let to = "";
     if (dataObj.to) {
       to = this.buildSearchString(dataObj.to, strings, "where", "to");
     }
+    else {
+      to = this.buildSearchString({}, strings, "where", "to");
+    }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
       rel = this.buildSearchString(dataObj.rel, strings, "where", "rel");
+    }
+    else {
+      rel = this.buildSearchString({}, strings, "where", "rel");
     }
 
     const query = `match (${from})-[${rel}]->(${to}) ${strings.where} delete rel ${strings.ret}`;
@@ -207,17 +226,26 @@ class nodeFunctions {
     if (dataObj.from) {
       from = this.buildSearchString(dataObj.from, strings, "where", "from");
     }
+    else {
+      from = this.buildSearchString({}, strings, "where", "from");
+    }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let to = "";
     if (dataObj.to) {
       to = this.buildSearchString(dataObj.to, strings, "where", "to");
     }
+    else {
+      to = this.buildSearchString({}, strings, "where", "to");
+    }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
       rel = this.buildSearchString(dataObj.rel, strings, "where", "rel");
+    }
+    else {
+      rel = this.buildSearchString({}, strings, "where", "rel");
     }
 
     // Build the string representing the changes - what comes after the SET keyword
@@ -268,17 +296,26 @@ class nodeFunctions {
     if (dataObj.required) {
       required = this.buildSearchString(dataObj.required, strings, "reqWhere", "required");
     }
+    else {
+      required = this.buildSearchString({}, strings, "reqWhere", "required");
+    }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let optional = "";
     if (dataObj.optional) {
       optional = this.buildSearchString(dataObj.optional, strings, "optWhere", "optional");
     }
+    else {
+      optional = this.buildSearchString({}, strings, "optWhere", "optional");
+    }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
       rel = this.buildSearchString(dataObj.rel, strings, "optWhere", "rel");
+    }
+    else {
+      rel = this.buildSearchString({}, strings, "optWhere", "rel");
     }
 
     // Build the string representing the changes - what comes after the SET keyword
@@ -289,7 +326,7 @@ class nodeFunctions {
 
     // default is that the relation starts on the required node, but if the direction is specified, it can go backward
     let arrow = `-[${rel}]->`;
-    if (dataObj.rel.direction == "left") {
+    if (dataObj.rel && dataObj.rel.direction && dataObj.rel.direction == "left") {
       arrow = `<-[${rel}]-`;
     }
 
@@ -333,11 +370,17 @@ class nodeFunctions {
     if (dataObj.start) {
       start = this.buildSearchString(dataObj.start, strings, "where", "start");
     }
+    else {
+      start = this.buildSearchString({}, strings, "where", "start");
+    }
 
     // Build the string representing the "middle" node - what goes in the second set of parentheses
     let middle = "";
     if (dataObj.middle) {
       middle = this.buildSearchString(dataObj.middle, strings, "where", "middle");
+    }
+    else {
+      middle = this.buildSearchString({}, strings, "where", "middle");
     }
 
     // Build the string representing the "end" node - what goes in the third set of parentheses
@@ -345,17 +388,26 @@ class nodeFunctions {
     if (dataObj.end) {
       end = this.buildSearchString(dataObj.end, strings, "where", "end");
     }
+    else {
+      end = this.buildSearchString({}, strings, "where", "end");
+    }
 
     // Build the string representing the first relation - what goes in the first set of brackets
     let rel1 = "";
     if (dataObj.rel1) {
       rel1 = this.buildSearchString(dataObj.rel1, strings, "where", "rel1");
     }
+    else {
+      rel1 = this.buildSearchString({}, strings, "where", "rel1");
+    }
 
     // Build the string representing the second relation - what goes in the first set of brackets
     let rel2 = "";
     if (dataObj.rel2) {
       rel2 = this.buildSearchString(dataObj.rel2, strings, "where", "rel2");
+    }
+    else {
+      rel2 = this.buildSearchString({}, strings, "where", "rel2");
     }
 
     // Build the string representing the changes - what comes after the SET keyword
@@ -555,7 +607,8 @@ class nodeFunctions {
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         // Results should be an array of row objects. Each row object will contain one object per item to return.
-        // Each of THOSE may contain an identity object or a count object which should be rewritten as a simple number.
+        // Each of THOSE may contain integer objects with a "high" and "low" value, which should be converted to a simple number.
+        // identity variables, specifically, should be rewritten as "id" for ease of typing later.
         // Also, row objects from metadata queries may include an id or count variable, which should also be rewritten.
         const result = JSON.parse(this.responseText);
         for (let i = 0; i < result.length; i++) {
@@ -569,17 +622,29 @@ class nodeFunctions {
 
           for (let item in row) {
             const entry = row[item];
-            if (entry && entry.identity) {
+            if (entry && entry.identity && entry.identity.low) {
               const IDobj = entry.identity;
               const ID = IDobj.low;
               entry.id = ID;
               delete entry.identity;
             }
-            if (entry && entry.properties && entry.properties.count) {
+            if (entry && entry.properties && entry.properties.count && entry.properties.count.low) {
               entry.properties.count = entry.properties.count.low;
             }
-          }
-        }
+
+            if (entry && entry.properties) {
+              for (let property in entry.properties) {
+                // This is the best set of criteria I can see to recognize an Integer object without using Neo4j functions:
+                // It has exactly two own properties (high and low), "high" is 0 and "low" is an integer.
+                const value = entry.properties[property];
+                if (typeof value === "object" && Object.keys(value).length == 2
+                    && "low" in value && Number.isInteger(value.low) && "high" in value && value.high === 0) {
+                  entry.properties[property] = value.low;
+                } // end if (value is a Neo4j integer)
+              } // end for (every property in the item)
+            } // end if (the item has properties)
+          } // end for (every item in the row)
+        } // end for (every row)
         // send results to desired function
         if (methodObj && methodName) {
           methodObj[methodName](result, ...args);

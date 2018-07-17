@@ -26,11 +26,11 @@ class widgetSVG {
 
     if (this.mapID) {
       const obj = {};
-      obj.node = {};
-      obj.node.name = "mindmap";
-      obj.node.type = "mindmap";
-      obj.node.id = this.mapID;
-      app.nodeFunctions.changeNode(obj, this, 'buildWidget');
+      obj.required = {};
+      obj.required.name = "mindmap";
+      obj.required.type = "mindmap";
+      obj.required.id = this.mapID;
+      app.nodeFunctions.findOptionalRelation(obj, this, 'buildWidget');
     }
 
     else {
@@ -47,8 +47,8 @@ class widgetSVG {
       `<b idr="name" contenteditable="true"
                      onfocus="this.parentNode.draggable = false;"
                      onblur="this.parentNode.draggable = true;">${this.name}</b>
-      <input type="button" idr="save" value="Save" onclick="app.widget('save', this)">
-      <input type="button" idr="saveAs" value="Save As" onclick="app.widget('save', this)">
+      <input type="button" idr="save" value="Save" onclick="app.widget('startSave', this)">
+      <input type="button" idr="saveAs" value="Save As" onclick="app.widget('startSave', this)">
       <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)">
     </div>
     <div><table><tr idr="svgRow"><td>
@@ -103,10 +103,7 @@ class widgetSVG {
     if (data.length == 0) {
       alert ("Error: Mind map not found");
     }
-    else if (data.length > 1) {
-      alert ("Error: Multiple mind maps found with same name");
-    }
-    else { // If one result was returned - which should always happen
+    else { // If a result was returned - which should always happen
       if (data[0].mindmap.properties.roots) {
         this.d3Functions.roots = JSON.parse(data[0].mindmap.properties.roots);
 
@@ -165,6 +162,60 @@ class widgetSVG {
         const nameText = app.domFunctions.getChildByIdr(this.widgetDOM, 'name');
         nameText.textContent = this.name;
       }
+
+      /*
+      Data will be multiple lines; each will include a node connected to the mindmap and a relation
+      (unless there ARE no such nodes, in which case data will be only one line and its "rel" and "optional" entries will be null)
+      For every line, check the type of relation. It should be "Owner", "ViewPermission" or "MapNode".
+      If it's "MapNode", then the link should say which label the node goes with. Fill in that label with that node's information.
+      Also, in savedObjects, create a new property "inDB" and set it to true for that label.
+      If it's "Owner", create a new variable this.owner and store some information (say, the name and ID) for the owner.
+      Ignore "Permissions" for now.
+      */
+      if (data[0].rel != null) {
+        for (let i = 0; i < data.length; i++) {
+          const type = data[i].rel.type;
+          switch (type) {
+            case "MapNode":
+              const labelID = data[i].rel.properties.id;
+              const node = data[i].optional;
+              const nodeType = node.labels[0];
+              const labelObj = this.d3Functions.objects[labelID].JSobj;
+              labelObj.name = node.properties.name;
+              labelObj.nodeID = node.id;
+              labelObj.type = nodeType;
+
+              labelObj.details = [];
+              const fields = app.metaData.node[nodeType].fieldsDisplayed;
+              if (fields) {
+                for (let j = 0; j < fields.length; j++) {
+                  const field = fields[j];
+                  if (field != "name") {
+                    const newRow = {};
+                    newRow.field = field;
+                    newRow.value = node.properties[field];
+                    newRow.instance = this.d3Functions;
+                    labelObj.details.push(newRow);
+                  }
+                }
+              }
+
+              const savedCopy = this.d3Functions.savedObjects[labelID];
+              savedCopy.inDB = true;
+              break;
+            case "Owner":
+              this.owner = {};
+              this.owner.name = data[i].optional.properties.name;
+              this.owner.id = data[i].optional.id;
+              break;
+            case "Permissions":
+              break;
+            default:
+              app.error("This mindmap has a relationship of an unrecognized type.");
+          }
+        }
+      }
+
       this.d3Functions.update();
     }
   }
@@ -186,7 +237,12 @@ class widgetSVG {
 
   allowDrop(object, evnt) { // Prevent default action so drag and drop works properly. Also find parent and sibling nodes.
     evnt.preventDefault();
-    this.clicks.highlightParent(evnt.clientX, evnt.clientY, null);
+    const mouseLocation = {};
+    mouseLocation.left = evnt.clientX;
+    mouseLocation.right = evnt.clientX;
+    mouseLocation.top = evnt.clientY;
+    mouseLocation.bottom = evnt.clientY;
+    this.clicks.highlightParent(mouseLocation, null);
   }
 
   dropAdd (svg, evnt) { // Add node to the list of root nodes in the mind map and call update.
@@ -242,7 +298,7 @@ class widgetSVG {
     const rects = this.clicks.checkClickedNode(null, x, y);
     if (rects) {
       for (let i = 0; i < rects.length; i++) {
-        if (rects[i].classList.contains("nodeRect")) {
+        if (rects[i].classList.contains("nodeRect") && !(rects[i].classList.contains("deletedData"))) {
           group = rects[i].parentElement;
         }
       }
@@ -547,44 +603,193 @@ class widgetSVG {
     this.selectBox.classList.add("hidden");
   }
 
-  // REFACTOR THIS LATER - there's no point right now, the whole thing needs to be overhauled.
-  save (button) { // Saves the current state of the graph to the database.
+  // obj should be a JS object, containing an instance and a details object which has rows each of which also has an instance
+  stripInstances(obj) {
+    const copy = Object.assign({}, obj);
+    delete copy.instance;
+
+    // Copy and delete instances from the details array too
+    const detailCopy = Array.from(copy.details)
+    for (let j = 0; j < detailCopy.length; j++) {
+      const lineCopy = Object.assign({}, detailCopy[j]);
+      delete lineCopy.instance;
+      detailCopy[j] = lineCopy;
+    }
+
+    copy.details = detailCopy;
+    return copy;
+  }
+
+  // Check whether a new node is needed (because the map has never been saved before, or the user clicked "Save As").
+  // If so, create the new node and call setOwner. If not, call setOwner if the map has no owner, or startNodes if it has an owner.
+  startSave(button) {
     let name = app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent;
     const id = this.mapID;
     let newMap = false;
     // If the mind map doesn't have an ID (indicating that it hasn't been saved),
-    // or if the user clicked the "Save As" button, indicating they want to make a copy with a new name, ask for a name.
-    if (!id || button.getAttribute("idr") == "saveAs") {
+    // or if the user clicked the "Save As" button, indicating they want to make a copy with a new name:
+    // ask for the name, set the name in the title, and mark the mindmap as "new".
+    if (typeof id === "undefined" || button.getAttribute("idr") == "saveAs") {
       name = prompt("Please enter the name for this mind map", name);
       newMap = true;
+      // Update name in title
+      app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
     }
+
+    if (newMap) {
+      const obj = {};
+      obj.type = "mindmap";
+      obj.properties = {};
+      obj.properties.name = name;
+      app.nodeFunctions.createNode(obj, this, "setOwner"); // If this is a new map or a new copy, it belongs to the user who made it
+    }
+    else {
+      if (this.owner) { // If the mindmap already has an owner, it still belongs to them
+        this.startNodes();
+      }
+      else {
+        this.setOwner(); // This should rarely happen - but if the mindmap already existed and DIDN'T have an owner, it belongs to this user (for now).
+      }
+    }
+  }
+
+  // Make the logged-in user the owner of this mindmap
+  setOwner(data) { // If there is data, this was called after creating a new mindmap node. Set the ID accordingly.
+    if (data) {
+      this.mapID = data[0].mindmap.id;
+    }
+
+    const obj = {};
+    obj.from = {};
+    obj.from.id = this.mapID;
+    obj.to = {};
+    obj.to.id = app.login.userID;
+    obj.rel = {};
+    obj.rel.type = "Owner";
+    app.nodeFunctions.createRelation(obj, this, "startNodes");
+  }
+
+  startNodes() {
+    const objsCopy = Array.from(this.d3Functions.objects);
+    for (let i = 0; i < objsCopy.length; i++) {
+      if (objsCopy[i] && objsCopy[i].JSobj) {
+        objsCopy[i] = this.stripInstances(objsCopy[i].JSobj); // No need for instances or DOM elements
+      }
+    }
+    this.processNodes(null, objsCopy);
+  }
+
+  processNodes(data, labels) {
+    if (labels.length > 0) { // As long as there are more labels to process
+      let label = labels.pop();
+      while (label == undefined) {
+        label = labels.pop();
+      }
+      const id = label.id;
+      const saved = this.d3Functions.savedObjects[id];
+      const original = this.d3Functions.objects[id].JSobj;
+      if (label.deleted) {
+        // First, remove the object from the roots array or its parent's children array
+        if (label.parent == "null") {
+          const rootIndex = this.d3Functions.roots.indexOf(original);
+          if (rootIndex != -1) {
+            this.d3Functions.roots.splice(rootIndex, 1);
+          }
+        }
+        else {
+          const parent = this.d3Functions.objects[label.parent].JSobj;
+          if (parent.children) {
+            const parentIndex = parent.children.indexOf(original);
+            if (parentIndex != -1) {
+              parent.children.splice(parentIndex, 1);
+            }
+          }
+          else if (parent._children) {
+            const parentIndex = parent._children.indexOf(original);
+            if (parentIndex != -1) {
+              parent._children.splice(parentIndex, 1);
+            }
+          }
+        }
+
+        // Now, remove the DB relation, if it exists
+        if (saved && saved.inDB) {
+          const obj = {};
+          obj.from = {};
+          obj.from.id = this.mapID;
+          obj.to = {};
+          obj.to.id = saved.nodeID;
+          obj.rel = {};
+          obj.rel.type = "MapNode";
+          obj.rel.properties = {};
+          obj.rel.properties.id = label.id;
+          app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels);
+        }
+        else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
+          this.processNodes(null, labels);
+        }
+      } // end if (the label was deleted)
+      else { // If this label was NOT deleted
+        if (saved && saved.inDB) { // If the mindmap already has a relation for this label...
+          if (label.nodeID != saved.nodeID) { // and the label is no longer connected to that node...
+            saved.inDB = false;
+            labels.push(label); // Prepare to process the label a second time WITHOUT the relation, to check for a new relation...
+            const obj = {};
+            obj.from = {};
+            obj.from.id = this.mapID;
+            obj.to = {};
+            obj.to.id = saved.nodeID;
+            obj.rel = {};
+            obj.rel.type = "MapNode";
+            obj.rel.properties = {};
+            obj.rel.properties.id = label.id;
+            app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels); // And delete the relation
+          }
+          else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
+            this.processNodes(null, labels);
+          }
+        }
+        else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
+          if (label.nodeID != null) { // If there is a node associated with this label
+            const obj = {};
+            obj.from = {};
+            obj.from.id = this.mapID;
+            obj.to = {};
+            obj.to.id = label.nodeID;
+            obj.rel = {};
+            obj.rel.type = "MapNode";
+            obj.rel.merge = true;
+            obj.rel.properties = {};
+            obj.rel.properties.id = label.id;
+            app.nodeFunctions.createRelation(obj, this, "processNodes", labels); // Create the relation
+          }
+          else { // If there is no new relation, no need to do anything except call processNodes.
+            this.processNodes(null, labels);
+          }
+        } // end else (no existing relation)
+      } // end else (the label was not deleted)
+    } // end if (there are more labels)
+    else {
+      this.setAttributes();
+    }
+  }
+
+  setAttributes() {
+    const id = this.mapID;  // This should definitely exist by now, because if it didn't exist when startSave was called, it was created then.
 
     // Create array of parents (starts empty)
     const parents = [];
 
-    // Copy roots array (with pointers to original root objects)
+    // Copy roots array (with pointers to original root objects) and strip instances
     const rootsCopy = Array.from(this.d3Functions.roots);
-
-    // For each root object, copy the object, remove the instance, replace the original with the copy, add to parents if applicable
     for (let i = 0; i < rootsCopy.length; i++) {
-      const copy = Object.assign({}, rootsCopy[i]);
-      delete copy.instance;
-
-      // Copy and delete instances from the details array too
-      const detailCopy = Array.from(copy.details)
-      for (let j = 0; j < detailCopy.length; j++) {
-        const lineCopy = Object.assign({}, detailCopy[j]);
-        delete lineCopy.instance;
-        detailCopy[j] = lineCopy;
-      }
-      copy.details = detailCopy;
-      rootsCopy[i] = copy;
-
-      if (copy.children && copy.children.length > 0 || copy._children && copy._children.length > 0) {
-        parents.push(copy);
+      rootsCopy[i] = this.stripInstances(rootsCopy[i]);
+      if (rootsCopy[i].children && rootsCopy[i].children.length > 0 || rootsCopy[i]._children && rootsCopy[i]._children.length > 0) {
+        parents.push(rootsCopy[i]);
       }
     }
-    // For each item in parents, go through children array
+
+    // Strip instances from all non-root label objects
     while (parents.length > 0) {
       const obj = parents.pop();
       let kids = null;
@@ -596,24 +801,10 @@ class widgetSVG {
         kids = Array.from(obj._children);
         obj._children = kids;
       }
-
-      // For each child, copy the object, remove instance, replace, add to parents if applicable
       for (let i = 0; i < kids.length; i++) {
-        const copy = Object.assign({}, kids[i]);
-        delete copy.instance;
-
-        // Copy and delete instances from the details array too
-        const detailCopy = Array.from(copy.details)
-        for (let j = 0; j < detailCopy.length; j++) {
-          const lineCopy = Object.assign({}, detailCopy[j]);
-          delete lineCopy.instance;
-          detailCopy[j] = lineCopy;
-        }
-        copy.details = detailCopy;
-        kids[i] = copy;
-
-        if (copy.children && copy.children.length > 0 || copy._children && copy._children.length > 0) {
-          parents.push(copy);
+        kids[i] = this.stripInstances(kids[i]);
+        if (kids[i].children && kids[i].children.length > 0 || kids[i]._children && kids[i]._children.length > 0) {
+          parents.push(kids[i]);
         }
       }
     }
@@ -622,20 +813,28 @@ class widgetSVG {
 
     // Store updated information about what labels have been saved
     let nonRootObjs = [];
-    for (let i = 0; i < rootsCopy.length; i++) { // for every root...
+    this.d3Functions.savedObjects = []; // Clear the savedObjects array...
+    for (let i = 0; i < rootsCopy.length; i++) { // then for every root...
       const root = rootsCopy[i];
-      // Make a deep copy and store in d3Functions' savedObjects array
+      // Make a deep copy and store in the savedObjects array...
       this.d3Functions.savedObjects[root.id] = JSON.parse(JSON.stringify(root));
 
-      if (root.children) {
+      if (root.children) { // and add its children, if any, to the nonRootObjs array.
         nonRootObjs = nonRootObjs.concat(root.children);
       }
       else if (root._children) {
         nonRootObjs = nonRootObjs.concat(root._children);
       }
+
+      // Also, update the root's coordinates
+      const id = root.id;
+      const tree = this.d3Functions.objects[id].DOMelements.tree;
+      const transform = tree.getAttribute("transform").slice(10, -1).split(' '); // Get the transformation string and extract the coordinates
+      root.x = parseFloat(transform[0]);
+      root.y = parseFloat(transform[1]);
     }
 
-    while (nonRootObjs.length > 0) { // If there are more objects...
+    while (nonRootObjs.length > 0) { // While there are more nonroot objects...
       const label = nonRootObjs.pop();
       // Make a deep copy and store in d3Functions' savedObjects array
       this.d3Functions.savedObjects[label.id] = JSON.parse(JSON.stringify(label));
@@ -647,57 +846,198 @@ class widgetSVG {
         nonRootObjs = nonRootObjs.concat(label._children);
       }
     }
+    // Done copying all labels to savedObjects array
 
-    for (let i=0; i< rootsCopy.length; i++) { // Go through all the roots and add their transform values to their coordinates, so they'll display in the right places.
-        const root = rootsCopy[i];
-        const id = root.id;
-        const tree = this.d3Functions.objects[id].DOMelements.tree;
-        const transform = tree.getAttribute("transform").slice(10, -1).split(' '); // Get the transformation string and extract the coordinates
-        root.x = parseFloat(transform[0]);
-        root.y = parseFloat(transform[1]);
-    }
-
-    // Update name in title, if necessary
-    app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
-
-    // Write save query.  If saving as (making a copy), create new node.
-    // If just saving but the map ID is null (this map didn't already exist), create new node.
-    // If just saving and the map ID is not null (did already exist), overwrite.
-
-    let query = "";
-
-    if (newMap) { // Creating a new map, either because we're saving a copy or this map has never been saved before
-      const obj = {};
-      obj.name = "mindmap";
-      obj.type = "mindmap";
-      obj.properties = {};
-      obj.properties.roots = app.stringEscape(JSON.stringify(rootsCopy));
-      obj.properties.count = this.d3Functions.count;
-      obj.properties.name = name;
-      app.nodeFunctions.createNode(obj, this.d3Functions, 'update');
-    }
-    else { // Updating an existing map
-      const obj = {};
-      obj.node = {};
-      obj.node.name = "mindmap";
-      obj.node.type = "mindmap";
-      obj.node.id = this.mapID;
-      obj.changes = [];
-      const roots = {};
-      roots.property = "roots";
-      roots.value = app.stringEscape(JSON.stringify(rootsCopy));
-      obj.changes.push(roots);
-      const count = {};
-      count.property = "count";
-      count.value = this.d3Functions.count;
-      obj.changes.push(count);
-      const nameObj = {};
-      nameObj.property = "name";
-      nameObj.value = name;
-      obj.changes.push(nameObj);
-      app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
-    }
+    // Run the actual query and callback to update
+    const obj = {};
+    obj.node = {};
+    obj.node.id = this.mapID;
+    obj.changes = [];
+    const roots = {};
+    roots.property = "roots";
+    roots.value = app.stringEscape(JSON.stringify(rootsCopy));
+    obj.changes.push(roots);
+    const count = {};
+    count.property = "count";
+    count.value = this.d3Functions.count;
+    obj.changes.push(count);
+    app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
   }
+
+  // save (button) { // Saves the current state of the graph to the database.
+  //   /* Current logic:
+  //     1) Get name and ID, determine whether this is a new mindmap
+  //     2) Create rootsCopy and remove all "instance" variables so it can be stringified
+  //     3) Save a copy of every object in savedObjects
+  //     4) Update roots' transform values so they display correctly
+  //     5) Run createNode or changeNode query
+  //
+  //     New logic:
+  //     1) Get name and ID, determine whether this is a new mindmap
+  //     2) If this is a new mindmap, run createNode query to create it
+  //     3) If this is a new mindmap OR the mindmap has no existing :Owner relation, run createRelation query to create it
+  //     4) Process each label as follows (will require additional functions, each with a "processNext"-type function as a callback):
+  //       I) If the label is deleted:
+  //         a) delete it from the roots array or its parent's children array
+  //         b) If it had a saved version with a node attached, delete that relation
+  //       II) If the label is new, and it has a node attached, create a relation to that node
+  //       III) Otherwise, check whether there is a saved version of the label with a node attached.
+  //         a) If so, and if the label no longer has that node attached:
+  //           i) delete the relation in the DB
+  //           ii) delete the reference to the relation in savedObjects (so next time, the label will appear to have no saved node)
+  //           iii) add the label back to the list to be processed again
+  //         b) If not, if the label has a node attached, create a link to that node
+  //     5) Create rootsCopy as before
+  //     6) Update savedObjects as before
+  //     7) Run changeNode query to update roots and count
+  //   */
+  //   // let name = app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent;
+  //   // const id = this.mapID;
+  //   // let newMap = false;
+  //   // // If the mind map doesn't have an ID (indicating that it hasn't been saved),
+  //   // // or if the user clicked the "Save As" button, indicating they want to make a copy with a new name, ask for a name.
+  //   // if (!id || button.getAttribute("idr") == "saveAs") {
+  //   //   name = prompt("Please enter the name for this mind map", name);
+  //   //   newMap = true;
+  //   // }
+  //
+  //   // // Create array of parents (starts empty)
+  //   // const parents = [];
+  //   //
+  //   // // Copy roots array (with pointers to original root objects)
+  //   // const rootsCopy = Array.from(this.d3Functions.roots);
+  //
+  //   // For each root object, copy the object, remove the instance, replace the original with the copy, add to parents if applicable
+  //   for (let i = 0; i < rootsCopy.length; i++) {
+  //     const copy = Object.assign({}, rootsCopy[i]);
+  //     delete copy.instance;
+  //
+  //     // Copy and delete instances from the details array too
+  //     const detailCopy = Array.from(copy.details)
+  //     for (let j = 0; j < detailCopy.length; j++) {
+  //       const lineCopy = Object.assign({}, detailCopy[j]);
+  //       delete lineCopy.instance;
+  //       detailCopy[j] = lineCopy;
+  //     }
+  //     copy.details = detailCopy;
+  //     rootsCopy[i] = copy;
+  //
+  //     if (copy.children && copy.children.length > 0 || copy._children && copy._children.length > 0) {
+  //       parents.push(copy);
+  //     }
+  //   }
+  //   // For each item in parents, go through children array
+  //   while (parents.length > 0) {
+  //     const obj = parents.pop();
+  //     let kids = null;
+  //     if (obj.children) {  // Get the children array, whether hidden or not
+  //       kids = Array.from(obj.children);
+  //       obj.children = kids;
+  //     }
+  //     else  {
+  //       kids = Array.from(obj._children);
+  //       obj._children = kids;
+  //     }
+  //
+  //     // For each child, copy the object, remove instance, replace, add to parents if applicable
+  //     for (let i = 0; i < kids.length; i++) {
+  //       const copy = Object.assign({}, kids[i]);
+  //       delete copy.instance;
+  //
+  //       // Copy and delete instances from the details array too
+  //       const detailCopy = Array.from(copy.details)
+  //       for (let j = 0; j < detailCopy.length; j++) {
+  //         const lineCopy = Object.assign({}, detailCopy[j]);
+  //         delete lineCopy.instance;
+  //         detailCopy[j] = lineCopy;
+  //       }
+  //       copy.details = detailCopy;
+  //       kids[i] = copy;
+  //
+  //       if (copy.children && copy.children.length > 0 || copy._children && copy._children.length > 0) {
+  //         parents.push(copy);
+  //       }
+  //     }
+  //   }
+  //
+  //   // At this point, rootsCopy is a copy of roots with no instances, which can be stringified.
+  //
+  //   // Store updated information about what labels have been saved
+  //   let nonRootObjs = [];
+  //   for (let i = 0; i < rootsCopy.length; i++) { // for every root...
+  //     const root = rootsCopy[i];
+  //     // Make a deep copy and store in d3Functions' savedObjects array
+  //     this.d3Functions.savedObjects[root.id] = JSON.parse(JSON.stringify(root));
+  //
+  //     if (root.children) {
+  //       nonRootObjs = nonRootObjs.concat(root.children);
+  //     }
+  //     else if (root._children) {
+  //       nonRootObjs = nonRootObjs.concat(root._children);
+  //     }
+  //   }
+  //
+  //   while (nonRootObjs.length > 0) { // If there are more objects...
+  //     const label = nonRootObjs.pop();
+  //     // Make a deep copy and store in d3Functions' savedObjects array
+  //     this.d3Functions.savedObjects[label.id] = JSON.parse(JSON.stringify(label));
+  //
+  //     if (label.children) {
+  //       nonRootObjs = nonRootObjs.concat(label.children);
+  //     }
+  //     else if (label._children) {
+  //       nonRootObjs = nonRootObjs.concat(label._children);
+  //     }
+  //   }
+  //
+  //   for (let i=0; i< rootsCopy.length; i++) { // Go through all the roots and add their transform values to their coordinates, so they'll display in the right places.
+  //       const root = rootsCopy[i];
+  //       const id = root.id;
+  //       const tree = this.d3Functions.objects[id].DOMelements.tree;
+  //       const transform = tree.getAttribute("transform").slice(10, -1).split(' '); // Get the transformation string and extract the coordinates
+  //       root.x = parseFloat(transform[0]);
+  //       root.y = parseFloat(transform[1]);
+  //   }
+  //
+  //   // Update name in title, if necessary
+  //   app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
+  //
+  //   // Write save query.  If saving as (making a copy), create new node.
+  //   // If just saving but the map ID is null (this map didn't already exist), create new node.
+  //   // If just saving and the map ID is not null (did already exist), overwrite.
+  //
+  //   if (newMap) { // Creating a new map, either because we're saving a copy or this map has never been saved before
+  //     const obj = {};
+  //     obj.name = "mindmap";
+  //     obj.type = "mindmap";
+  //     obj.properties = {};
+  //     obj.properties.roots = app.stringEscape(JSON.stringify(rootsCopy));
+  //     obj.properties.count = this.d3Functions.count;
+  //     obj.properties.name = name;
+  //     app.nodeFunctions.createNode(obj, this.d3Functions, 'update');
+  //   }
+  //   else { // Updating an existing map
+  //     const obj = {};
+  //     obj.node = {};
+  //     obj.node.name = "mindmap";
+  //     obj.node.type = "mindmap";
+  //     obj.node.id = this.mapID;
+  //     obj.changes = [];
+  //     const roots = {};
+  //     roots.property = "roots";
+  //     roots.value = app.stringEscape(JSON.stringify(rootsCopy));
+  //     obj.changes.push(roots);
+  //     const count = {};
+  //     count.property = "count";
+  //     count.value = this.d3Functions.count;
+  //     obj.changes.push(count);
+  //     const nameObj = {};
+  //     nameObj.property = "name";
+  //     nameObj.value = name;
+  //     obj.changes.push(nameObj);
+  //     app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
+  //   }
+  // }
 
   lookForEnter(input, evnt) { // Makes hitting enter do the same thing as blurring (e. g. inserting a new node or changing an existing one)
     if (evnt.keyCode === 13) {
@@ -904,11 +1244,16 @@ class widgetSVG {
   showButtons(rect) {
     const group = rect.parentElement;
     const ID = group.getAttribute("idr").slice(5); // the IDR will be like groupxxx
-
-    const prefixes = ["toggle", "toggleText1",
+    let prefixes = [];
+    if (rect.classList.contains("deletedData")) {
+      prefixes = ["restore", "restoreText"];
+    }
+    else {
+    prefixes = ["toggle", "toggleText1",
                       "note", "showNotesText1",
                       "detail", "showDetailsText1",
                       "edit", "editText1"];
+    }
     for (let i = 0; i < prefixes.length; i++) {
       const idr = prefixes[i] + ID;
       const element = this.d3Functions.objects[ID].DOMelements[prefixes[i]];
@@ -930,7 +1275,7 @@ class widgetSVG {
     const group = element.parentElement;
     const ID = group.getAttribute("idr").slice(5); // the IDR will be like groupxxx
 
-    const prefixes = ["node", "toggle", "note", "detail", "edit"];
+    const prefixes = ["node", "toggle", "note", "detail", "edit", "restore"];
     for (let i = 0; i < prefixes.length; i++) {
       const idr = prefixes[i] + ID;
       const element = this.d3Functions.objects[ID].DOMelements[prefixes[i]];
@@ -958,6 +1303,7 @@ class widgetSVG {
                       "note", "showNotesText1", "noteExpln", "noteExpBox",
                       "detail", "detailExpln", "showDetailsText1", "detailExpBox",
                       "edit", "editText1", "editExpln", "editExpBox",
+                      "restore", "restoreText", "restoreExpln", "restoreExpBox",
                       "popupGroup"];
 
     for (let i = 0; i < prefixes.length; i++) {
