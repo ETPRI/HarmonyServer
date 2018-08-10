@@ -258,8 +258,7 @@ class widgetSVG {
       data.details.push(uri);
     }
 
-    else if (evnt.dataTransfer.files.length > 0) {
-      const test = evnt.dataTransfer.items[0].getAsFile();
+    else if (evnt.dataTransfer.files.length > 0) { // if the object is a file
       data.name = evnt.dataTransfer.files[0].name;
       data.nodeID = null;
       data.type = "file";
@@ -270,12 +269,12 @@ class widgetSVG {
       data.details.push(type);
     }
 
-    else { // If it's not a link, check whether it's a node...
+    else { // If it's not a link or a file, check whether it's a node...
       const dataText = evnt.dataTransfer.getData("text/plain");
       if (dataText) {
         data = JSON.parse(dataText);
       }
-      // If the object being dragged is not a node
+      // If the object being dragged is not a link, file or node
       if (!data || data.sourceType != "widgetTableNodes" || data.sourceTag != "TD") {
         return;
       }
