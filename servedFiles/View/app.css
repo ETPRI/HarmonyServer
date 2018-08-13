@@ -67,7 +67,10 @@ td {
 	fill: limegreen !important;
 }
 
-.deletedData {background-color: palevioletred}
+.deletedData {
+	background-color: palevioletred;
+	fill: palevioletred !important;
+}
 
 .loggedIn {
 	color: green;
@@ -154,6 +157,15 @@ text.editExpln {
 	fill: white;
 }
 
+text.restoreExpln {
+	font-size: 12px;
+}
+
+.restoreExpBox {
+	stroke: gray;
+	stroke-width: 1px;
+	fill: white;
+}
 
 .selectBox {
 	stroke: black;
@@ -210,6 +222,12 @@ text.editExpln {
 }
 
 .editRect {
+	stroke: black;
+	stroke-width: 1px;
+	fill: white;
+}
+
+.restoreRect {
 	stroke: black;
 	stroke-width: 1px;
 	fill: white;

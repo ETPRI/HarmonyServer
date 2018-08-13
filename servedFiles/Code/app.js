@@ -11,10 +11,6 @@ constructor() {
 	this.widgets   = {}; // store widgets as they are created, remove when closed
 	this.idCounter = 0;  // init id counter - used get getElementById, is the id of the widget
 
-	// used by class DB to access neo4j database
-	this.authToken = neo4j.v1.auth.basic("neo4j", "paleo3i");
-	this.driver    = neo4j.v1.driver("bolt://localhost", this.authToken, {encrypted:false});
-
 	this.activeWidget = null; // widget being dragged
 }
 
@@ -132,7 +128,7 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 			this.widgets[id][method](widgetElement, ...args); //  Call the method, and pass in widgetElement and any extra args
 		} else {
 	     // Create an error message. This could stand to be more informative, but I'm not sure how best to write it.
-			 alert(`App.widget: Error, method: ${method}`);
+			 this.error(`App.widget: method ${method} in widget #${id} could not be called.`);
 		}
 	}
 
@@ -143,7 +139,7 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 			this.widgets[id][method](widgetElement, ...args); //  Call the method, and pass in widgetElement and any extra args
 		} else {
 			 // Create an error message. This could stand to be more informative, but I'm not sure how best to write it.
-			 alert(`App.widget: Error, method: ${method}`);
+			 this.error(`App.widget: Error, method: ${method}`);
 		}
 	}
 }
@@ -523,6 +519,17 @@ supportsES6() {
 		alert (`This browser doesn't support JS v6, and you will likely have some problems running this website. Try using an up-to-date version of Safari or Chrome.`);
     return false;
   }
+}
+
+error(message) {
+	const err = new Error();
+	const line = err.line;
+	const col = err.column;
+	const URL = err.sourceURL;
+	const stack = err.stack;
+
+
+	alert(`An error has occurred. Details: ${message}\nStack:${stack}`);
 }
 
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.

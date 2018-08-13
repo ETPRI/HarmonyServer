@@ -31,7 +31,7 @@ class domFunctions {
   		return(this.widgetGetId(domElement.parentElement));
   	}
     else {
-      alert ("Error: Searched for the widget ID of an element which is not in a widget.");
+      app.error("Searched for the widget ID of an element which is not in a widget.");
       return null;
     }
   }

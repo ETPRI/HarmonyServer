@@ -344,7 +344,7 @@ class widgetCalendar {
         this.buildYear(this.day);
         break;
       default:
-        alert(`Error: ${this.mode} is not a valid calendar mode (should be day, week, month or year)`);
+        app.error(`${this.mode} is not a valid calendar mode (should be day, week, month or year)`);
     }
   }
 

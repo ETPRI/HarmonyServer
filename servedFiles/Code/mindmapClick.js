@@ -34,7 +34,7 @@ class mindmapClick {
       const right = bound.right;
 
       let contains = false;
-      if (group != null) {
+      if (group != undefined) {
         contains = group.contains(rect);
       }
 
@@ -46,10 +46,11 @@ class mindmapClick {
         ancestor = ancestor.parentElement;
       }
       hidden = ancestor.classList.contains("hidden");
+      // const deleted = rect.classList.contains("deletedData");
 
       if (top < y && y < bottom && left < x && x < right && !contains && !hidden) { // If the mouse is inside this element,
                                                   // and this is NOT the element being dragged or that element doesn't exist,
-                                                  // and this element is visible
+                                                  // and this element is visible and has not been deleted
         clickedRects.push(rect);
       }
     }
@@ -214,9 +215,8 @@ class mindmapClick {
 
     // Highlight the prospective parent. Add/remove highlighting from current parent if needed.
     // Rather than the current MOUSE position, use the current position of the middle of the left side of the label
-    // NOTE: code walkthrough starts here
     const nodeDetails = this.draggingNode.getBoundingClientRect();
-    this.highlightParent(nodeDetails.x, nodeDetails.y + this.d3Functions.nodeHeight/2, rect.parentElement);
+    this.highlightParent(nodeDetails, rect.parentElement);
 
     if (this.initialPosition) { // If any of the labels being dragged were children, this variable will be defined.
       if (Math.abs(this.currentX - this.initialPosition[0]) < this.detachDistance
@@ -237,22 +237,27 @@ class mindmapClick {
     }
   }
 
-  highlightParent(x, y, group) {
+  highlightParent(draggingNodeRect, group) {
     // Check for parent and highlight it if found
     let parent = null;
-    if (group) { // Check for hovering over something first, but ONLY if moving an existing box!
-      const rectArray = this.checkClickedNode(group, x, y);
+    let centerX = (draggingNodeRect.left + draggingNodeRect.right)/2;
+    let centerY = (draggingNodeRect.top + draggingNodeRect.bottom)/2;
+    // Check for hovering over something first, but ONLY if moving an existing box!
+    // Check whether the CENTER of the node being dragged is over another node.
+    if (group) {
+      const rectArray = this.checkClickedNode(group, centerX, centerY);
       if (rectArray) { // If the edge of the box was over any rectangles, then check whether any of them was a nodeRect.
         for (let i = 0; i < rectArray.length; i++) {
-          if (rectArray[i].classList.contains("nodeRect")) {
+          if (rectArray[i].classList.contains("nodeRect") && !(rectArray[i].classList.contains("deletedData"))) {
             parent = rectArray[i].parentElement;
           }
         }
       }
     }
 
-    if (!parent) { // If no parent was found in the last step, next check for being near enough to link to other elements
-      parent = this.checkNear(group, x, y);
+    // If no parent was found in the last step, next check for being near enough to link to other elements.
+    if (!parent) {
+      parent = this.checkNear(group, draggingNodeRect);
     }
 
     if (parent && parent != this.parentNode) { // If a new parent (not the one already marked) has been found
@@ -269,8 +274,12 @@ class mindmapClick {
     }
   }
 
-  checkNear(element, x, y) {
-    const groups = this.SVG_DOM.getElementsByClassName("node"); // Get all rectangles in the mind map
+  checkNear(element, draggingNodeRect) {
+    const centerX = (draggingNodeRect.left + draggingNodeRect.right)/2;
+    const centerY = (draggingNodeRect.top + draggingNodeRect.bottom)/2;
+    const leftX = draggingNodeRect.left;
+
+    const groups = this.SVG_DOM.getElementsByClassName("node"); // Get all label groups in the mind map
     let prev = null;
     let next = null;
     let parent = null;
@@ -289,34 +298,51 @@ class mindmapClick {
       // Check for prospective parent...
       const kids = group.__data__.data.children;
       const noKids = (kids == null || kids.length < 1); // true if the group represents a node with no chldren visible
-      // If the point that was passed in is between the top and bottom of the rectangle,
-      // and within this.frontCushion of the right edge of the rectangle,
+      const deleted = group.__data__.data.deleted;
+      // If the vertical center of the dragging node in is between the top and bottom of the rectangle,
+      // and the left edge of the dragging node is within this.frontCushion of the right edge of the rectangle,
       // and the rectangle isn't part of the group being dragged and has no children,
       // then the group being dragged will become its child and there's no need to worry about order
-      if (top < y && y < bottom && right < x && x < right + this.frontCushion && !contains && noKids) {
+      if (top < centerY && centerY < bottom && right < leftX && leftX < right + this.frontCushion && !contains && noKids && !deleted) {
         parent = group;
       }
 
       // Then check for prospective sibling. Note that to be a sibling, the group must have a parent
-      // (which will become the new parent of the group being dragged)
+      // (which will become the new parent of the group being dragged).
+      // Check whether the CENTER of the node being dragged is just above or below the group being checked.
       if (!parent) {
-        const notRoot = !(group.__data__.data.parent == "null"); // true if the group represents a node that isn't a root
-        // Check for next sibling (the point that was passed in is just ABOVE this group, and this group has a parent)
+        let parentExists = false;
+        const parentID = group.__data__.data.parent;
+        if (parentID != "null") { // If this group has a parent at all...
+          const groupParent = this.d3Functions.objects[parentID].JSobj;
+          if (!(groupParent.deleted)) {
+            parentExists = true;
+          }
+        }
+
         const topBound = top - 20;
         const bottomBound = top;
-        if (topBound < y && y < bottomBound && left < x && x < right && !contains && notRoot) {
+        if (topBound < centerY && centerY < bottomBound && left < centerX && centerX < right && !contains && parentExists) {
           next = group;
           const parentID = group.__data__.data.parent;
           parent = this.d3Functions.objects[parentID].DOMelements.group;
         }
       }
 
+      // Now check for previous sibling (the point that was passed in is just BELOW this group, and there's a parent)
       if (!parent) {
-        const notRoot = !(group.__data__.data.parent == "null"); // true if the group represents a node that isn't a root
-        // Now check for previous sibling (the point that was passed in is just BELOW this group, and there's a parent)
+        let parentExists = false;
+        const parentID = group.__data__.data.parent;
+        if (parentID != "null") { // If this group has a parent at all...
+          const groupParent = this.d3Functions.objects[parentID].JSobj;
+          if (!(groupParent.deleted)) {
+            parentExists = true;
+          }
+        }
+
         const topBound = bottom;
         const bottomBound = bottom + 20;
-        if (topBound < y && y < bottomBound && left < x && x < right && !contains && notRoot) {
+        if (topBound < centerY && centerY < bottomBound && left < centerX && centerX < right && !contains && parentExists) {
           prev = group;
           const parentID = group.__data__.data.parent;
           parent = this.d3Functions.objects[parentID].DOMelements.group;
@@ -402,7 +428,7 @@ class mindmapClick {
 
       if (this.parentNode) { // If we dropped the selected label onto another label, we should connect them.
         if (labelObj == null) {
-          alert("Error: The child object was not found.");
+          app.error("Could not link two labels because the child object could not be found.");
         }
         else this.dropConnect(this.parentNode, labelObj, object);
       } // end if (the label was dragged onto another label)
@@ -507,5 +533,59 @@ class mindmapClick {
       delete childObj.x;
       delete childObj.y;
     } // End if (both objects found)
+  }
+
+  // Removes red formatting from the label associated with the clicked button and from all descendants.
+  // Detaches the label from its parent iff the parent has red formatting.
+  // Hides restore button and refreshes the graphic.
+  restore(button) {
+    const id = button.getAttribute("idr").slice(7); // idr will be like restorexxx
+    const obj = this.d3Functions.objects[id].JSobj;
+    obj.deleted = false;
+    let descendants = [];
+    if (obj.children && obj.children.length > 0) {
+      descendants = descendants.concat(obj.children);
+    }
+    if (obj._children && obj._children.length > 0) {
+      descendants = descendants.concat(obj._children);
+    }
+
+    while (descendants.length > 0) {
+      const descendant = descendants.pop();
+      descendant.deleted = false;
+      if (descendant.children && descendant.children.length > 0) {
+        descendants = descendants.concat(descendant.children);
+      }
+      if (descendant._children && descendant._children.length > 0) {
+        descendants = descendants.concat(descendant._children);
+      }
+    }
+
+    const parentID = obj.parent;
+    if (parentID != "null") {
+      const parentObj = this.d3Functions.objects[parentID].JSobj;
+      if (parentObj.deleted) { // If the parent is deleted, separate this label from the parent.
+        const parentIndex = parentObj.children.indexOf(obj);
+        if(parentIndex != -1) {
+          parentObj.children.splice(parentIndex, 1);
+        }
+        obj.parent = "null";
+
+        // Get coordinates of label and store them
+        const node = this.d3Functions.objects[id].DOMelements.node;
+        const labelRect = node.getBoundingClientRect();
+        const SVGrect = this.SVG_DOM.getBoundingClientRect();
+        const viewBox = this.SVG_DOM.getAttribute("viewBox").split(" ");
+        obj.x = labelRect.x - SVGrect.x + parseInt(viewBox[0]);
+        obj.y = labelRect.y - SVGrect.y + parseInt(viewBox[1]);
+        this.d3Functions.roots.push(obj);
+
+        // Remove mouseout function because this label is about to disappear and be redrawn
+        node.removeAttribute("onmouseout");
+        button.removeAttribute("onmouseout");
+      }
+    }
+    this.parent.hideEverything(id);
+    this.d3Functions.update();
   }
 }
