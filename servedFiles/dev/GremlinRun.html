@@ -12,7 +12,7 @@
        </tr>
       </table>
 
-      <h2>Gremlin Responce</h2>
+      <h2>Gremlin Response</h2>
       <div id="gremlinResponse">
       </div>
 
@@ -25,6 +25,7 @@
           // call back funtion when state of send changes
           if (this.readyState == 4 && this.status == 200) {
             // update page with result from server, server is done
+            const obj = JSON.parse(this.responseText);
           document.getElementById("gremlinResponse").innerHTML = this.responseText;
           }
         };

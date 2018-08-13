@@ -11,6 +11,8 @@ var fs   = require('fs');
 var path = require('path');
 var url  = require('url');
 
+const config  = require('./config');
+
 http.createServer(function (request, response) {
     console.log('request ', request.url);
     var q = url.parse(request.url, true);
@@ -46,9 +48,7 @@ http.createServer(function (request, response) {
     // serve static file
     var filePath = './servedFiles';  // default location of served files relative to where server is
     if (request.url == "/") {
-      filePath += "/index.html";
-  // filePath += "/admin/Neo4jRun.html";
-  //filePath += "_app.html";
+      filePath += config.defaultFile;
     } else {
       // try to find static file to return
       filePath += request.url ;
@@ -103,7 +103,7 @@ const neo4j  = require('neo4j-driver').v1;
 
 // Create a driver instance, for the user neo4j with password neo4j.
 // It should be enough to have a single driver per database per application.
-const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo3i"));
+const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", config.neo4j.password ));
 //const driver = new neo4j.driver("bolt://localhost:7687", neo4j.auth.driver("neo4j", "paleo3i"));
 //const driver = neo4j.v1.driver("bolt://localhost", neo4j.v1.auth.basic("neo4j", "paleo3i"));
 
@@ -154,17 +154,16 @@ function runNeo4j(query, response)
 // ------------------------------------------ Gremlin stuff ---------
 
 const Gremlin = require('gremlin');
-const config  = require('./config');
 const async   = require('async');
 
 const client = Gremlin.createClient(
     443,
-    config.endpoint,
+    config.gremlin.endpoint,
     {
         "session": false,
         "ssl": true,
-        "user": `/dbs/${config.database}/colls/${config.collection}`,
-        "password": config.primaryKey
+        "user": `/dbs/${config.gremlin.database}/colls/${config.gremlin.collection}`,
+        "password": config.gremlin.primaryKey
     }
 );
 
@@ -182,20 +181,3 @@ function runGremlin2(query, response)
         }
     })) ;
 }
-//
-// // this is sequential code, add asyc back, not sure the best way
-// function runGremlin(query, response)
-// {
-//     console.log('runGremlin - %s',query);
-//     client.execute(query, { }, (err, results) => {
-//         if (err) {
-//           console.error(err);
-//           response.end(err);
-//         } else {
-//           const ret = JSON.stringify(results);
-//           console.log("Result: %s\n", ret);
-//           response.end(ret);
-//         }
-//
-//     });
-// }

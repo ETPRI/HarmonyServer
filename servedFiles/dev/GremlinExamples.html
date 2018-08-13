@@ -10,30 +10,37 @@ CRUD - Creat, Read, Update, Delete<br>
 Vertex<br>
 g.addV('person').property('id', 'david').property('firstName', 'David').property('age', 60)<br>
 g.addV('person').property('id', 'mert').property('firstName', 'Mert').property('age', 40).property('userid', 2)<br>
-
+g.V().has('person','firstName','Amy').fold().coalesce(unfold(), addV('person').property('name','Amy')) merge<br>
 <br>Edge<br>
 g.V('mert').addE('knows').to(g.V('david'))<br>
+g.V().has('person','firstName','Amy').outE().hasLabel('related').inV().has('person', 'firstName','David').fold().coalesce(unfold(), addE('related').from(g.V().has('person', 'firstName', 'Amy')).to(g.V().has('person', 'firstName', 'David'))) merge
 
 <br><br><strong>Read/Search</strong><br>
 Vertex<br>
-g.V().count()<br>
-g.V().values('id')<br>
-g.V("david").valueMap()<br>
-g.V("david").values('firstName')<br>
+g.V().count()  gets the number of vertices<br>
+g.V().values('id')  gets a list of vertex ids<br>
+g.V("david")  returns the whole object<br>
+g.V("david").valueMap()  returns the object's property list<br>
+g.V("david").values('firstName', 'age')  returns just the specified properties<br>
 
-g.V.has('firstName','David')
-g.V("firstName","David")
-g.V().has('firstName','Mert')
-g.V().has('firstName','Mert')
-g.V().hasLabel("person").valueMap("id","firstName", "age")
+g.V().has('firstName')  returns every node with a value for the given property<br>
+g.V().has('firstName','David')  searches by property value<br>
+g.V().hasLabel("person").valueMap("id","firstName", "age")  returns the given properties for each retrieved vertex (Works, but doesn't return ID because it's not part of properties object)<br>
+g.V().has('firstName', between('Dav', 'Daw'))  returns vertices starting with "Dav" - simulates "starts with" command<br>
+g.V().has('firstName', 'Amy').has('age', 31) match more than one property<br>
 
+<br>GREMLIN DOES NOT SUPPORT REGEXES. Use "Between" workaround to simulate "starts with". Investigating other options for "contains" and "ends with"<br>
 <br>Edge<br>
-g.E().count()<br>
-
+g.E().count() returns the number of relations<br>
+g.E().values('id') returns a list of edge ids <br>
+g.V().has('firstName', 'Mert').outE().inV().path() returns any relation starting on Mert, and the vertices it connects<br>
+g.V().outE().hasLabel('knows').inV().path() returns any relation with the "knows" label, and the vertices it connects<br>
+g.V().has('firstName', 'David').optional(outE().inV()).path() returns the "David" node, and any relations that start on it
 
 <br><br><strong>update</strong><br>
-g.V('david').property('age',59)  will set the age<br>
-g.V('david').property('age',59).values('age')  will set the age, and then read it back
+g.V('david').property('age',59)  will set the age and return the whole vertex<br>
+g.V('david').property('age',59).values('age')  will set the age, and then read it back<br>
+g.V().as('from').outE().as('rel').inV().as('to').select('from').property('age',40).path()  finds a pattern and sets the age of one node, then returns the whole pattern
 <br><br><strong>delete</strong><br>
 g.V('mert').drop()  delete a node<br>
 g.V().drop()        delete all data
