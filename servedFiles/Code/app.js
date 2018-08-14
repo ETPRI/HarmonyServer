@@ -60,7 +60,7 @@ keyPressed(evnt) {
 	if (this.activeWidget) {
 		const widgetID = this.activeWidget.getAttribute("id");
 		const widgetObj = this.widgets[widgetID];
-		if (widgetObj.keyPressed) {
+		if (widgetObj && widgetObj.keyPressed) {
 			widgetObj.keyPressed(evnt);
 		}
 	}

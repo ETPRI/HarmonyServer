@@ -49,6 +49,15 @@ class widgetTableNodes {
     obj.where = this.buildWhere();
     obj.orderBy = this.queryObject.orderBy;
     obj.limit = app.domFunctions.getChildByIdr(this.widget, "limit").value;
+
+    if (obj.type == 'mindmap') {
+      obj.owner = this.buildOwner();
+    }
+
+    if (obj.type == "people") {
+      const dropDown = app.domFunctions.getChildByIdr(this.widget, "permissionsDropdown");
+      obj.permissions = dropDown.options[dropDown.selectedIndex].value;
+    }
     return obj;
   }
 
@@ -61,8 +70,9 @@ class widgetTableNodes {
     // iterate siblings of input
     for(let i=2; i<th.length; i++) {
       const inputDOM = th[i].firstElementChild;  // <input>  tag
-      const dropDown = inputDOM.nextElementSibling;
-      if (0 < inputDOM.value.length) {
+      // If the text input exists, has a value and has a db attribute (meaning it represents a property field)
+      if (inputDOM && inputDOM.tagName == 'INPUT' && 0 < inputDOM.value.length && inputDOM.getAttribute('db')) {
+        const dropDown = inputDOM.nextElementSibling;
         // get value of search type
         const searchType = dropDown.options[dropDown.selectedIndex].value;
 
@@ -90,6 +100,19 @@ class widgetTableNodes {
   	*/
     const ret = element.getAttribute("db").split(attName+":")[1].split(";")[0].trim();
   	return(ret);
+  }
+
+  buildOwner() {
+    const cell = app.domFunctions.getChildByIdr(document.getElementById(this.idWidget), 'ownerSearch');
+    const text = cell.firstElementChild;
+    const dropDown = text.nextElementSibling;
+    let owner = null;
+    if (text.value.length > 0) {
+      owner = {};
+      owner.value = text.value;
+      owner.searchType = dropDown.options[dropDown.selectedIndex].value;
+    }
+    return owner;
   }
 
   ////////////////////////////////////////////////////////////////////
@@ -134,7 +157,7 @@ class widgetTableNodes {
     let s="";
     for (let i=0; i<this.fieldsDisplayed.length; i++ ) {
         const fieldName =this.fieldsDisplayed[i];
-        let s1 = `<th><input idr = "text` + i + `" db="fieldName: #1" size="7" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
+        let s1 = `<th><input idr = "text${i}" db="fieldName: #1" size="7" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
         if (this.fields[fieldName].type === "number") {
           // number search
           s1 += numSearch.replace('#x#', i);
@@ -143,6 +166,22 @@ class widgetTableNodes {
           s1 += strSearch.replace('#x#', i);
         }
         s += s1.replace('#1',fieldName)
+    }
+    if (this.queryObjectName == 'mindmap') {
+      s += `<th idr = "ownerSearch">`;
+      s += `<input idr = "ownerText" size="7" value = "${app.login.userName}" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
+      s += strSearch.replace('#x#', 'owner');
+      s += `</th>`;
+    }
+    if (this.queryObjectName == 'people') {
+      s += `<th colspan = "3">
+            <select idr="permissionsDropdown">
+              <option value="all">All people</option>
+              <option value="allUsers">Users and Admins</option>
+              <option value="users">Users</option>
+              <option value="admins">Admins</option>
+            </select>
+          </th>`;
     }
 
     const html4 = html.replace('#headerSearch#',s)
@@ -155,6 +194,12 @@ class widgetTableNodes {
         // The original version of this line called a method that doesn't exist yet.
         // If we build that method eventually, we can put the old version of the line back.
         f += "<th>"+ this.fields[fieldName].label + "</th>" ;
+    }
+    if (this.queryObjectName == 'mindmap') {
+      f += '<th>Owner</th>';
+    }
+    if (this.queryObjectName == 'people') {
+      f += '<th colspan = "3">Permissions</th>'
     }
     const html5 = html4.replace('#header#',f);
 
@@ -212,7 +257,19 @@ class widgetTableNodes {
         row.appendChild(cell);
       }
 
-      // IF this is a people table...
+      // If this is a mindmap table
+      if (this.queryObjectName == 'mindmap') {
+        let owner = "None";
+        if (r[i].owner) {
+          owner = r[i].owner;
+        }
+        cell = document.createElement('td');          // Make a cell showing their permissions...
+        text = document.createTextNode(owner);
+        cell.appendChild(text);
+        row.appendChild(cell);
+      }
+
+      // If this is a people table...
       if (this.queryObjectName == "people") {
         let permissions = "None";
         if (r[i].permissions) {

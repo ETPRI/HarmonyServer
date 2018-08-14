@@ -20,6 +20,10 @@ class nodeFunctions {
       command = "merge";
     }
 
+    if (strings.ret != "") {
+      strings.ret = `return ${strings.ret}`;
+    }
+
     const query = `${command} (${node}) ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
@@ -79,6 +83,10 @@ class nodeFunctions {
       }
     }
 
+    if (strings.ret != "") {
+      strings.ret = `return ${strings.ret}`;
+    }
+
     const query = `match (${node}) ${strings.where} ${changes} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
@@ -102,6 +110,8 @@ class nodeFunctions {
   dataObj.rel.properties = an object containing properties the relation should have. Example: {username: "admin", password:"admin"}
   dataObj.rel.merge = boolean setting whether to merge the relation (if it already exists, don't make a new one). Default: false
   dataObj.rel.return = boolean setting whether to return the relation. Defaults to true.
+
+  The data object can also contain a boolean, dataObj.distinct. It defaults to false. If true, then duplicate items are removed from the results.
   */
   createRelation(dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""};
@@ -137,6 +147,13 @@ class nodeFunctions {
     let command = "create";
     if (dataObj.rel && dataObj.rel.merge === true) {
       command = "merge";
+    }
+
+    if (strings.ret != "" && dataObj.distinct) {
+      strings.ret = `return distinct ${strings.ret}`;
+    }
+    else if (strings.ret != "") {
+      strings.ret = `return ${strings.ret}`;
     }
 
     const query = `match (${from}), (${to}) ${strings.where} ${command} (from)-[${rel}]->(to) ${strings.ret}`;
@@ -190,6 +207,13 @@ class nodeFunctions {
     }
     else {
       rel = this.buildSearchString({}, strings, "where", "rel");
+    }
+
+    if (strings.ret != "" && dataObj.distinct) {
+      strings.ret = `return distinct ${strings.ret}`;
+    }
+    else if (strings.ret != "") {
+      strings.ret = `return ${strings.ret}`;
     }
 
     const query = `match (${from})-[${rel}]->(${to}) ${strings.where} delete rel ${strings.ret}`;
@@ -252,6 +276,13 @@ class nodeFunctions {
     let changes = "";
     if (dataObj.changes) {
      changes = this.buildChangesString(dataObj.changes);
+    }
+
+    if (strings.ret != "" && dataObj.distinct) {
+      strings.ret = `return distinct ${strings.ret}`;
+    }
+    else if (strings.ret != "") {
+      strings.ret = `return ${strings.ret}`;
     }
 
     const query = `match (${from})-[${rel}]->(${to}) ${strings.where} ${changes} ${strings.ret}`;
@@ -330,6 +361,8 @@ class nodeFunctions {
       arrow = `<-[${rel}]-`;
     }
 
+    strings.ret = `return ${strings.ret}`;
+
     const query = `match (${required}) ${strings.reqWhere}
                    optional match (required)${arrow}(${optional}) ${changes} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
@@ -401,7 +434,7 @@ class nodeFunctions {
       rel1 = this.buildSearchString({}, strings, "where", "rel1");
     }
 
-    // Build the string representing the second relation - what goes in the first set of brackets
+    // Build the string representing the second relation - what goes in the second set of brackets
     let rel2 = "";
     if (dataObj.rel2) {
       rel2 = this.buildSearchString(dataObj.rel2, strings, "where", "rel2");
@@ -414,6 +447,13 @@ class nodeFunctions {
     let changes = "";
     if (dataObj.changes) {
      changes = this.buildChangesString(dataObj.changes);
+    }
+
+    if (strings.ret != "" && dataObj.distinct) {
+      strings.ret = `return distinct ${strings.ret}`;
+    }
+    else if (strings.ret != "") {
+      strings.ret = `return ${strings.ret}`;
     }
 
     const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where} ${changes} ${strings.ret}`;
@@ -479,6 +519,44 @@ class nodeFunctions {
       }
     }
 
+    if (dataObj.owner) {
+      const w = `o.name=~"(?i)#s#${dataObj.owner.value}#E#" and `;
+      let w1="";
+      switch(dataObj.owner.searchType) {
+        case "S":    // start
+          // Anything can come AFTER the specified value, but nothing BEFORE it (it starts the desired string)
+          w1 = w.replace('#s#',"").replace('#E#','.*');    break;
+        case "M":    // middle
+          // Anything can come before or after the specified value (as long as it appears anywhere in the string)
+          w1 = w.replace('#s#',".*").replace('#E#','.*');  break;
+        case "E":    // end
+          // Anything can come BEFORE the specified value, but nothing AFTER it (it ends the desired string)
+          w1 = w.replace('#s#',".*").replace('#E#','');    break;
+        case "=":    // equal to
+          // NOTHING can come before OR after the specified value (string must match it exactly)
+          w1 = w.replace('#s#',"").replace('#E#','');      break;
+        default:
+          app.error("Error: search type for a string field is not 'S', 'M', 'E' or '='.");
+      }
+      where += w1;
+    }
+
+    if (dataObj.permissions) {
+      switch (dataObj.permissions) {
+        case "users":
+          where += `t.name = 'User' and `;
+          break;
+        case "admins":
+          where += `t.name = 'Admin' and `;
+          break;
+        case "allUsers": // These do nothing - they're only here so that a REAL default can produce an error message
+        case "all":
+          break;
+        default:
+          app.error("Error: Search type for permissions is not users, admins, users and admins, or all people")
+      }
+    }
+
     // Remove the last " and " from the where clause
     where = where.slice(0, -5);
 
@@ -489,7 +567,23 @@ class nodeFunctions {
       ret += `, perm.name as permissions`;
     }
 
-    const query = `match (${dataObj.name}:${dataObj.type}), (a) ${where} ${permCheck}
+    let ownerCheck = "";
+    if (dataObj.type == "mindmap") {
+      ownerCheck = `optional match (${dataObj.name})-[:Owner]->(owner:people)`;
+      ret += `, owner.name as owner`;
+    }
+
+    let query = `match (${dataObj.name}:${dataObj.type})`;
+
+    if (dataObj.owner) {
+      query += `-[:Owner]->(o:people)`;
+    }
+
+    if (dataObj.permissions && dataObj.permissions != "all") {
+      query += `-[:Permissions]->(t:LoginTable)`; // require a permissions link
+    }
+
+    query += `, (a) ${where} ${permCheck} ${ownerCheck}
                    ${ret} order by ${dataObj.orderBy} limit ${dataObj.limit}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
@@ -551,7 +645,7 @@ class nodeFunctions {
 
     if (!(obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
       if (strings.ret == "") {
-        strings.ret = `return ${defaultName}`;
+        strings.ret = `${defaultName}`;
       }
       else strings.ret += `, ${defaultName}`;
 

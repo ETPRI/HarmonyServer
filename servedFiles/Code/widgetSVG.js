@@ -206,6 +206,10 @@ class widgetSVG {
               this.owner = {};
               this.owner.name = data[i].optional.properties.name;
               this.owner.id = data[i].optional.id;
+              if (this.owner.id != app.login.userID) { // If the map belongs to someone else, disable saving
+                const saveButton = app.domFunctions.getChildByIdr(document.getElementById(this.widgetID), 'save');
+                saveButton.style.display='none';
+              }
               break;
             case "Permissions":
               break;
@@ -628,15 +632,21 @@ class widgetSVG {
     // If the mind map doesn't have an ID (indicating that it hasn't been saved),
     // or if the user clicked the "Save As" button, indicating they want to make a copy with a new name:
     // ask for the name, set the name in the title, and mark the mindmap as "new".
-    if (typeof id === "undefined" || button.getAttribute("idr") == "saveAs") {
+    if (typeof id === "undefined" || id == null || button.getAttribute("idr") == "saveAs") {
       name = prompt("Please enter the name for this mind map", name);
-      newMap = true;
-      const obj = {};
-      obj.node = {};
-      obj.node.type = "mindmap";
-      obj.node.properties = {};
-      obj.node.properties.name = name;
-      app.nodeFunctions.changeNode(obj, this, "checkNameExists", name, newMap);
+      if (name != null) {
+        newMap = true;
+        const obj = {};
+        obj.from = {};
+        obj.from.type = "mindmap";
+        obj.from.properties = {};
+        obj.from.properties.name = name;
+        obj.rel = {};
+        obj.rel.type = "Owner";
+        obj.to = {};
+        obj.to.id = app.login.userID;
+        app.nodeFunctions.changeRelation(obj, this, "checkNameExists", name, newMap);
+      }
     }
     else {
       this.checkOwner(name, newMap);
@@ -645,13 +655,19 @@ class widgetSVG {
 
   checkNameExists(data, name, newMap) {
     if (data && data.length > 0) {
-      name = prompt("Sorry, that name is taken. Please choose another", name);
-      const obj = {};
-      obj.node = {};
-      obj.node.type = "mindmap";
-      obj.node.properties = {};
-      obj.node.properties.name = name;
-      app.nodeFunctions.changeNode(obj, this, "checkNameExists", name, newMap);
+      name = prompt("Sorry, you already have a map with that name. Please choose another", name);
+      if (name != null) {
+        const obj = {};
+        obj.from = {};
+        obj.from.type = "mindmap";
+        obj.from.properties = {};
+        obj.from.properties.name = name;
+        obj.rel = {};
+        obj.rel.type = "Owner";
+        obj.to = {};
+        obj.to.id = app.login.userID;
+        app.nodeFunctions.changeRelation(obj, this, "checkNameExists", name, newMap);
+      }
     }
     else {
       this.checkOwner(name, newMap);
