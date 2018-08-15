@@ -52,8 +52,48 @@ buildApp() {
 	// Create temp admin account if a real one doesn't yet exist; delete it if a real one does exist
 	this.login.checkAdminTable();
 
+	// Check for metadata and add it if needed
+	this.checkMetaData();
+
 	// Run any test code currently in app
 	this.test();
+}
+
+checkMetaData() {
+	const obj = {};
+	obj.node = {};
+	obj.node.type = "M_MetaData";
+	this.nodeFunctions.changeNode(obj, this, 'addMetaData');
+}
+
+addMetaData(data) {
+	if (!data || data.length == 0) { // If no metadata nodes were found, add them.
+		let type;
+		for (type in this.metaData.node) {
+			const obj = {};
+			obj.type = "M_MetaData";
+			obj.properties = {};
+			obj.properties.name = type;
+			obj.properties.label = this.metaData.node[type].nodeLabel;
+			obj.properties.orderBy = this.metaData.node[type].orderBy;
+			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
+			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
+			this.nodeFunctions.createNode(obj);
+		}
+	}
+
+	else { // if data were found, it will be an array of metadata nodes
+		let metaData = {};
+		for (let i = 0; i < data.length; i++) {
+			const node = data[i].node.properties;
+			metaData[node.name] = {};
+			metaData[node.name].nodeLabel = node.label;
+			metaData[node.name].orderBy = node.orderBy;
+			metaData[node.name].fieldsDisplayed = JSON.parse(node.fieldsDisplayed);
+			metaData[node.name].fields = JSON.parse(node.fields);
+		}
+		this.metaData.node = metaData;
+	}
 }
 
 keyPressed(evnt) {

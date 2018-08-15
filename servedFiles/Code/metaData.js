@@ -52,7 +52,6 @@ initNodeData() { // move to DB in the future
     ,"email":      {label: "Email"     }
     ,"state":      {label: "State"     }
     ,"comment":    {label: "Comment"   }
-    ,"newField":   {label: "newField"  }
     }}
 
   this.node.organization = {
@@ -62,7 +61,6 @@ initNodeData() { // move to DB in the future
     ,fields: {"name":       {label: "Name" }
       ,"web":      {label: "Web"}
       ,"comment":  {label: "Comment"  }
-      ,"newField": {label: "newField"  }
     }}
 
   this.node.topic = {
@@ -71,7 +69,6 @@ initNodeData() { // move to DB in the future
     ,fieldsDisplayed: ["name", "comment"]
     ,fields: {"name":       {label: "Name" }
       ,"comment":    {label: "Comment"}
-      ,"newField":   {label: "newField"  }
     }}
 
 

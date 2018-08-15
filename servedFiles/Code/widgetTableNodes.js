@@ -482,7 +482,7 @@ class widgetTableNodes {
     obj.from.id = ID;
     obj.from.return = false;
     obj.to = {};
-    obj.to.type = "LoginTable"; // If this user has a relation to ANY login table, find it (and later, extract login details and delete it)
+    obj.to.type = "M_LoginTable"; // If this user has a relation to ANY login table, find it (and later, extract login details and delete it)
     obj.to.return = false;
     obj.rel = {};
     obj.rel.type = "Permissions";
@@ -534,7 +534,7 @@ class widgetTableNodes {
     obj.from.id = ID;
     obj.from.return = false;
     obj.to = {};
-    obj.to.type = "LoginTable";
+    obj.to.type = "M_LoginTable";
     obj.to.properties = {};
     obj.to.properties.name = toAdd;
     obj.to.return = false;
@@ -556,7 +556,7 @@ class widgetTableNodes {
     obj.from.id = ID; // From this user
     obj.from.return = false;
     obj.to = {};
-    obj.to.type = "LoginTable"; // To any login table
+    obj.to.type = "M_LoginTable"; // To any login table
     obj.to.return = false;
     obj.rel = {};
     obj.rel.type = "Permissions"; // Any permissions link

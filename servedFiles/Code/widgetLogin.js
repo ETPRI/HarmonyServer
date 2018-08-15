@@ -85,7 +85,7 @@ class widgetLogin {
   checkAdminTable() { // start by merging the User table...
     const obj = {};
     obj.merge = true;
-    obj.type = "LoginTable";
+    obj.type = "M_LoginTable";
     obj.properties = {};
     obj.properties.name = "User";
     obj.return = false;
@@ -95,7 +95,7 @@ class widgetLogin {
   mergeAdmin() { // then merge the Admin table...
     const obj = {};
     obj.merge = true;
-    obj.type = "LoginTable";
+    obj.type = "M_LoginTable";
     obj.properties = {};
     obj.properties.name = "Admin";
     obj.return = false;
@@ -108,7 +108,7 @@ class widgetLogin {
     obj.from.name = "user";
     obj.from.type = "people";
     obj.to = {};
-    obj.to.type = "LoginTable";
+    obj.to.type = "M_LoginTable";
     obj.to.properties = {};
     obj.to.properties.name = "Admin";
     obj.to.return = false;
@@ -145,7 +145,7 @@ class widgetLogin {
     obj.from.id = id;
     obj.from.return = false;
     obj.to = {};
-    obj.to.type = "LoginTable";
+    obj.to.type = "M_LoginTable";
     obj.to.properties = {};
     obj.to.properties.name = "Admin";
     obj.to.return = false;
@@ -174,7 +174,7 @@ class widgetLogin {
       obj.from.name = "user";
       obj.to = {};
       obj.to.name = "table";
-      obj.to.type = "LoginTable";
+      obj.to.type = "M_LoginTable";
       obj.rel = {};
       obj.rel.type = "Permissions";
       obj.rel.properties = {};

@@ -32,7 +32,7 @@ class widgetView {
     obj.start = {};
     obj.start.name = "user";
     obj.middle = {};
-    obj.middle.type = "View";
+    obj.middle.type = "M_View";
     obj.middle.properties = {};
     obj.middle.properties.direction = relationType;
     obj.middle.return = false;
@@ -280,7 +280,7 @@ class widgetView {
     obj.start = {};
     obj.start.name = "user";
     obj.middle = {};
-    obj.middle.type = "View";
+    obj.middle.type = "M_View";
     obj.middle.properties = {};
     obj.middle.properties.direction = this.relationType;
     obj.middle.return = false;
@@ -410,7 +410,7 @@ class widgetView {
     // Create a view of this node for this user
     const obj = {};
     obj.name = "view";
-    obj.type = "View";
+    obj.type = "M_View";
     obj.properties = {};
     obj.properties.direction = this.relationType;
     app.nodeFunctions.createNode(obj, this, 'linkViewUser');

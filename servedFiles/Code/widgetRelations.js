@@ -40,7 +40,7 @@ refresh() {
     obj.start.return = false;
     obj.middle = {};
     obj.middle.name = "view";
-    obj.middle.type = "View";
+    obj.middle.type = "M_View";
     obj.middle.properties = {};
     obj.middle.properties.direction = this.relationType;
     obj.end = {};
@@ -519,7 +519,7 @@ findReverse(data, rows) {
   obj.start.return = false;
   obj.middle = {};
   obj.middle.name = "view";
-  obj.middle.type = "View";
+  obj.middle.type = "M_View";
   obj.middle.properties = {};
   obj.middle.properties.direction = otherRelType;
   obj.end = {};

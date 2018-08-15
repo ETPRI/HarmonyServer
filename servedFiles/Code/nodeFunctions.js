@@ -481,7 +481,7 @@ class nodeFunctions {
   tableNodeSearch(dataObj, methodObj, methodName, ...args) {
     // Example search string:
     // match (n:type) where n.numField < value and n.stringField =~(?i)value
-    // optional match (n)-[:Permissions]->(perm:LoginTable) return n, perm.name as permissions
+    // optional match (n)-[:Permissions]->(perm:M_LoginTable) return n, perm.name as permissions
     // order by first, second, third limit 9
 
     // Notes: use *. for wildcard in string search. Only search for permissions if type = people.
@@ -563,7 +563,7 @@ class nodeFunctions {
     let permCheck = "";
     let ret = `return ${dataObj.name}`;
     if (dataObj.type == "people") {
-      permCheck = `optional match (${dataObj.name})-[:Permissions]->(perm:LoginTable)`;
+      permCheck = `optional match (${dataObj.name})-[:Permissions]->(perm:M_LoginTable)`;
       ret += `, perm.name as permissions`;
     }
 
@@ -580,7 +580,7 @@ class nodeFunctions {
     }
 
     if (dataObj.permissions && dataObj.permissions != "all") {
-      query += `-[:Permissions]->(t:LoginTable)`; // require a permissions link
+      query += `-[:Permissions]->(t:M_LoginTable)`; // require a permissions link
     }
 
     query += `, (a) ${where} ${permCheck} ${ownerCheck}
@@ -613,9 +613,9 @@ class nodeFunctions {
 
     const query = `match (per), (start), (end)
                  where ID(per) = ${app.login.userID} and ID(start) = ${dataObj.startID} and ID(end)=${dataObj.endID}
-                 merge (per)-[:Owner]->(view:View {direction:"start"})-[:Subject]->(start)
+                 merge (per)-[:Owner]->(view:M_View {direction:"start"})-[:Subject]->(start)
                  merge (view)-[endLink:Link${attributeString}]->(end)
-                 merge (per)-[:Owner]->(view2:View {direction:"end"})-[:Subject]->(end)
+                 merge (per)-[:Owner]->(view2:M_View {direction:"end"})-[:Subject]->(end)
                  merge (view2)-[startLink:Link${attributeString}]->(start)
                  return ${dataObj.relation} as link`;
     this.sendQuery(query, methodObj, methodName, ...args);
@@ -643,7 +643,7 @@ class nodeFunctions {
   buildSearchString(obj, strings, whereString, defaultName) {
     let string = defaultName;
 
-    if (!(obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
+    if (!(obj.return && obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
       if (strings.ret == "") {
         strings.ret = `${defaultName}`;
       }

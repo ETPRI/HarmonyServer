@@ -32,6 +32,7 @@ constructor(callerID, label, id, name) {
   this.queryObject = app.metaData.getNode(label);
   this.fields      = this.queryObject.fields;
   this.name        = name;
+  this.newFields   = 0;
 
   this.idWidget = app.idCounter;
   app.widgets[app.idCounter] = this; // Add to app.widgets
@@ -146,7 +147,6 @@ buildWidget() { // public - build table header
   this.startDOM   = app.domFunctions.getChildByIdr(widget, "start");
 }
 
-
 buildDataNode() {   // put in one field label and input row for each field
   let fieldCount = 0;
   let value = "";
@@ -155,12 +155,6 @@ buildDataNode() {   // put in one field label and input row for each field
   while (this.tableDOM.hasChildNodes()) {
     this.tableDOM.removeChild(this.tableDOM.firstChild);
   }
-
-  // NOTE: Kludge to be removed once all function calls return ID number instead of identity object
-  // if (this.dataNode && ("id" in this.dataNode)) {
-  //   this.dataNode.identity = this.dataNode.id;
-  //   delete this.dataNode.id;
-  // }
 
   for (let fieldName in this.fields) {
 
@@ -181,6 +175,9 @@ buildDataNode() {   // put in one field label and input row for each field
       if (value) { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
         value = value.replace(/"/g, "&quot;");
       }
+      else {
+        value = "";
+      }
     }
 
     else if (fieldName == "name") {
@@ -196,11 +193,11 @@ buildDataNode() {   // put in one field label and input row for each field
   }
 
   // Create div for the "trash" checkbox and reason
-  const trashRow = document.createElement('tr');
+  this.trashRow = document.createElement('tr');
   const trash = document.createElement('td');
-  trashRow.appendChild(trash);
+  this.trashRow.appendChild(trash);
   const trashInput = document.createElement('td');
-  trashRow.appendChild(trashInput);
+  this.trashRow.appendChild(trashInput);
 
   const trashTextSection = document.createElement('b');
   const trashText = document.createTextNode("Trash Node");
@@ -228,12 +225,12 @@ buildDataNode() {   // put in one field label and input row for each field
   trashInput.appendChild(reason);
 
   if (!app.login.userID) { // If no user is logged in
-    trashRow.setAttribute("hidden", "true");
+    this.trashRow.setAttribute("hidden", "true");
   }
-  this.tableDOM.appendChild(trashRow);
-  app.login.viewLoggedIn.push(trashRow);
+  this.tableDOM.appendChild(this.trashRow);
+  app.login.viewLoggedIn.push(this.trashRow);
 
-  if (this.dataNode.properties._trash) {
+  if (this.dataNode && this.dataNode.properties._trash) {
     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
     const reason = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
     const reasonText = app.domFunctions.getChildByIdr(this.widgetDOM, 'reasonText');
@@ -246,6 +243,47 @@ buildDataNode() {   // put in one field label and input row for each field
   // set the button to be save or added
   if (this.dataNode) {this.addSaveDOM.value = "Save";
   } else {this.addSaveDOM.value = "Add";}
+
+  // Create new field box
+  this.addField();
+}
+
+checkNewField() {
+  const rows = Array.from(this.tableDOM.children);
+  let add = true;
+  for (let i = 0; i < rows.length; i++) {
+    const idr = rows[i].getAttribute('idr');
+    if (idr && idr.slice(0,11) == 'newFieldRow') { // This is a new field row
+      const nameCell = rows[i].firstElementChild;
+      const valueCell = nameCell.nextElementSibling;
+      if (nameCell.firstElementChild.value == "" && valueCell.firstElementChild.value == "") { // both inputs are empty
+        add = false;
+        break;
+      }
+    }
+  }
+  // If all rows have been checked, and there are no empty ones, create a new one.
+  if (add) {
+    this.addField();
+  }
+}
+
+addField(textbox) {
+  const row = document.createElement('tr');
+  row.setAttribute('idr', `newFieldRow${this.newFields}`);
+  this.tableDOM.insertBefore(row, this.trashRow);
+
+  const nameCell = document.createElement('td');
+  row.appendChild(nameCell);
+  const nameIn = document.createElement('input');
+  nameCell.appendChild(nameIn);
+  nameIn.outerHTML = `<input type = "text" idr = "newFieldName${this.newFields}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkNewField', this)" value = "">`
+
+  const valueCell = document.createElement('td');
+  row.appendChild(valueCell);
+  const valueIn = document.createElement('input');
+  valueCell.appendChild(valueIn);
+  valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkNewField', this)" value = "">`
 }
 
 saveAdd(widgetElement) { // Saves changes or adds a new node
@@ -348,13 +386,47 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
 
   const create = "create (n:"+ this.label+" {#data#}) return n";
   let data={};
+  let newFieldsExist = false;
+
   while (tr) {
     const inp = tr.lastElementChild.firstElementChild;
 
-    if (inp && inp.hasAttribute("db")) { // Only process input rows with a db value - not the trash div; that's done separately
+    if (inp && inp.hasAttribute("db")) { //  Process input rows with a db value - ones corresponding to existing fields
       data[inp.getAttribute("db")] = app.stringEscape(inp.value);
     }
+
+    // process rows with new fields
+    const idr = tr.getAttribute('idr')
+    if (idr && idr.slice(0,11) == "newFieldRow") {
+      const nameCell = tr.firstElementChild;
+      const name = nameCell.firstElementChild.value;
+      const valueCell = nameCell.nextElementSibling;
+      const value = valueCell.firstElementChild.value;
+      if (name != "") {
+        newFieldsExist = true;
+        const fieldName = name.replace(/\s/g, "");
+        // Add new field to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
+        this.fields[fieldName] = {label: name};
+        data[fieldName] = value;
+      }
+    }
     tr=tr.nextElementSibling;
+  }
+
+  // Change metadata node if needed
+  if (newFieldsExist) {
+    const metadataObj = {};
+    metadataObj.node = {};
+    metadataObj.node.type = "M_MetaData";
+    metadataObj.node.properties = {};
+    metadataObj.node.properties.name = this.label;
+    metadataObj.changes = [];
+    const fields = {};
+    fields.property = "fields";
+    fields.value = app.stringEscape(JSON.stringify(this.fields));
+    metadataObj.changes.push(fields);
+
+    app.nodeFunctions.changeNode(metadataObj);
   }
 
   const obj = {};
@@ -363,7 +435,6 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
   obj.properties = data;
   app.nodeFunctions.createNode(obj, this, 'addComplete');
 }
-
 
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
   this.dataNode = data[0].n; // takes single nodes
@@ -384,7 +455,6 @@ addComplete(data) { // Refreshes the node table and logs that addSave was clicke
   this.buildDataNode();
   this.buildStart();
 }
-
 
 changed(input) { // Logs changes to fields, and highlights when they are different from saved fields
   if (!this.dataNode) {
@@ -414,24 +484,41 @@ changed(input) { // Logs changes to fields, and highlights when they are differe
   app.regression.record(obj);
 }
 
-
 save(widgetElement, trashUntrash) { // Builds query to update a node, runs it and passes the results to saveData()
-  /*
-    MATCH (n)
-    WHERE id(n)= 146
-    SET n.born = 2003  // loop changed
-    RETURN n
-  */
   let tr = this.tableDOM.firstElementChild;
 
-  let data=[];
+  let data = [];
+  let newFieldsExist = false;
+
   while (tr) {
     const inp = tr.lastElementChild.firstElementChild;  // find <input> element
-    if(inp.getAttribute("class") === "changedData") {
+
+    // process new fields
+    const idr = tr.getAttribute('idr');
+    if (idr && idr.slice(0,11) == "newFieldRow") {
+
+      const nameCell = tr.firstElementChild;
+      const name = nameCell.firstElementChild.value;
+      const valueCell = nameCell.nextElementSibling;
+      const value = valueCell.firstElementChild.value;
+      if (name != "") {
+        newFieldsExist = true;
+        const fieldName = name.replace(/\s/g, "");
+        // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
+        this.fields[fieldName] = {label: name};
+
+        // Add field name and value to list of changes
+        const change = {};
+        change.property = fieldName;
+        change.value = app.stringEscape(inp.value);  // assume string
+        data.push(change);
+      }
+    }
+
+    // process existing fields
+    else if(inp.getAttribute("class") === "changedData") {
       // create a set for this field
       const fieldName = inp.getAttribute("db");
-      // const d1 = "n."+ fieldName +"=#value#, ";
-      // let d2 = "";
       if (fieldName in this.fields) {
         const change = {};
         change.property = fieldName;
@@ -447,7 +534,23 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     tr=tr.nextElementSibling;
   }
 
-  if (data==={}) {
+  // Update metadata node
+  if (newFieldsExist) {
+    const obj = {};
+    obj.node = {};
+    obj.node.type = "M_MetaData";
+    obj.node.properties = {};
+    obj.node.properties.name = this.label;
+    obj.changes = [];
+    const fields = {};
+    fields.property = "fields";
+    fields.value = app.stringEscape(JSON.stringify(this.fields));
+    obj.changes.push(fields);
+
+    app.nodeFunctions.changeNode(obj);
+  }
+
+  if (data===[]) {
     if (trashUntrash) { // If the node was trashed or untrashed, but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
       const obj = {};
       obj.id = this.idWidget;
@@ -458,7 +561,8 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     } else { // If the node was NOT trashed or untrashed AND there were no changes to fields, just alert that there were no changes. No need to log in this case.
     alert("no changes to save")
     }
-  } else {
+  }
+  else {
     const obj = {};
     obj.node = {};
     obj.node.name = "n";
@@ -495,9 +599,8 @@ saveData(data) { // Refreshes the node table and logs that addSave was clicked
 }
 
 toggleReason(checkBox) {
-  const trashRow = checkBox.parentElement.parentElement;
-  const reason = app.domFunctions.getChildByIdr(trashRow, 'trashReason');
-  const reasonText = app.domFunctions.getChildByIdr(trashRow, 'reasonText');
+  const reason = app.domFunctions.getChildByIdr(this.trashRow, 'trashReason');
+  const reasonText = app.domFunctions.getChildByIdr(this.trashRow, 'reasonText');
 
   if (checkBox.checked) {
     reason.removeAttribute("hidden");
