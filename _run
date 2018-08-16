@@ -2,4 +2,8 @@
 # run electron application, this is a node.js app
 #
 cd "${0%/*}"
+# I'm told this is not a good practice -
+# https://stackoverflow.com/questions/35068712/error-listen-eacces-0-0-0-080-osx-node-js
+#sudo node server.js
+
 node server.js

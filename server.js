@@ -18,7 +18,7 @@ http.createServer(function (request, response) {
     var q = url.parse(request.url, true);
 
     if (q.pathname === "/get"){
-      // reading a form
+      // reading a form, do not think this is used
       console.log("get: %s\n", JSON.stringify(q.query));
       response.statusCode = 200;
       response.setHeader('Content-Type', 'text/plain');
@@ -94,9 +94,10 @@ http.createServer(function (request, response) {
         }
     });
 
-}).listen(8125);
+}).listen(8080);
 
-console.log('Server running at http://127.0.0.1:8125');
+
+console.log('Server running at http://127.0.0.1:8080');
 
 // neo4j  --------------------------------------
 const neo4j  = require('neo4j-driver').v1;
