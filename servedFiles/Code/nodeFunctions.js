@@ -15,16 +15,19 @@ class nodeFunctions {
   createNode(dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""}; // where won't be used here, but I'm including it for consistency
     const node = this.buildSearchString(dataObj, strings, "where", "node");
+
     let command = "create";
+    let oncreate = "set node.GUID = ID(node)";
     if (dataObj.merge === true) {
       command = "merge";
+      oncreate = "on create set node.GUID = ID(node)";
     }
 
     if (strings.ret != "") {
       strings.ret = `return ${strings.ret}`;
     }
 
-    const query = `${command} (${node}) ${strings.ret}`;
+    const query = `${command} (${node}) ${oncreate} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -55,6 +58,7 @@ class nodeFunctions {
   dataObj.node.id = the ID of the node
   dataObj.node.properties = an object containing properties the object should have. Example: {name:"Amy", age:31}
   dataObj.node.return = boolean setting whether to return the node. Defaults to true.
+  dataObj.node.merge = boolean, default false. If it's true, and no nodes are found that match the given values, creates ones.
   The change array is called changes, and contains objects representing properties to set.
   (If no changes are sent, just returns any nodes without "return" set to false without making any changes.)
   Each object in the array has a property and a value, and may contain a boolean stating whether it's a string (default is true).
@@ -87,7 +91,14 @@ class nodeFunctions {
       strings.ret = `return ${strings.ret}`;
     }
 
-    const query = `match (${node}) ${strings.where} ${changes} ${strings.ret}`;
+    let command = 'match';
+    let oncreate = "";
+    if (dataObj.merge === true) {
+      command = 'merge';
+      oncreate = 'on create set node.GUID = ID(node)';
+    }
+
+    const query = `${command} (${node}) ${strings.where} ${oncreate} ${changes} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -145,8 +156,11 @@ class nodeFunctions {
 
 
     let command = "create";
+    let oncreate = "set rel.GUID = ID(rel)";
+
     if (dataObj.rel && dataObj.rel.merge === true) {
       command = "merge";
+      oncreate = "on create set rel.GUID = ID(rel)";
     }
 
     if (strings.ret != "" && dataObj.distinct) {
@@ -156,7 +170,7 @@ class nodeFunctions {
       strings.ret = `return ${strings.ret}`;
     }
 
-    const query = `match (${from}), (${to}) ${strings.where} ${command} (from)-[${rel}]->(to) ${strings.ret}`;
+    const query = `match (${from}), (${to}) ${strings.where} ${command} (from)-[${rel}]->(to) ${oncreate} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -234,6 +248,7 @@ class nodeFunctions {
   The only difference is that if no name is supplied for the end node, it is called "to" instead of "from".
 
   The relation object is called "rel", and can contain the same keys as "from" and "to": type, name, id, properties, return.
+  It can also contain a "merge" boolean (default false). If true, this will create a new relation if no existing one is found.
   If no name is supplied, the relation is called "rel".
 
   The changes array contains objects representing changes to make to the nodes or relation.
@@ -243,33 +258,33 @@ class nodeFunctions {
   */
   changeRelation(dataObj, methodObj, methodName, ...args) {
     // These strings are stored in an object so they can be passed in and out of methods and updated
-    const strings = {ret:"", where:""};
+    const strings = {ret:"", nodesWhere:"", relWhere:""};
 
     // Build the string representing the "from" node - what goes in the first set of parentheses
     let from = "";
     if (dataObj.from) {
-      from = this.buildSearchString(dataObj.from, strings, "where", "from");
+      from = this.buildSearchString(dataObj.from, strings, "nodesWhere", "from");
     }
     else {
-      from = this.buildSearchString({}, strings, "where", "from");
+      from = this.buildSearchString({}, strings, "nodesWhere", "from");
     }
 
     // Build the string representing the "to" node - what goes in the second set of parentheses
     let to = "";
     if (dataObj.to) {
-      to = this.buildSearchString(dataObj.to, strings, "where", "to");
+      to = this.buildSearchString(dataObj.to, strings, "nodesWhere", "to");
     }
     else {
-      to = this.buildSearchString({}, strings, "where", "to");
+      to = this.buildSearchString({}, strings, "nodesWhere", "to");
     }
 
     // Build the string representing the relation - what goes in the brackets
     let rel = "";
     if (dataObj.rel) {
-      rel = this.buildSearchString(dataObj.rel, strings, "where", "rel");
+      rel = this.buildSearchString(dataObj.rel, strings, "relWhere", "rel");
     }
     else {
-      rel = this.buildSearchString({}, strings, "where", "rel");
+      rel = this.buildSearchString({}, strings, "relWhere", "rel");
     }
 
     // Build the string representing the changes - what comes after the SET keyword
@@ -285,7 +300,15 @@ class nodeFunctions {
       strings.ret = `return ${strings.ret}`;
     }
 
-    const query = `match (${from})-[${rel}]->(${to}) ${strings.where} ${changes} ${strings.ret}`;
+    let command = 'match';
+    let oncreate = "";
+
+    if (dataObj.rel.merge === true) {
+      command = 'merge';
+      oncreate = 'on create set rel.GUID = ID(rel)'
+    }
+
+    const query = `match (${from}), (${to}) ${strings.nodesWhere} ${command} (from)-[${rel}]->(to) ${strings.relWhere} ${oncreate} ${changes} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -364,7 +387,7 @@ class nodeFunctions {
     strings.ret = `return ${strings.ret}`;
 
     const query = `match (${required}) ${strings.reqWhere}
-                   optional match (required)${arrow}(${optional}) ${changes} ${strings.ret}`;
+                   optional match (required)${arrow}(${optional}) ${strings.optWhere} ${changes} ${strings.ret}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -475,7 +498,7 @@ class nodeFunctions {
     dataObj.where[property].value = the value the user typed in the search field
     dataObj.where[property].searchType = the value the user selected from the dropdown list. Can be "S", "M", "E" or "=" for strings, or "<", ">", "<=", ">=" or "=" for numbers.
     Example of a where object for a people search: {name:{fieldType:"string", value:"Fiori", searchType:"E"}, age:{fieldType:"number", value:18, searchType:">"}}
-  dataObj.orderBy = string representing the fields to order the search results by.
+  dataObj.orderBy = array representing the fields to order the search results by.
   dataObj.limit = number representing the maximum number of rows to return.
   */
   tableNodeSearch(dataObj, methodObj, methodName, ...args) {
@@ -583,8 +606,16 @@ class nodeFunctions {
       query += `-[:Permissions]->(t:M_LoginTable)`; // require a permissions link
     }
 
+    let orderBy = "";
+    for (let i = 0; i < dataObj.orderBy.length; i++) {
+      orderBy += `n.${dataObj.orderBy[i]}, `;
+    }
+
+    // Remove the last ', '
+    orderBy = orderBy.slice(0, -2);
+
     query += `, (a) ${where} ${permCheck} ${ownerCheck}
-                   ${ret} order by ${dataObj.orderBy} limit ${dataObj.limit}`;
+                   ${ret} order by ${orderBy} limit ${dataObj.limit}`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
 
@@ -613,10 +644,10 @@ class nodeFunctions {
 
     const query = `match (per), (start), (end)
                  where ID(per) = ${app.login.userID} and ID(start) = ${dataObj.startID} and ID(end)=${dataObj.endID}
-                 merge (per)-[:Owner]->(view:M_View {direction:"start"})-[:Subject]->(start)
-                 merge (view)-[endLink:Link${attributeString}]->(end)
-                 merge (per)-[:Owner]->(view2:M_View {direction:"end"})-[:Subject]->(end)
-                 merge (view2)-[startLink:Link${attributeString}]->(start)
+                 merge (per)-[r1:Owner]->(view:M_View {direction:"start"})-[r2:Subject]->(start) on create set r1.GUID = ID(r1), view.GUID = ID(view), r2.GUID = ID(r2)
+                 merge (view)-[endLink:Link${attributeString}]->(end) on create set endLink.GUID = ID(endLink)
+                 merge (per)-[r3:Owner]->(view2:M_View {direction:"end"})-[r4:Subject]->(end) on create set r3.GUID = ID(r3), view2.GUID = ID(view2), r4.GUID = ID(r4)
+                 merge (view2)-[startLink:Link${attributeString}]->(start) on create set startLink.GUID = ID(startLink)
                  return ${dataObj.relation} as link`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
@@ -690,7 +721,7 @@ class nodeFunctions {
       if (changes == "") {
         changes = `set ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
       }
-      else changes += `, ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
+      else changes += `,${changeArray[i].item}.${changeArray[i].property} = ${value}`;
     }
     return changes;
   }

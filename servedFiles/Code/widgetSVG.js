@@ -51,7 +51,7 @@ class widgetSVG {
       <input type="button" idr="saveAs" value="Save As" onclick="app.widget('startSave', this)">
       <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)">
     </div>
-    <div><table><tr idr="svgRow"><td>
+    <div class = "widgetBody"><table><tr idr="svgRow"><td>
       <svg id="svg${this.widgetID}" width="${this.width}" height="${this.height}" viewBox = "0 0 ${this.width} ${this.height}"
         ondblclick="app.widget('newBox', this, event)"
         ondragover="app.widget('allowDrop', this, event)"

@@ -41,12 +41,13 @@ initRelationData(){
 initNodeData() { // move to DB in the future
   ///////////////////////////////////// ETPRI
   this.node.people = {
-     nodeLabel: "people"
-    ,orderBy: "n.name, n.nameLast, n.nameFirst, n.email"
+     nodeLabel: "People"
+    ,orderBy: ["name", "nameLast", "nameFirst", "email", "state", "comment"]
     ,fieldsDisplayed: ["name","nameLast", "nameFirst", "email"]
+    ,formFieldsDisplayed: ["name", "nameLast", "nameFirst", "email", "state", "comment"]
     ,fields: {
       // I'm not sure this att is needed. It refers to a method that doesn't exist and that I don't think we plan to implement.
-     "name":       {label: "Name" , att: `onclick="app.widget('relationAdd',this)"` }
+     "name":       {label: "Name"      } // , att: `onclick="app.widget('relationAdd',this)"`
     ,"nameLast":   {label: "Last Name" }
     ,"nameFirst":  {label: "First Name"}
     ,"email":      {label: "Email"     }
@@ -56,8 +57,9 @@ initNodeData() { // move to DB in the future
 
   this.node.organization = {
      nodeLabel: "organization"
-    ,orderBy: "n.name, n.web"
+    ,orderBy: ["name", "web", "comment"]
     ,fieldsDisplayed: ["name", "web"]
+    ,formFieldsDisplayed: ["name", "web"]
     ,fields: {"name":       {label: "Name" }
       ,"web":      {label: "Web"}
       ,"comment":  {label: "Comment"  }
@@ -65,8 +67,9 @@ initNodeData() { // move to DB in the future
 
   this.node.topic = {
      nodeLabel: "topic"
-    ,orderBy: "n.name, n.comment"
+    ,orderBy: ["name", "comment"]
     ,fieldsDisplayed: ["name", "comment"]
+    ,formFieldsDisplayed: ["name", "comment"]
     ,fields: {"name":       {label: "Name" }
       ,"comment":    {label: "Comment"}
     }}
@@ -74,8 +77,9 @@ initNodeData() { // move to DB in the future
 
   this.node.address = {
     nodeLabel: "address"
-    ,orderBy: "n.name, n.state, n.postalCode, n.city, n.street1, n.street2"
+    ,orderBy: ["name", "state", "postalCode", "city", "street1", "street2"]
     ,fieldsDisplayed: ["name", "street1", "street2", "city", "state", "postalCode"]
+    ,formFieldsDisplayed: ["name", "street1", "street2", "city", "state", "postalCode", "country", "comment"]
     ,fields: {"name":       {label: "Name"}
     ,"street1":    {label: "Street"}
     ,"street2":    {label: ""  }
@@ -88,8 +92,9 @@ initNodeData() { // move to DB in the future
 
   this.node.mindmap = {
     nodeLabel: "mindmap"
-    ,orderBy: "n.name" // , n.lastEdited, n.created, n.lastEditor, n.creator
+    ,orderBy: ["name", "comment"] // ,lastEdited, created, lastEditor, creator
     ,fieldsDisplayed: ["name", "comment"] // , "creator", "created", "lastEditor", "lastEdited"
+    ,formFieldsDisplayed: ["name", "comment"] // , "creator", "created", "lastEditor", "lastEdited"
     ,fields: {
       "name":         {label: "Name"}
       ,"comment":     {label: "Comment"}
@@ -101,8 +106,9 @@ initNodeData() { // move to DB in the future
 
     this.node.calendar = {
       nodeLabel: "calendar"
-      ,orderBy: "n.name, n.description"
+      ,orderBy: ["name", "description"]
       ,fieldsDisplayed: ["name", "description"]
+      ,formFieldsDisplayed: ["name", "description"]
       ,fields: {
         "name": {label: "Name"}
         ,"description": {label: "Description"}

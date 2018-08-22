@@ -17,9 +17,11 @@ class dragDrop {
     this.domElement = document.getElementById(this.id);
 
     // Set up Show/Hide button
-    this.showHide = this.domFunctions.getChildByIdr(this.domElement, buttonIDR);
-    this.showHide.value = "Hide Input";
-    this.showHide.setAttribute("onclick", "app.widget('inputToggle', this)");
+    if (buttonIDR) {
+      this.showHide = this.domFunctions.getChildByIdr(this.domElement, buttonIDR);
+      this.showHide.value = "Hide Input";
+      this.showHide.setAttribute("onclick", "app.widget('inputToggle', this)");
+    }
 
     // Set up edit input
     this.editDOM = document.createElement("input");

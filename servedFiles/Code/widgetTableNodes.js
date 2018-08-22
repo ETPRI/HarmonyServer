@@ -45,7 +45,7 @@ class widgetTableNodes {
   buildQuery() { // public - called when search criteria change
     const obj = {};
     obj.name = "n";
-    obj.type = this.queryObject.nodeLabel;
+    obj.type = this.queryObjectName;
     obj.where = this.buildWhere();
     obj.orderBy = this.queryObject.orderBy;
     obj.limit = app.domFunctions.getChildByIdr(this.widget, "limit").value;
@@ -125,7 +125,7 @@ class widgetTableNodes {
     limit <input value ="9" idr = "limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
     </div>
 
-    <table>
+    <table class="widgetBody">
       <thead idr = "headerRow">
       <tr><th></th><th></th>#headerSearch#</tr>
       <tr><th>#</th><th>ID</th>#header#</tr>
@@ -417,7 +417,7 @@ class widgetTableNodes {
       new widgetCalendar(this.idWidget, id);
     }
     else {
-      new widgetNode(this.idWidget, this.queryObject.nodeLabel, id);
+      new widgetNode(this.idWidget, this.queryObjectName, id);
     }
     // log
     const obj = {};
@@ -446,7 +446,7 @@ class widgetTableNodes {
       new widgetCalendar(this.idWidget, null, name);
     }
     else {
-      new widgetNode(this.idWidget, this.queryObject.nodeLabel, null, name);
+      new widgetNode(this.idWidget, this.queryObjectName, null, name);
     }
 
     // log

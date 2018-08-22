@@ -241,6 +241,19 @@ class widgetLogin {
   		alert ("Multiple such nodes found");
   	}
 
+    const metadataObj = {};
+    metadataObj.required = {};
+    metadataObj.required.type = "M_MetaData";
+    metadataObj.required.name = "metadata";
+    metadataObj.rel = {};
+    metadataObj.rel.type = "Settings";
+    metadataObj.rel.name = "settings";
+    metadataObj.rel.direction = "left";
+    metadataObj.optional = {};
+    metadataObj.optional.id = this.userID;
+    metadataObj.optional.return = false;
+    app.nodeFunctions.findOptionalRelation(metadataObj, this, 'updateMetaData');
+
     // log
     const obj = {};
     obj.id = "loginDiv";
@@ -250,6 +263,31 @@ class widgetLogin {
     app.stripIDs(obj.data);
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
+  }
+
+  updateMetaData(data) {
+    // data should be an array of objects, each of which contains:
+    // a) a metadata object containing the name of the metadata object to update, and maybe
+    // b) a settings object whose properties are used to update metadata
+    for (let i = 0; i < data.length; i++) {
+      const row = data[i];
+      let properties = row.metadata.properties; // default values
+      const name = properties.name;
+
+      const propertyNames = ['fields', 'fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
+      for (let i = 0; i < propertyNames.length; i++) {
+        if (row.settings && row.settings.properties[propertyNames[i]]) { // user-specific values overrule defaults if they are present
+          properties[propertyNames[i]] = row.settings.properties[propertyNames[i]];
+        }
+
+        if (properties[propertyNames[i]]) {
+          app.metaData.node[name][propertyNames[i]] = JSON.parse(properties[propertyNames[i]]);
+        }
+      }
+    } // end for (each metadata node)
+
+    // Once metadata are updated, can call app.menuNodesInit to update dropdown list
+    app.menuNodesInit();
   }
 
   // Logs the user out: resets login information to null, resets the info paragraph to say "not logged in",

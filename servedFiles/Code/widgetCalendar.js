@@ -39,7 +39,7 @@ class widgetCalendar {
                                        <input type="button" idr="forwardButton" value=">" onclick="app.widget('page', this)">
                                        <input type="button" idr="details" value="Show Details" onclick="app.widget('showDetails', this)">
                                        </div>
-                                       <div><table><tr idr="calendarRow"><td id="calendar${this.widgetID}"></td></tr></table></div></div>`;
+                                       <div class="widgetBody"><table><tr idr="calendarRow"><td id="calendar${this.widgetID}"></td></tr></table></div></div>`;
 
     const parent = document.getElementById('widgets');
     const caller = document.getElementById(this.callerID); // Find the first existing element in the widgets div

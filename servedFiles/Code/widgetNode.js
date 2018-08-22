@@ -16,23 +16,27 @@ input: label
 
 
 class widgetNode {
-constructor(callerID, label, id, name) {
+constructor(callerID, queryObjectName, id, name) {
   // DOM pointers to data that will change, just make place holders
-  this.widgetDOM   = {};
-  this.relationsFrom = {}; // place holder for relations ->(n)
-  this.relationsTo   = {}; // place holder for relations   (n)->
-  this.addSaveDOM  = {};
-  this.tableDOM    = {};
-  this.fromDOM     = {}; // Is this ever used?
-  this.toDOM       = {}; // Is this ever used?
-  this.endDOM      = {}; // sub widget
-  this.startDOM    = {}; // sub widget
+  this.widgetDOM        = {};
+  this.relationsFrom    = {}; // place holder for relations ->(n)
+  this.relationsTo      = {}; // place holder for relations   (n)->
+  this.addSaveDOM       = {};
+  this.tableDOM         = {};
+  this.fromDOM          = {}; // Is this ever used?
+  this.toDOM            = {}; // Is this ever used?
+  this.endDOM           = {}; // sub widget
+  this.startDOM         = {}; // sub widget
 
-  this.label       = label;
-  this.queryObject = app.metaData.getNode(label);
-  this.fields      = this.queryObject.fields;
-  this.name        = name;
-  this.newFields   = 0;
+  this.queryObject          = app.metaData.getNode(queryObjectName);
+  this.queryObjectName      = queryObjectName;
+  this.nodeLabel            = this.queryObject.nodeLabel;
+  this.fields               = this.queryObject.fields;
+  this.fieldsDisplayed      = this.queryObject.fieldsDisplayed;
+  this.formFieldsDisplayed  = this.queryObject.formFieldsDisplayed;
+  this.orderBy              = this.queryObject.orderBy;
+  this.name                 = name;
+  this.newFields            = 0;
 
   this.idWidget = app.idCounter;
   app.widgets[app.idCounter] = this; // Add to app.widgets
@@ -104,7 +108,7 @@ buildWidget() { // public - build table header
   let id=null;  // assume add mode
   let name = this.name;
   if (name == "") {
-    name = `New ${this.label} Node`;
+    name = `New ${this.nodeLabel} Node`;
   }
 
   if (this.dataNode) {
@@ -113,14 +117,18 @@ buildWidget() { // public - build table header
     name = this.dataNode.properties.name;
   }
 
-  const html = app.widgetHeader() + `<b idr="nodeLabel">${this.label}#${id}: ${name}</b></div><table><tbody><tr>
+  const html = app.widgetHeader() + `<b idr= "nodeTypeLabel" contentEditable="true"
+                                        onfocus="this.parentNode.draggable = false;"
+                                        onblur="this.parentNode.draggable = true;">${this.nodeLabel}</b>
+                                        <b idr="nodeLabel">#${id}: ${name}</b></div><table class="widgetBody"><tbody><tr>
   <td idr="end"></td>
-  <td>
+  <td idr="main">
     <input idr = "addSaveButton" type="button" onclick="app.widget('saveAdd',this)"></div>
-    <table idr = "nodeTable"></table>
+    <table idr = "nodeTable"><tbody idr = "nodeTBody"></tbody></table>
   </td>
   <td idr="start"></td>
-  </tr></tbody></table></div>
+  </tr></tbody></table>
+  </div>
   `
   /*
   Create new element, append to the widgets div in front of existing widgets
@@ -141,32 +149,152 @@ buildWidget() { // public - build table header
   app.activeWidget = this.widgetDOM;
   this.widgetDOM.classList.add("activeWidget");
 
+  this.fieldPopup = document.createElement("div");
+  this.fieldPopup.setAttribute("hidden", "true");
+  this.fieldPopup.setAttribute('class', 'fieldPopup')
+  this.fieldPopup.innerHTML =
+  `<div class="popupHeader" idr="popupHeader"></div>
+  <div>
+    <p>Display Name: <input idr="labelInput" type="text"></p>
+    <p><input idr="showTable" type="checkbox"> Show this field in the table</p>
+    <p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
+    <p><input type="button" value="OK" onclick = "app.widget('popupOK', this)">
+    <input type="button" value="Cancel" onclick="app.widget('popupCancel', this)"></p>
+  </div>
+  `
+
+  this.fieldPopup.setAttribute("idr", "fieldPopup");
+  this.widgetDOM.appendChild(this.fieldPopup);
+
   this.addSaveDOM = app.domFunctions.getChildByIdr(widget, "addSaveButton");
   this.tableDOM   = app.domFunctions.getChildByIdr(widget, "nodeTable");
+  this.tBodyDOM   = app.domFunctions.getChildByIdr(widget, "nodeTBody");
   this.endDOM     = app.domFunctions.getChildByIdr(widget, "end");
   this.startDOM   = app.domFunctions.getChildByIdr(widget, "start");
 }
 
-buildDataNode() {   // put in one field label and input row for each field
+showPopup(label) {
+  this.fieldPopup.hidden = false;
+  const bounds = label.getBoundingClientRect();
+  this.fieldPopup.setAttribute("style", `left:${bounds.left + window.scrollX}px; top:${bounds.top + window.scrollY}px`);
+  // set text in popup header to "actual" field name (stored as db of label)
+  const fieldName = label.getAttribute('db');
+  const header = app.domFunctions.getChildByIdr(this.fieldPopup, 'popupHeader');
+  header.innerHTML = fieldName;
+  // set text in label textbox to "label" field name (stored as text of label)
+  const labelInput = app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
+  labelInput.value = label.textContent;
+
+  if (this.fieldsDisplayed.indexOf(fieldName) != -1) {
+    const tableCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
+    tableCheck.checked = true;
+  }
+  if (this.formFieldsDisplayed.indexOf(fieldName) != -1) {
+    const formCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
+    formCheck.checked = true;
+  }
+
+}
+
+popupCancel() {
+  this.fieldPopup.hidden = true;
+}
+
+popupOK(button) {
+  // Get the DOM elements and the db name of the field being edited
+  const header = app.domFunctions.getChildByIdr(this.fieldPopup, 'popupHeader');
+  const label = app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
+  const tableCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
+  const formCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
+  const db = header.textContent;
+  const formLabel = app.domFunctions.getChildByIdr(this.widgetDOM, `th${db}`, true);
+  formLabel.innerText = label.value;
+
+  // update metadata class
+  if (tableCheck.checked && this.fieldsDisplayed.indexOf(db) == -1) { // If the field should be displayed and currently isn't
+    this.fieldsDisplayed.push(db);
+  }
+
+  else if (!(tableCheck.checked) && this.fieldsDisplayed.indexOf(db) != -1) { // If the field shouldn't be displayed and is
+    this.fieldsDisplayed.splice(this.fieldsDisplayed.indexOf(db), 1);
+  }
+
+  if (formCheck.checked && this.formFieldsDisplayed.indexOf(db) == -1) { // If the field should be displayed and currently isn't
+    this.formFieldsDisplayed.push(db);
+  }
+
+  else if (!(formCheck.checked) && this.formFieldsDisplayed.indexOf(db) != -1) { // If the field shouldn't be displayed and is
+    this.formFieldsDisplayed.splice(this.formFieldsDisplayed.indexOf(db), 1);
+  }
+
+  this.fields[db].label = label.value;
+
+  // create or update link
+  const obj = {};
+  obj.from = {};
+  obj.from.id = app.login.userID;
+  obj.rel = {};
+  obj.rel.type = "Settings";
+  obj.rel.merge = true;
+  obj.to = {};
+  obj.to.type = "M_MetaData";
+  obj.to.properties = {};
+  obj.to.properties.name = this.queryObjectName;
+  obj.changes = [];
+  const fields = {};
+  fields.item = 'rel';
+  fields.property = "fields";
+  fields.value = app.stringEscape(JSON.stringify(this.fields));
+  obj.changes.push(fields);
+  const fieldsDisplayed = {};
+  fieldsDisplayed.item = 'rel';
+  fieldsDisplayed.property = "fieldsDisplayed";
+  fieldsDisplayed.value = app.stringEscape(JSON.stringify(this.fieldsDisplayed));
+  obj.changes.push(fieldsDisplayed);
+  const formFieldsDisplayed = {};
+  formFieldsDisplayed.item = 'rel';
+  formFieldsDisplayed.property = "formFieldsDisplayed";
+  formFieldsDisplayed.value = app.stringEscape(JSON.stringify(this.formFieldsDisplayed));
+  obj.changes.push(formFieldsDisplayed);
+
+  app.nodeFunctions.changeRelation(obj);
+  // close popup
+  this.fieldPopup.hidden = true;
+}
+
+buildDataNode() {   // put in one field label and input row for each field - includes creating dragdrop table
   let fieldCount = 0;
   let value = "";
 
   // Clear any existing data
-  while (this.tableDOM.hasChildNodes()) {
-    this.tableDOM.removeChild(this.tableDOM.firstChild);
+  while (this.tBodyDOM.hasChildNodes()) {
+    this.tBodyDOM.removeChild(this.tBodyDOM.firstChild);
   }
 
   for (let fieldName in this.fields) {
 
     // Create a table row
     const row = document.createElement('tr');
-    this.tableDOM.appendChild(row);
+    row.setAttribute('ondrop', "app.widget('drop', this, event)");
+    row.setAttribute("ondragover", "app.widget('allowDrop', this, event)");
+    row.setAttribute('ondragstart', "app.widget('drag', this, event)");
+    row.setAttribute('draggable', "true")
+
+    if (this.formFieldsDisplayed.indexOf(fieldName) == -1) { // If the field shouldn't be visible
+      row.setAttribute('class', 'notShown');
+      row.hidden = true;
+    }
+
+    this.tBodyDOM.appendChild(row);
 
     // Create the first cell, a th cell containing the label as text
     const header = document.createElement('th');
     row.appendChild(header);
     const labelText = document.createTextNode(this.fields[fieldName].label);
     header.appendChild(labelText);
+    header.setAttribute('oncontextmenu', "event.preventDefault(); app.widget('showPopup', this)");
+    header.setAttribute('db', fieldName);
+    header.setAttribute('idr', `th${fieldName}`);
 
     // Create the second cell, a td cell containing an input which has an idr, an onChange event, and a value which may be an empty string
     if (this.dataNode) {
@@ -192,43 +320,31 @@ buildDataNode() {   // put in one field label and input row for each field
     value="";
   }
 
-  // Create div for the "trash" checkbox and reason
-  this.trashRow = document.createElement('tr');
-  const trash = document.createElement('td');
-  this.trashRow.appendChild(trash);
-  const trashInput = document.createElement('td');
-  this.trashRow.appendChild(trashInput);
+  this.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetRelation contains"
+  // Create the new dragDrop table
+  const dragDrop = new dragDropTable(null, "nodeTBody", this.widgetDOM, 0, 0);
+  dragDrop.createInputs = function(){}; // empty function - don't want this to do anything in this case
+  dragDrop.showPopup = this.showPopup.bind(this);
+  dragDrop.changed = this.changed.bind(this);
+  dragDrop.checkNewField = this.checkNewField.bind(this);
+  dragDrop.addField = this.addField.bind(this);
 
-  const trashTextSection = document.createElement('b');
-  const trashText = document.createTextNode("Trash Node");
-  trashTextSection.appendChild(trashText);
-  trash.appendChild(trashTextSection);
 
-  const checkbox = document.createElement('input');
-  checkbox.setAttribute("type", "checkbox");
-  checkbox.setAttribute("onclick", "app.widget('toggleReason', this)");
-  checkbox.setAttribute("idr", "trashCheck");
-  trash.appendChild(checkbox);
+  // Create 'Show All' button
+  const button = document.createElement("input");
+  const mainCell = app.domFunctions.getChildByIdr(this.widgetDOM, 'main');
+  mainCell.appendChild(button);
+  button.outerHTML = `<input type="button" value="Show All" onclick = "app.widget('showHideAllFields', this)">`;
+  button.setAttribute('style', 'text-align:center');
 
-  const reasonTextSection = document.createElement('b');
-  const reasonText = document.createTextNode("Reason: ");
-  reasonTextSection.appendChild(reasonText);
-  reasonTextSection.setAttribute("idr", "reasonText");
-  reasonTextSection.setAttribute("hidden", true);
-  trash.appendChild(reasonTextSection);
+  const trashHTML = `<b>Trash Node</b>
+                <input type="checkbox" onclick="app.widget('toggleReason', this)" idr="trashCheck">
+                <b idr="reasonText" hidden="true">Reason: </b>
+                <input type="text" hidden="true" onblur="app.widget('changed', this)" idr="trashReason" db="reason">`;
 
-  const reason = document.createElement("input");
-  reason.setAttribute("hidden", true);
-  reason.setAttribute("onblur", "app.widget('changed', this)");
-  reason.setAttribute("idr", "trashReason");
-  reason.setAttribute("db", "reason");
-  trashInput.appendChild(reason);
-
-  if (!app.login.userID) { // If no user is logged in
-    this.trashRow.setAttribute("hidden", "true");
-  }
-  this.tableDOM.appendChild(this.trashRow);
-  app.login.viewLoggedIn.push(this.trashRow);
+  this.trashRow = document.createElement('div');
+  mainCell.appendChild(this.trashRow);
+  this.trashRow.innerHTML = trashHTML;
 
   if (this.dataNode && this.dataNode.properties._trash) {
     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
@@ -248,8 +364,26 @@ buildDataNode() {   // put in one field label and input row for each field
   this.addField();
 }
 
+showHideAllFields(button) {
+  const hiddenFields = this.tBodyDOM.getElementsByClassName('notShown');
+  switch(button.value) {
+    case 'Show All':
+      for (let i = 0; i < hiddenFields.length; i++) {
+        hiddenFields[i].hidden = false;
+      }
+      button.value = "Show Less";
+      break;
+    case 'Show Less':
+    for (let i = 0; i < hiddenFields.length; i++) {
+      hiddenFields[i].hidden = true;
+    }
+    button.value = "Show All";
+    break;
+  }
+}
+
 checkNewField() {
-  const rows = Array.from(this.tableDOM.children);
+  const rows = this.tBodyDOM.children;
   let add = true;
   for (let i = 0; i < rows.length; i++) {
     const idr = rows[i].getAttribute('idr');
@@ -271,7 +405,7 @@ checkNewField() {
 addField(textbox) {
   const row = document.createElement('tr');
   row.setAttribute('idr', `newFieldRow${this.newFields}`);
-  this.tableDOM.insertBefore(row, this.trashRow);
+  this.tBodyDOM.append(row);
 
   const nameCell = document.createElement('td');
   row.appendChild(nameCell);
@@ -382,24 +516,34 @@ trashUntrash(data, widgetElement) {
 
 ////////////////////////////////////////////////////////////////////
 add(widgetElement) { // Builds a query to add a new node, then runs it and passes the result to addComplete
-  let tr = this.tableDOM.firstElementChild;
+  let tr = this.tBodyDOM.firstElementChild;
 
-  const create = "create (n:"+ this.label+" {#data#}) return n";
   let data={};
   let newFieldsExist = false;
+  let reordered = false;
+  let currentFields = [];
+
+  const label = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeTypeLabel');
+  const labelText = label.textContent;
+  const renamed = (labelText != this.nodeLabel);
+  if (renamed) { // update metadata nodeLabel object
+    this.nodeLabel = labelText;
+    this.queryObject.nodeLabel = labelText;
+  }
 
   while (tr) {
     const inp = tr.lastElementChild.firstElementChild;
 
     if (inp && inp.hasAttribute("db")) { //  Process input rows with a db value - ones corresponding to existing fields
       data[inp.getAttribute("db")] = app.stringEscape(inp.value);
+      currentFields.push(inp.getAttribute("db"));
     }
 
     // process rows with new fields
     const idr = tr.getAttribute('idr')
     if (idr && idr.slice(0,11) == "newFieldRow") {
       const nameCell = tr.firstElementChild;
-      const name = nameCell.firstElementChild.value;
+      name = nameCell.firstElementChild.value;
       const valueCell = nameCell.nextElementSibling;
       const value = valueCell.firstElementChild.value;
       if (name != "") {
@@ -408,32 +552,74 @@ add(widgetElement) { // Builds a query to add a new node, then runs it and passe
         // Add new field to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
         this.fields[fieldName] = {label: name};
         data[fieldName] = value;
+        currentFields.push(fieldName);
       }
     }
     tr=tr.nextElementSibling;
   }
 
-  // Change metadata node if needed
-  if (newFieldsExist) {
-    const metadataObj = {};
-    metadataObj.node = {};
-    metadataObj.node.type = "M_MetaData";
-    metadataObj.node.properties = {};
-    metadataObj.node.properties.name = this.label;
-    metadataObj.changes = [];
-    const fields = {};
-    fields.property = "fields";
-    fields.value = app.stringEscape(JSON.stringify(this.fields));
-    metadataObj.changes.push(fields);
+  // Build a string listing the fields from the form (done above) and a string listing the fields from the field object.
+  // If they don't match, need to update the order of fields in fields, fieldsDisplayed and formFieldsDisplayed.
+  let oldFields = [];
+  for (let fieldName in this.fields) {
+    oldFields.push(fieldName);
+  }
+  reordered = (JSON.stringify(oldFields) != JSON.stringify(currentFields));
+  if (reordered) {
+    let fields = {};
+    let fieldsDisplayed = [];
+    let formFieldsDisplayed = [];
+    for (let i = 0; i < currentFields.length; i++) {
+      const fieldName = currentFields[i];
+      fieldsDisplayed.push(fieldName);
+      formFieldsDisplayed.push(fieldName);
+      fields[fieldName] = this.fields[fieldName];
+    }
+    this.fields = fields;
+    app.metaData.node[this.queryObjectName].fields = fields;
+    this.fieldsDisplayed = fieldsDisplayed;
+    app.metaData.node[this.queryObjectName].fieldsDisplayed = fieldsDisplayed;
+    this.formFieldsDisplayed = formFieldsDisplayed;
+    app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
+  }
 
-    app.nodeFunctions.changeNode(metadataObj);
+  // Change metadata node if needed
+  if (newFieldsExist || renamed || reordered) {
+    this.updateMetaData();
   }
 
   const obj = {};
   obj.name = "n";
-  obj.type = this.label;
+  obj.type = this.queryObjectName;
   obj.properties = data;
   app.nodeFunctions.createNode(obj, this, 'addComplete');
+}
+
+updateMetaData() {
+  const metadataObj = {};
+  metadataObj.from = {};
+  metadataObj.from.id = app.login.userID;
+  metadataObj.from.return = false;
+  metadataObj.rel = {};
+  metadataObj.rel.type = "Settings";
+  metadataObj.rel.merge = true;
+  metadataObj.rel.return = false;
+  metadataObj.to = {};
+  metadataObj.to.type = "M_MetaData";
+  metadataObj.to.properties = {};
+  metadataObj.to.properties.name = this.queryObjectName;
+  metadataObj.to.return = false;
+  metadataObj.changes = [];
+
+  const propertyNames = ['fields', 'fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
+  for (let i = 0; i < propertyNames.length; i++) {
+    const change = {};
+    change.item = "rel";
+    change.property = propertyNames[i];
+    change.value = app.stringEscape(JSON.stringify(this[propertyNames[i]]));
+    metadataObj.changes.push(change);
+  }
+  app.nodeFunctions.changeRelation(metadataObj);
 }
 
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
@@ -441,7 +627,7 @@ addComplete(data) { // Refreshes the node table and logs that addSave was clicke
   const id = this.dataNode.id;
   const name = this.dataNode.properties.name;
   const nodeLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeLabel");
-  nodeLabel.textContent=`${this.label}#${id}: ${name}`;
+  nodeLabel.textContent=`${this.nodeLabel}#${id}: ${name}`;
 
   const obj = {};
   obj.id = this.idWidget;
@@ -485,10 +671,20 @@ changed(input) { // Logs changes to fields, and highlights when they are differe
 }
 
 save(widgetElement, trashUntrash) { // Builds query to update a node, runs it and passes the results to saveData()
-  let tr = this.tableDOM.firstElementChild;
+  let tr = this.tBodyDOM.firstElementChild;
 
   let data = [];
   let newFieldsExist = false;
+  let reordered = false;
+  let currentFields = [];
+
+  const label = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeTypeLabel');
+  const labelText = label.textContent;
+  const renamed = (labelText != this.nodeLabel);
+  if (renamed) { // update metadata nodeLabel object
+    this.nodeLabel = labelText;
+    this.queryObject.nodeLabel = labelText;
+  }
 
   while (tr) {
     const inp = tr.lastElementChild.firstElementChild;  // find <input> element
@@ -506,6 +702,7 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
         const fieldName = name.replace(/\s/g, "");
         // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
         this.fields[fieldName] = {label: name};
+        currentFields.push(fieldName);
 
         // Add field name and value to list of changes
         const change = {};
@@ -516,38 +713,56 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     }
 
     // process existing fields
-    else if(inp.getAttribute("class") === "changedData") {
-      // create a set for this field
-      const fieldName = inp.getAttribute("db");
-      if (fieldName in this.fields) {
-        const change = {};
-        change.property = fieldName;
-        if (this.fields[fieldName].type === "number") {
-          change.value = inp.value;
-          change.string = false;
-        } else {
-          change.value = app.stringEscape(inp.value);  // assume string
+    else {
+      currentFields.push(inp.getAttribute("db"));
+      if(inp.getAttribute("class") === "changedData") {
+        // create a set for this field
+        const fieldName = inp.getAttribute("db");
+        if (fieldName in this.fields) {
+          const change = {};
+          change.property = fieldName;
+          if (this.fields[fieldName].type === "number") {
+            change.value = inp.value;
+            change.string = false;
+          } else {
+            change.value = app.stringEscape(inp.value);  // assume string
+          }
+          data.push(change);
         }
-        data.push(change);
       }
     }
+
     tr=tr.nextElementSibling;
   }
 
-  // Update metadata node
-  if (newFieldsExist) {
-    const obj = {};
-    obj.node = {};
-    obj.node.type = "M_MetaData";
-    obj.node.properties = {};
-    obj.node.properties.name = this.label;
-    obj.changes = [];
-    const fields = {};
-    fields.property = "fields";
-    fields.value = app.stringEscape(JSON.stringify(this.fields));
-    obj.changes.push(fields);
+  // Build a string listing the fields from the form (done above) and a string listing the fields from the field object.
+  // If they don't match, need to update the order of fields in fields, fieldsDisplayed and formFieldsDisplayed.
+  let oldFields = [];
+  for (let fieldName in this.fields) {
+    oldFields.push(fieldName);
+  }
+  reordered = (JSON.stringify(oldFields) != JSON.stringify(currentFields));
+  if (reordered) {
+    let fields = {};
+    let fieldsDisplayed = [];
+    let formFieldsDisplayed = [];
+    for (let i = 0; i < currentFields.length; i++) {
+      const fieldName = currentFields[i];
+      fieldsDisplayed.push(fieldName);
+      formFieldsDisplayed.push(fieldName);
+      fields[fieldName] = this.fields[fieldName];
+    }
+    this.fields = fields;
+    app.metaData.node[this.queryObjectName].fields = fields;
+    this.fieldsDisplayed = fieldsDisplayed;
+    app.metaData.node[this.queryObjectName].fieldsDisplayed = fieldsDisplayed;
+    this.formFieldsDisplayed = formFieldsDisplayed;
+    app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
+  }
 
-    app.nodeFunctions.changeNode(obj);
+  // Change metadata node if needed
+  if (newFieldsExist || renamed || reordered) {
+    this.updateMetaData();
   }
 
   if (data===[]) {
@@ -559,7 +774,7 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
       app.regression.log(JSON.stringify(obj));
       app.regression.record(obj);
     } else { // If the node was NOT trashed or untrashed AND there were no changes to fields, just alert that there were no changes. No need to log in this case.
-    alert("no changes to save")
+    alert("No changes to save")
     }
   }
   else {
@@ -572,6 +787,7 @@ save(widgetElement, trashUntrash) { // Builds query to update a node, runs it an
     app.nodeFunctions.changeNode(obj, this, 'saveData');
   }
 }
+
 saveData(data) { // Refreshes the node table and logs that addSave was clicked
   // redo from as edit now that data is saved
   this.dataNode = data[0].n;

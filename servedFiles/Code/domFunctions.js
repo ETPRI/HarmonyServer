@@ -3,16 +3,23 @@ class domFunctions {
 
   // Takes a DOM element and an idr to search for within it. Searches through the element's children, then their children
   // and so on, until it finds an element with that idr, and returns that element. Returns null if it finds no such element.
-  // If other widgets are nested inside the element passed in, these are NOT searched.
-  getChildByIdr(element, idr) {
-    const children = Array.from(element.children); // Get the element's children
-    while (children.length > 0) {
-      const child = children.pop(); // For each child...
-      if (child.getAttribute("idr") == idr) {
-        return child; // If the idr matches, return the element...
-      }
-      else if (!child.classList.contains("widget") && child.children.length > 0) { // If the child is not a widget itself, and it has children...
-        children.push(...child.children); // add its children to the children array
+  // If other widgets are nested inside the element passed in, default is NOT to search them, but you can pass in a boolean
+  // "deep" value that determines whether to keep going.
+  getChildByIdr(element, idr, deep) {
+    if (!(element && element.children)) {
+      alert (`Searching for idr ${idr}`);
+    }
+    if (element.children) {
+      const children = Array.from(element.children); // Get the element's children
+      while (children.length > 0) {
+        const child = children.pop(); // For each child...
+        if (child.getAttribute("idr") == idr) {
+          return child; // If the idr matches, return the element...
+        }
+        // If the child is not a widget itself (or a deep search is being done), and it has children...
+        else if ((!child.classList.contains("widget") || deep) && child.children.length > 0) { 
+          children.push(...child.children); // add its children to the children array
+        }
       }
     }
   	return null; // return null if no idr matches

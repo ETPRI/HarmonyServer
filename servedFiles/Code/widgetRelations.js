@@ -9,7 +9,7 @@
 class widgetRelations {
 constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
   // data to be displayed
-  this.containerDOM = containerDOM
+  this.containerDOM = containerDOM;
   this.nodeID       = nodeID;
   this.viewID       = viewID;
   this.viewNodeID   = null; // ID of the view node in the DB

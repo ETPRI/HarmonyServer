@@ -43,9 +43,6 @@ buildApp() {
 	// Check the brower capabilities and, if applicable, report that it definitely won't work or that it's not tested
 	this.supportsES6();
 
-	// Build the node menu
-	this.menuNodesInit();
-
 	// Create preset calendar options
 	this.presetCalendars();
 
@@ -74,10 +71,11 @@ addMetaData(data) {
 			obj.type = "M_MetaData";
 			obj.properties = {};
 			obj.properties.name = type;
-			obj.properties.label = this.metaData.node[type].nodeLabel;
-			obj.properties.orderBy = this.metaData.node[type].orderBy;
+			obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
+			obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
 			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
 			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
+			obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
 			this.nodeFunctions.createNode(obj);
 		}
 	}
@@ -87,9 +85,10 @@ addMetaData(data) {
 		for (let i = 0; i < data.length; i++) {
 			const node = data[i].node.properties;
 			metaData[node.name] = {};
-			metaData[node.name].nodeLabel = node.label;
-			metaData[node.name].orderBy = node.orderBy;
+			metaData[node.name].nodeLabel = JSON.parse(node.nodeLabel);
+			metaData[node.name].orderBy = JSON.parse(node.orderBy);
 			metaData[node.name].fieldsDisplayed = JSON.parse(node.fieldsDisplayed);
+			metaData[node.name].formFieldsDisplayed = JSON.parse(node.formFieldsDisplayed);
 			metaData[node.name].fields = JSON.parse(node.fields);
 		}
 		this.metaData.node = metaData;
@@ -188,10 +187,23 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 // and adds an option for every type of node listed in this.metadata.
 menuNodesInit(){
 	const menu = document.getElementById('menuNodes');
-	const selectionTemplate = '<option value="#db#">#db#</option>'
+
+	// clear existing options
+	while (menu.firstElementChild) {
+		menu.remove(menu.firstElementChild);
+	}
+
+	const start = document.createElement('option');
+	menu.appendChild(start);
+	start.outerHTML =  '<option value="">-- Nodes --</option>';
+
+
+	const selectionTemplate = '<option value="#name#">#label#</option>';
 	let html = "";  // build dropdown menu selections
 	for (let nodeName in this.metaData.node) { // nodeName is the name of the node, like "people" or "Movie"
-		html = selectionTemplate.replace(/#db#/g, nodeName); // Replaces the "#db" with nodeName
+		html = selectionTemplate
+			.replace(/#label#/g, this.metaData.node[nodeName].nodeLabel)
+			.replace(/#name#/g, nodeName);
 		const dropDown = document.createElement('option'); // Creates a new placeholder option...
 		menu.appendChild(dropDown); // adds it to the menu...
 		dropDown.outerHTML = html; // and replaces it with the version made from the selection template.
@@ -384,16 +396,28 @@ widgetHeader(tag){
 
 // Expands or collapses a widget when the expand/collapse button in that widget is clicked.
 // Also changes the text on the button back and forth between "__" and "+".
-widgetCollapse(domElement) {
-	const table=domElement.parentElement.parentElement.lastElementChild;
-  // above code is brittle, it assumes position of table relative to button. Also assumes only one item (a table) needs hiding.
-	// Currently: Button is in header which is in widget div (the grandparent). The last child of the widget div is the table.
 
-	table.hidden = !table.hidden  // toggle hidden
-	if(table.hidden) {
-		domElement.value = "+";
-	} else {
-		domElement.value = 	"__";
+// Currently, assumes that the expand/collapse button is in the header, which is in the widget div
+// (it is thus the grandchild of the widget div), which should always be true because all widget headers
+// are made the same way by the same function. Also assumes that the widget body - the part to expand or
+// collapse - is a child of the widget div and has the class "widgetBody".
+widgetCollapse(domElement) {
+	const children = Array.from(domElement.parentElement.parentElement.children);
+	let widgetBody;
+	for (let i = 0; i < children.length; i++) {
+		if (children[i].classList.contains('widgetBody')) {
+			widgetBody = children[i];
+			break;
+		}
+	}
+
+	if (widgetBody) {
+		widgetBody.hidden = !widgetBody.hidden  // toggle hidden
+		if(widgetBody.hidden) {
+			domElement.value = "+";
+		} else {
+			domElement.value = 	"__";
+		}
 	}
 
 	// log
@@ -547,8 +571,9 @@ supportsES6() {
   try {
     new Function("(a = 0) => a");
 		const workingBrowsers = [
-			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36",
-			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15"
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36"
+			,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15"
+			,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1.2 Safari/605.1.15"
 		]
 		if (workingBrowsers.indexOf(navigator.userAgent) == -1) {
 			alert (`While this browser may support JS v6, it has not been tested with this website, and may not work.`);

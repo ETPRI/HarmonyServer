@@ -345,7 +345,9 @@ z-index: 1;
   top: 0;
   padding: 5px;
   background-color: white;
-  border: 2px solid black;}
+  border: 2px solid black;
+	z-index:0;
+}
 
 /* // not being used
 [draggable=true] {
@@ -404,4 +406,18 @@ textarea {
 	font-weight: bold;
 	font-size: 120%;
 	background-color: yellow;
+}
+
+.fieldPopup {
+	background: white;
+	position: absolute;
+	border: 3px solid black;
+	z-index: 10000;
+}
+
+.popupHeader {
+	background-color: #999;
+	color: #FFF;
+	font-weight: bold;
+	text-align: center;
 }

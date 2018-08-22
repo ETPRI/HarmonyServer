@@ -7,8 +7,11 @@ class dragDropTable extends dragDrop {
   // content: number of cells already in the table that can be interacted with and need idrs - start numbering them here.
   constructor(templateIDR, containerIDR, containerDOM, row, content) {
     // Store the DOM elements of the template and container
-    const template = app.domFunctions.getChildByIdr(containerDOM, templateIDR);
-    const container = app.domFunctions.getChildByIdr(containerDOM, containerIDR);
+    let template = null;
+    if (templateIDR) {
+      template = app.domFunctions.getChildByIdr(containerDOM, templateIDR);
+    }
+    const container = app.domFunctions.getChildByIdr(containerDOM, containerIDR, true);
 
     // The container should be either a table or a tbody in a table. The table should be made a widget.
     let table = container;
@@ -48,17 +51,21 @@ class dragDropTable extends dragDrop {
       return newEl; // return the finished element
     } // End function (createInsertElement)
 
-    const insertRow = createInsertElement(template); // Create the row to insert
-    container.appendChild(insertRow); // append it to container
-    // Create a show/hide button and add it to the header row
-    const newCell = document.createElement('TH');
-    const showHide = document.createElement('input');
-    showHide.setAttribute("type", "button");
-    showHide.setAttribute("idr", "showHide");
-    newCell.appendChild(showHide);
-    template.appendChild(newCell);
+    let showHideIDR = null;
+    if (template) {
+      const insertRow = createInsertElement(template); // Create the row to insert
+      container.appendChild(insertRow); // append it to container
+      // Create a show/hide button and add it to the header row
+      const newCell = document.createElement('TH');
+      const showHide = document.createElement('input');
+      showHide.setAttribute("type", "button");
+      showHide.setAttribute("idr", "showHide");
+      newCell.appendChild(showHide);
+      template.appendChild(newCell);
+      showHideIDR = "showHide";
+    }
 
-    super(containerIDR, "showHide", row, content); // After that point the original constructor should do the trick
+    super(containerIDR, showHideIDR, row, content); // After that point the original constructor should do the trick
   }
 
   // Overrides the createDelete method in the original dragDrop class. The only difference is that the original
