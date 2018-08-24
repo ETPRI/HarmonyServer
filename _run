@@ -2,4 +2,4 @@
 # run electron application, this is a node.js app
 #
 cd "${0%/*}"
-sudo node server.js
+node server.js
