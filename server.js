@@ -14,6 +14,7 @@ var url  = require('url');
 http.createServer(function (request, response) {
     console.log('request ', request.url);
     var q = url.parse(request.url, true);
+    response.setHeader('Access-Control-Allow-Origin', '*');
 
     if (q.pathname === "/get"){
       // reading a form
@@ -32,12 +33,18 @@ http.createServer(function (request, response) {
         response.statusCode = 200;
         response.setHeader('Content-Type', 'text/plain');
         var obj = JSON.parse(body);
-        if (obj.server === "neo4j") {
-          runNeo4j(obj.query, response);
-        } else if (obj.server === "gremlin") {
-          runGremlin2(obj.query, response);
-        } else {
-          console.log("Error server = %s\n", obj.server );
+        switch (obj.server) {
+          case "neo4j":
+            runNeo4j(obj.query, response);
+            break;
+          case "gremlin":
+            runGremlin2(obj.query, response);
+            break;
+          case "backupNeo4j":
+            processBackup(obj.query, response);
+            break;
+          default:
+            console.log("Error server = %s\n", obj.server );
         }
       });
       return;
@@ -182,6 +189,242 @@ function runGremlin2(query, response)
         }
     })) ;
 }
+
+// -----------------------------------Backup code------------
+const blocksize = 100;
+const today = new Date();
+const todayString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+const basePath = `${config.neo4jBackup}/${todayString}`;
+let finalPath = basePath;
+
+function processBackup(query, response) {
+  switch (query.functionName) {
+    case "findNodes":
+      makeDirectory(query, response);
+      break;
+    case "findRels":
+      findRels(query, response);
+      break;
+    case "backupNodes":
+      backupNodes(query, response);
+      break;
+    case "backupRels":
+      backupRels(query, response);
+      break;
+    default:
+    console.log("Error function = %s\n", query.functionName);
+  }
+}
+
+function makeDirectory(query, response) {
+  let number = 2;
+
+  while (fs.existsSync(finalPath)) {
+    finalPath = `${basePath}(${number})`;
+    number++;
+  }
+
+  fs.mkdir(`${finalPath}`, function(err) {
+    if (err) {
+      console.log(err);
+    }
+    else {
+      findNodes(query, response);
+    }
+  });
+
+}
+
+function findNodes(query, response) {
+  var nodesDone = [];
+  var data = [];
+
+  console.log('Backup Neo4j - finding nodes');
+
+  if (query === 'server:exit') {
+      // stop the node server
+      driver.close();
+      process.exit(0);
+      return;
+  }
+
+  const session = driver.session();
+  const startQuery = "MATCH (n) unwind labels(n) as L RETURN  distinct L, count(L) as count";
+
+  session
+    .run(startQuery)
+    .subscribe({
+      onNext: function (record) {
+        const obj={};
+        for (let i=0; i< record.length; i++) {
+          obj[record.keys[i]]=record._fields[i];
+        }
+        data.push(obj);
+        console.log("%s/n",JSON.stringify(obj));
+      },
+      onCompleted: function () {
+        // organize results into array
+        for (let i = 0; i < data.length; i++) {
+          nodesDone[i] = {};
+          nodesDone[i].name = data[i].L;
+          nodesDone[i].target = data[i].count.low;
+        }
+
+        response.end(JSON.stringify(nodesDone));
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+    });
+}
+
+function findRels(query, response) {
+  var data = [];
+  var relsDone = [];
+
+  console.log('Backup Neo4j - finding relations');
+
+  if (query === 'server:exit') {
+      // stop the node server
+      driver.close();
+      process.exit(0);
+      return;
+  }
+
+  const session = driver.session();
+  const startQuery = "MATCH (a)-[r]->(b) return distinct type(r) as type, count(r) as count order by type";
+
+  session
+    .run(startQuery)
+    .subscribe({
+      onNext: function (record) {
+      const obj={};
+    for (let i=0; i< record.length; i++) {
+      obj[record.keys[i]]=record._fields[i];
+      }
+      data.push(obj);
+        console.log("%s/n",JSON.stringify(obj));
+      },
+      onCompleted: function () {
+        // organize results into array
+        for (let i = 0; i < data.length; i++) {
+          relsDone[i] = {};
+          relsDone[i].name = data[i].type;
+          relsDone[i].target = data[i].count.low;
+        }
+        response.end(JSON.stringify(relsDone));
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+    });
+}
+
+function backupNodes(query, response) {
+  console.log('Backup Neo4j - backing up nodes');
+
+  if (query === 'server:exit') {
+      // stop the node server
+      driver.close();
+      process.exit(0);
+      return;
+  }
+
+  const session = driver.session();
+
+  let where = "";
+  if (query.minimum > 0) {
+    where = `where ID(n) > ${query.minimum}`;
+  }
+
+  const backupQuery = `match (n: ${query.name}) ${where} return n order by ID(n) limit ${query.blocksize}`;
+  let currentObj = {};
+  let count = 0;
+
+  session
+    .run(backupQuery)
+    .subscribe({
+      onNext: function (record) {
+        for (let i=0; i< record.length; i++) {
+          currentObj[record.keys[i]]=record._fields[i];
+        }
+
+        // store data
+        fs.appendFile(`${finalPath}/nodes.txt`, `${JSON.stringify(currentObj)}\n`, (err) => {
+          if (err) throw err;
+        });
+
+        console.log("%s/n",JSON.stringify(currentObj));
+
+        count++;
+      },
+      onCompleted: function () {
+
+        // send progress back to client
+        const lastID = currentObj.n.identity.low;
+        const update = {"numNodes":count, "lastID":lastID};
+        response.end(JSON.stringify(update));
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+    });
+}
+
+function backupRels(query, response) {
+  console.log('Backup Neo4j - backing up relations');
+
+  if (query === 'server:exit') {
+      // stop the node server
+      driver.close();
+      process.exit(0);
+      return;
+  }
+
+  const session = driver.session();
+
+  let where = "";
+  if (query.minimum > 0) {
+    where = `where ID(r) > ${query.minimum}`;
+  }
+  const backupQuery = `match (a)-[r:${query.name}]->(b) ${where} return a.GUID as a, b.GUID as b, r order by ID(r) limit ${query.blocksize}`;
+
+  let currentObj = {};
+  let count = 0;
+
+  session
+    .run(backupQuery)
+    .subscribe({
+      onNext: function (record) {
+        for (let i=0; i< record.length; i++) {
+          currentObj[record.keys[i]]=record._fields[i];
+        }
+
+        // store data
+        fs.appendFile(`${finalPath}/rels.txt`, `${JSON.stringify(currentObj)}\n`, (err) => {
+          if (err) throw err;
+        });
+
+        console.log("%s/n",JSON.stringify(currentObj));
+
+        count++;
+      },
+      onCompleted: function () {
+        // send progress back to client
+        const lastID = currentObj.r.identity.low;
+        const update = {"numRels":count, "lastID":lastID};
+        response.end(JSON.stringify(update));
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+    });
+}
+
 //
 // // this is sequential code, add asyc back, not sure the best way
 // function runGremlin(query, response)

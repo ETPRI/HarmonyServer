@@ -9,6 +9,8 @@ class copy {
 
   }
 
+  //-----------------------------------Copy code-----------------------------
+
   checkDB(copy) {
     this.destination = `http://${document.getElementById('destination').value}`;
     var xhttp2 = new XMLHttpRequest();
@@ -45,7 +47,7 @@ class copy {
 
     xhttp.open("POST", "");
     const steps = "MATCH (n) unwind labels(n) as L RETURN  distinct L, count(L) as count"
-    const obj = {"server": "neo4j", "query": steps};  // crearte object to send to server
+    const obj = {"server": "neo4j", "query": steps};  // create object to send to server
 
     xhttp.send(JSON.stringify(obj));         // send request to server
   }
@@ -251,6 +253,141 @@ class copy {
       alert ("Error: Tried to upload an empty set of relations");
     }
   }
+
+  //------------------------------------Backup code--------------------------
+
+  startBackup(copy) {
+    this.progress.innerHTML = "";
+    var xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        // Update progress bar and nodesDone array...
+        const nodesDone = [];
+        const results = JSON.parse(this.responseText); // array of node objects, containing name and target.
+        for (let i = 0; i < results.length; i++) {
+          copy.progress.innerHTML +=
+          `<tr><td>Node</td><td>${results[i].name}</td><td id="nodeCount${i}">0</td><td>${results[i].target}</td></tr>`;
+          nodesDone[i] = {"name":results[i].name, "done":0, "target":results[i].target};
+        }
+        // and send next request
+        copy.findRels(nodesDone, copy);
+      } // end if (readystate = 4, status = 200)
+    }; // end of callback function
+
+    xhttp.open("POST", "");
+    const obj = {"server": "backupNeo4j"};  // create object to send to server
+    const query = {"functionName": "findNodes"}; // query to start the backup process
+    obj.query = query;
+
+    xhttp.send(JSON.stringify(obj));         // send request to server
+  }
+
+  findRels(nodesDone, copy) {
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        // Update progress bar and relsDone array...
+        const relsDone = [];
+        const results = JSON.parse(this.responseText); // array of node objects, containing name and target.
+        for (let i = 0; i < results.length; i++) {
+          copy.progress.innerHTML +=
+          `<tr><td>Rel</td><td>${results[i].name}</td><td id="relCount${i}">0</td><td>${results[i].target}</td></tr>`;
+          relsDone[i] = {"name":results[i].name, "done":0, "target":results[i].target};
+        }
+        // and send next request
+        const progress = {"nodesDone":nodesDone, "relsDone":relsDone};
+        copy.backupNodes(0,0, progress, copy);
+      } // end if (readystate = 4, status = 200)
+    }; // end of callback function
+
+    xhttp.open("POST", "");
+    const obj = {"server": "backupNeo4j"};  // create object to send to server
+    const query = {"functionName": "findRels"}; // query to find the relations
+    obj.query = query;
+
+    xhttp.send(JSON.stringify(obj));         // send request to server
+  }
+
+  backupNodes(index, minimum, progress, copy) {
+    var xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        // Update progress bar...
+        const results = JSON.parse(this.responseText); // object containing numNodes and lastID
+        progress.nodesDone[index].done += results.numNodes;
+        document.getElementById(`nodeCount${index}`).textContent = progress.nodesDone[index].done;
+
+        // update variables
+        if (progress.nodesDone[index].done < progress.nodesDone[index].target) {
+          minimum = results.lastID;
+        }
+        else {
+          index++;
+          minimum = 0;
+        }
+
+        // and send next request
+        if (index < progress.nodesDone.length) {
+          copy.backupNodes(index, minimum, progress, copy);
+        }
+        else {
+          copy.backupRels(0, 0, progress, copy);
+        }
+      } // end if (readystate = 4, status = 200)
+    }; // end of callback function
+
+    xhttp.open("POST", "");
+    const obj = {"server": "backupNeo4j"};  // create object to send to server
+    const query = {"functionName": "backupNodes", "name": progress.nodesDone[index].name, "minimum": minimum, "blocksize": this.blocksize}; // query to start the backup process
+    obj.query = query;
+
+    xhttp.send(JSON.stringify(obj));         // send request to server
+  }
+
+  backupRels(index, minimum, progress, copy) {
+    var xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        // Update progress bar...
+        const results = JSON.parse(this.responseText); // object containing numRels and lastID
+        progress.relsDone[index].done += results.numRels;
+        document.getElementById(`relCount${index}`).textContent = progress.relsDone[index].done;
+
+        // update variables
+        if (progress.relsDone[index].done < progress.relsDone[index].target) {
+          minimum = results.lastID;
+        }
+        else {
+          index++;
+          minimum = 0;
+        }
+
+        // and send next request
+        if (index < progress.relsDone.length) {
+          copy.backupRels(index, minimum, progress, copy);
+        }
+        else {
+          copy.progress.innerHTML += "Done!"
+        }
+      } // end if (readystate = 4, status = 200)
+    }; // end of callback function
+
+    xhttp.open("POST", "");
+    const obj = {"server": "backupNeo4j"};  // create object to send to server
+    const query = {"functionName": "backupRels", "name": progress.relsDone[index].name, "minimum": minimum, "blocksize": this.blocksize}; // query to back up the relations
+    obj.query = query;
+
+    xhttp.send(JSON.stringify(obj));         // send request to server
+  }
+
+  //------------------------------------Helper functions---------------------
 
   // Escapes special character in a string. Stringifying it and then removing the outer quotes is a good shortcut.
   stringEscape(text) {

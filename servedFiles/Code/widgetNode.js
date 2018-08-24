@@ -320,10 +320,15 @@ buildDataNode() {   // put in one field label and input row for each field - inc
     value="";
   }
 
-  this.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetRelation contains"
+  this.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetNode contains"
   // Create the new dragDrop table
   const dragDrop = new dragDropTable(null, "nodeTBody", this.widgetDOM, 0, 0);
-  dragDrop.createInputs = function(){}; // empty function - don't want this to do anything in this case
+
+  // NOTE: Can't stop dragDrop from creating inputs, so instead I'll reset the th idr at the end for now. Feels kludgy, though.
+  const lastRow = app.domFunctions.getChildByIdr(this.tableDOM, 'insertContainer', true);
+  const th = lastRow.firstElementChild;
+  th.setAttribute('idr', `th${th.getAttribute('db')}`);
+
   dragDrop.showPopup = this.showPopup.bind(this);
   dragDrop.changed = this.changed.bind(this);
   dragDrop.checkNewField = this.checkNewField.bind(this);

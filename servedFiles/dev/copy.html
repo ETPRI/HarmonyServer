@@ -1,8 +1,9 @@
 <html>
 <script src="copy.js"></script>
 
+<b>Copy to another DB</b>
 Destination: <input type="text" id="destination"><br>
-<input type="button" id="start" value="start" onclick="copy.checkDB(copy)">
+<input type="button" id="startCopy" value="start" onclick="copy.checkDB(copy)">
 <table>
   <tr>
     <th>Type</th><th>Name</th><th>Done</th><th>Total</th>
@@ -10,6 +11,9 @@ Destination: <input type="text" id="destination"><br>
   <tbody id="progress">
   </tbody>
 </table>
+
+<b>Backup to local file</b>
+<input type="button" id="startBackup" value="start" onclick="copy.startBackup(copy)">
 
 <script>
   copy = new copy();
