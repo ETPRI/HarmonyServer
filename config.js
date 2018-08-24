@@ -5,4 +5,6 @@ config.primaryKey = "BSGbfbwdycuuB7R79lyz6UA35bBJ9SW7hy1AT1Mrt5my92BfU5nsXw80GoQ
 config.database = "graphdb";
 config.collection = "Persons";
 config.neo4jBackup = "backups/Neo4j";
+config.harmonyServer = "192.168.1.99";
+config.harmonyBeta = "192.168.1.99:8080";
 module.exports = config;

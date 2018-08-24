@@ -101,9 +101,9 @@ http.createServer(function (request, response) {
         }
     });
 
-}).listen(8125);
+}).listen(80);
 
-console.log('Server running at http://127.0.0.1:8125');
+console.log('Server running at http://127.0.0.1');
 
 // neo4j  --------------------------------------
 const neo4j  = require('neo4j-driver').v1;
