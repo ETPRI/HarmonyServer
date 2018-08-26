@@ -1,9 +1,22 @@
 <html>
 <script src="copy.js"></script>
 
-<b>Copy to another DB</b>
-Destination: <input type="text" id="destination"><br>
-<input type="button" id="startCopy" value="start" onclick="copy.checkDB(copy)">
+<b>Copy to another DB</b><br>
+Destination URL: <input type="text" id="copyDestination"><br>
+<input type="button" id="startCopyTo" value="start" onclick="copy.checkOtherDB(copy)"><br><hr>
+
+<b>Copy from another DB (not yet written)</b><br>
+Source URL: <input type="text" id="copySource"><br>
+<input type="button" id="startCopyFrom" value="start" onclick="copy.checkDB(copy, startCopyFrom)"><br><hr>
+
+<b>Backup to local file</b><br>
+<input type="button" id="startBackup" value="start" onclick="copy.startBackup(copy)"><br><hr>
+
+<b>Restore from backup file (not yet written)</b><br>
+Source folder (name only - path to backups/Neo4j is hardcoded): <input type="text" id="backupSource"><br>
+<input type="button" id="startRestore" value="start" onclick="copy.checkLocalDB(copy)"><br><hr>
+
+<b>Progress</b><br>
 <table>
   <tr>
     <th>Type</th><th>Name</th><th>Done</th><th>Total</th>
@@ -11,9 +24,6 @@ Destination: <input type="text" id="destination"><br>
   <tbody id="progress">
   </tbody>
 </table>
-
-<b>Backup to local file</b>
-<input type="button" id="startBackup" value="start" onclick="copy.startBackup(copy)">
 
 <script>
   copy = new copy();

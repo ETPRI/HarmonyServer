@@ -192,14 +192,15 @@ function runGremlin2(query, response)
 
 // -----------------------------------Backup code------------
 const blocksize = 100;
-const today = new Date();
-const todayString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
-const basePath = `${config.neo4jBackup}/${todayString}`;
-let finalPath = basePath;
+let finalPath = "";
+let nodeFiles = 1;
+let relFiles = 1;
 
 function processBackup(query, response) {
   switch (query.functionName) {
     case "findNodes":
+      nodeFiles = 1; // reset to defaults
+      relFiles = 1;
       makeDirectory(query, response);
       break;
     case "findRels":
@@ -211,12 +212,31 @@ function processBackup(query, response) {
     case "backupRels":
       backupRels(query, response);
       break;
+    case "startRestore":
+      nodeFiles = 1; // reset to defaults
+      relFiles = 1;
+      getNodeData(query, response);
+      break;
+    case "getRelData":
+      getRelData(query, response);
+      break;
+    case "restoreNodes":
+      restoreNodes(query, response);
+      break;
+    case "restoreRels":
+      restoreRels(query, response);
+      break;
     default:
     console.log("Error function = %s\n", query.functionName);
   }
 }
 
 function makeDirectory(query, response) {
+  const today = new Date();
+  const todayString = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()}`;
+  const basePath = `${config.neo4jBackup}/${todayString}`;
+  finalPath = basePath; // reset just in case it's been changed
+
   let number = 2;
 
   while (fs.existsSync(finalPath)) {
@@ -269,6 +289,9 @@ function findNodes(query, response) {
           nodesDone[i].name = data[i].L;
           nodesDone[i].target = data[i].count.low;
         }
+        fs.appendFile(`${finalPath}/nodeMetaData.txt`, JSON.stringify(nodesDone), (err) => {
+          if (err) throw err;
+        });
 
         response.end(JSON.stringify(nodesDone));
         session.close();
@@ -313,6 +336,10 @@ function findRels(query, response) {
           relsDone[i].name = data[i].type;
           relsDone[i].target = data[i].count.low;
         }
+        fs.appendFile(`${finalPath}/relMetaData.txt`, JSON.stringify(relsDone), (err) => {
+          if (err) throw err;
+        });
+
         response.end(JSON.stringify(relsDone));
         session.close();
       },
@@ -340,31 +367,29 @@ function backupNodes(query, response) {
   }
 
   const backupQuery = `match (n: ${query.name}) ${where} return n order by ID(n) limit ${query.blocksize}`;
-  let currentObj = {};
-  let count = 0;
+  let data = [];
 
   session
     .run(backupQuery)
     .subscribe({
       onNext: function (record) {
+        let currentObj = {};
         for (let i=0; i< record.length; i++) {
           currentObj[record.keys[i]]=record._fields[i];
         }
+        data.push(currentObj);
 
+        console.log("%s/n",JSON.stringify(currentObj));
+      },
+      onCompleted: function () {
         // store data
-        fs.appendFile(`${finalPath}/nodes.txt`, `${JSON.stringify(currentObj)}\n`, (err) => {
+        fs.appendFile(`${finalPath}/nodes_${nodeFiles++}.txt`, JSON.stringify(data), (err) => {
           if (err) throw err;
         });
 
-        console.log("%s/n",JSON.stringify(currentObj));
-
-        count++;
-      },
-      onCompleted: function () {
-
         // send progress back to client
-        const lastID = currentObj.n.identity.low;
-        const update = {"numNodes":count, "lastID":lastID};
+        const lastID = data[data.length-1].n.identity.low;
+        const update = {"numNodes":data.length, "lastID":lastID};
         response.end(JSON.stringify(update));
         session.close();
       },
@@ -391,31 +416,28 @@ function backupRels(query, response) {
     where = `where ID(r) > ${query.minimum}`;
   }
   const backupQuery = `match (a)-[r:${query.name}]->(b) ${where} return a.GUID as a, b.GUID as b, r order by ID(r) limit ${query.blocksize}`;
-
-  let currentObj = {};
-  let count = 0;
+  let data = [];
 
   session
     .run(backupQuery)
     .subscribe({
       onNext: function (record) {
+        let currentObj = {};
         for (let i=0; i< record.length; i++) {
           currentObj[record.keys[i]]=record._fields[i];
         }
-
+        data.push(currentObj);
+        console.log("%s/n",JSON.stringify(currentObj));
+      },
+      onCompleted: function () {
         // store data
-        fs.appendFile(`${finalPath}/rels.txt`, `${JSON.stringify(currentObj)}\n`, (err) => {
+        fs.appendFile(`${finalPath}/rels_${relFiles++}.txt`, JSON.stringify(data), (err) => {
           if (err) throw err;
         });
 
-        console.log("%s/n",JSON.stringify(currentObj));
-
-        count++;
-      },
-      onCompleted: function () {
         // send progress back to client
-        const lastID = currentObj.r.identity.low;
-        const update = {"numRels":count, "lastID":lastID};
+        const lastID = data[data.length-1].r.identity.low;
+        const update = {"numRels":data.length, "lastID":lastID};
         response.end(JSON.stringify(update));
         session.close();
       },
@@ -424,6 +446,192 @@ function backupRels(query, response) {
       }
     });
 }
+
+//--------------------------------------Restore code---------------
+let restoreFolder = "";
+let restorePath = "";
+
+function getNodeData(query, response) {
+  restoreFolder = query.folder;
+  restorePath = `${config.neo4jBackup}/${restoreFolder}`;
+  const nodePath = `${restorePath}/nodeMetaData.txt`;
+
+  fs.readFile(nodePath, function(err, data) {
+    if (err) {
+      console.log(err);
+    }
+    else {
+      response.end(data);
+    }
+  });
+}
+
+function getRelData(query, response) {
+  const relPath = `${restorePath}/relMetaData.txt`;
+  fs.readFile(relPath, function(err, data) {
+    if (err) {
+      console.log(err);
+    }
+    else {
+      response.end(data);
+    }
+  });
+}
+
+function restoreNodes(query, response) {
+  const filePath = `${restorePath}/nodes_${nodeFiles++}.txt`;
+  if (fs.existsSync(filePath)) {
+    fs.readFile(filePath, function(err, stringData) {
+      if (err) {
+        console.log(err);
+      }
+      else {
+        const session = driver.session();
+
+        let steps = "create ";
+        data = JSON.parse(stringData);
+        for (let i = 0; i < data.length; i++) { // for every node...
+          const props = data[i].n.properties;
+          let properties = "";
+          for (let propName in props) { // loop through all properties and create text to set them...
+            // If the property is an object with a low and high value, take the low one
+            let value = props[propName];
+            if (typeof value.low !== "undefined") {
+              value = JSON.stringify(value.low);
+            }
+            else if (typeof value !== "string") {
+              value = JSON.stringify(value);
+            }
+            properties += `${propName}: '${stringEscape(value)}', `;
+          }
+          if (properties.length > 0) {
+            properties = properties.slice(0, properties.length - 2); // remove the last ", "
+          }
+
+          let nodeText = `(n${i}:${data[i].n.labels[0]} {${properties}}), `; // Crate text to make the node
+          steps += nodeText; // add to the request
+        } // end for (create command to restore each node)
+        if (steps.length > 7) { // If at least one node needs to be added - which SHOULD always be the case
+          steps = steps.slice(0, steps.length - 2);
+          session
+            .run(steps)
+            .subscribe({ // I don't think we need to return the data we're creating
+              // onNext: function (record) {
+              //   const obj={};
+              //   for (let i=0; i< record.length; i++) {
+              //     obj[record.keys[i]]=record._fields[i];
+              //   }
+              //   data.push(obj);
+              //   console.log("%s/n",JSON.stringify(obj));
+              // },
+              onCompleted: function () { // get the number and type of node restored and return it using response.end
+                const obj = {};
+                obj.numNodes = data.length;
+                obj.name = data[0].n.labels[0]; // There should be at least one item and they should all have the same type
+                response.end(JSON.stringify(obj));
+                session.close();
+              },
+              onError: function (error) {
+                console.log(error);
+              }
+            });
+
+        } // end if (at least one node needs to be restored)
+        else { // this should never happen - but may as well prepare for it
+          alert ("Error: Tried to restore an empty set of nodes");
+        }
+      } // end else (file could be read)
+    }); // end readFile call
+  } // end if (file exists)
+  else {
+    response.end("Out of nodes");
+  }
+}
+
+function restoreRels(query, response) {
+  const filePath = `${restorePath}/rels_${relFiles++}.txt`;
+  if (fs.existsSync(filePath)) {
+    fs.readFile(filePath, function(err, stringData) {
+      if (err) {
+        console.log(err);
+      }
+      else {
+        const session = driver.session();
+
+        data = JSON.parse(stringData);
+        let nodeText = "";
+        let relText = "";
+
+        for (let i = 0; i < data.length; i++) { // for every relation...
+          nodeText += `(a${i} {GUID:'${data[i].a.low}'}), (b${i} {GUID:'${data[i].b.low}'}), `
+
+          const rProps = data[i].r.properties;
+          let rProperties = "";
+          for (let propName in rProps) { // loop through all properties of the relation and create text to set them...
+            let value = rProps[propName];
+
+            if (typeof value.low !== "undefined") {
+              value = JSON.stringify(value.low);
+            }
+            else if (typeof value !== "string") {
+              value = JSON.stringify(value);
+            }
+            rProperties += `${propName}: '${stringEscape(value)}', `;
+          }
+          if (rProperties.length > 0) {
+            rProperties = rProperties.slice(0, rProperties.length - 2); // remove the last ", "
+          }
+          relText += `(a${i})-[r${i}:${data[i].r.type} {${rProperties}}]->(b${i}), `
+        }
+        if (nodeText.length > 0 && relText.length > 0) { // Assuming that at least one relation between two nodes was found
+          nodeText = nodeText.slice(0, nodeText.length - 2);
+          relText = relText.slice(0, relText.length - 2);
+          let steps = `match ${nodeText} create ${relText}`;
+
+          session
+            .run(steps)
+            .subscribe({ // I don't think we need to return the data we're creating
+              // onNext: function (record) {
+              //   const obj={};
+              //   for (let i=0; i< record.length; i++) {
+              //     obj[record.keys[i]]=record._fields[i];
+              //   }
+              //   data.push(obj);
+              //   console.log("%s/n",JSON.stringify(obj));
+              // },
+              onCompleted: function () { // get the number and type of rel restored and return it using response.end
+                const obj = {};
+                obj.numRels = data.length;
+                obj.name = data[0].r.type; // There should be at least one item and they should all have the same type
+                response.end(JSON.stringify(obj));
+                session.close();
+              },
+              onError: function (error) {
+                console.log(error);
+              }
+            });
+        }
+        else { // this should never happen - but may as well prepare for it
+          alert ("Error: Tried to upload an empty set of nodes");
+        }
+      } // end else (file could be read)
+    }); // end readFile call
+  } // end if (file exists)
+  else {
+    response.end("Out of rels");
+  }
+}
+
+
+function stringEscape(text) {
+  let string = JSON.stringify(text);
+  string = string.substring(1, string.length-1);
+  if (string.indexOf("'") > -1) {
+    string = string.replace(/'/g, "\\'");
+  }
+  return string;
+}
+
 
 //
 // // this is sequential code, add asyc back, not sure the best way
