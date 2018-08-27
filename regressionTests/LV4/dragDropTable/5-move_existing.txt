@@ -1,1 +1,0 @@
-[{"id":"0","idr":"item2","action":"dragstart"},{"id":"0","idr":"item0","action":"drop"},{"id":"0","idr":"item0","action":"dragstart"},{"id":"0","idr":"item8","action":"drop"},{"id":"0","idr":"item1","action":"dragstart"},{"id":"0","idr":"item4","action":"drop"}]

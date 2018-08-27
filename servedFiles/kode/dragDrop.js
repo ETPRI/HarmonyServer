@@ -32,7 +32,7 @@ class dragDrop {
     this.editDOM.setAttribute("idr", "edit");
     this.domElement.appendChild(this.editDOM);           // move input field to end of DOM element representing the table
 
-    this.container = this.domFunctions.getChildByIdr(this.domElement, containerIDR);
+    this.container = this.domFunctions.getChildByIdr(this.domElement, containerIDR, true);
 
     // This is where we start building the insert line. insertContainer is the outermost template tag (the draggable one) (or the only one, if they're not nested)
     this.insertContainer = this.container.lastElementChild;

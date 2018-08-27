@@ -1,1 +1,0 @@
-[{"id":"0","idr":"content11","action":"dblclick"},{"id":"0","idr":"edit","value":"hack","action":"blur"},{"id":"0","idr":"content19","action":"dblclick"},{"id":"0","idr":"edit","value":"A woman without a man is like a fish without a bicycle","action":"blur"},{"id":"0","idr":"content27","action":"dblclick"},{"id":"0","idr":"edit","value":"∑","action":"blur"}]

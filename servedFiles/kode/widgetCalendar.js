@@ -4,10 +4,13 @@ class widgetCalendar {
     this.calendarID = id;
     this.widgetID = app.idCounter;
     app.widgets[app.idCounter] = this;
+    this.containedWidgets = [];
     this.calendarDOM = null;
     this.widgetDOM = null;
     this.callerID = callerID;
     this.selectedButton = null;
+
+    this.nodeLabel = app.metaData.getNode('calendar').nodeLabel;
 
     this.hourHeight = "30px";
     this.dayWidth = "600px";
@@ -30,16 +33,23 @@ class widgetCalendar {
     if (!this.name) {
       this.name = "Untitled calendar";  // Call it "Untitled calendar" for now - can change later
     }
-    const html = app.widgetHeader() + `<b idr="name">${this.name}</b>
-                                       <input type="button" idr="backButton" value="<" onclick="app.widget('page', this)">
-                                       <input type="button" class="selectedButton" idr="dayButton" value="Day" onclick="app.widget('changeView', this)">
-                                       <input type="button" idr="weekButton" value="Week" onclick="app.widget('changeView', this)">
-                                       <input type="button" idr="monthButton" value="Month" onclick="app.widget('changeView', this)">
-                                       <input type="button" idr="yearButton" value="Year" onclick="app.widget('changeView', this)">
-                                       <input type="button" idr="forwardButton" value=">" onclick="app.widget('page', this)">
-                                       <input type="button" idr="details" value="Show Details" onclick="app.widget('showDetails', this)">
-                                       </div>
-                                       <div class="widgetBody"><table><tr idr="calendarRow"><td id="calendar${this.widgetID}"></td></tr></table></div></div>`;
+    const html = app.widgetHeader() +
+    `<b idr="name">${this.name}</b>
+    <input type="button" idr="backButton" value="<" onclick="app.widget('page', this)">
+    <input type="button" class="selectedButton" idr="dayButton" value="Day" onclick="app.widget('changeView', this)">
+    <input type="button" idr="weekButton" value="Week" onclick="app.widget('changeView', this)">
+    <input type="button" idr="monthButton" value="Month" onclick="app.widget('changeView', this)">
+    <input type="button" idr="yearButton" value="Year" onclick="app.widget('changeView', this)">
+    <input type="button" idr="forwardButton" value=">" onclick="app.widget('page', this)">
+    <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)">
+    </div>
+    <div class="widgetBody"><table><tr idr="calendarRow">
+      <td id="calendar${this.widgetID}"></td>
+      <td id = "detailsPane" class="hidden">
+        <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
+        <b idr="nodeLabel">#${this.calendarID}: ${this.name}</b>
+      </td>
+    </tr></table></div></div>`;
 
     const parent = document.getElementById('widgets');
     const caller = document.getElementById(this.callerID); // Find the first existing element in the widgets div
@@ -57,6 +67,10 @@ class widgetCalendar {
     this.widgetDOM.classList.add("activeWidget");
 
     this.selectedButton = app.domFunctions.getChildByIdr(this.widgetDOM, "dayButton");
+
+    this.detailsPane = document.getElementById('detailsPane');
+    this.containedWidgets.push(app.idCounter);
+    this.details = new widgetDetails('calendar', this.detailsPane, this.calendarID);
 
     this.buildDay(this.day);
   }
@@ -348,18 +362,29 @@ class widgetCalendar {
     }
   }
 
-  showDetails(button) {
-    const row = app.domFunctions.getChildByIdr(this.widgetDOM, 'calendarRow');
-    const detailsCell = row.insertCell(-1);
-    new widgetDetails('calendar', detailsCell, this.calendarID);
-    button.value = "Hide Details";
-    button.setAttribute("onclick", "app.widget('hideDetails', this)");
+  toggleWidgetDetails(button) {
+    if (button.value == "Show Details") {
+      this.detailsPane.classList.remove("hidden");
+      button.value = "Hide Details";
+    }
+    else {
+      this.detailsPane.classList.add("hidden");
+      button.value = "Show Details";
+    }
   }
 
-  hideDetails(button) {
-    const row = app.domFunctions.getChildByIdr(this.widgetDOM, 'calendarRow');
-    row.deleteCell(-1);
-    button.value = "Show Details";
-    button.setAttribute("onclick", "app.widget('showDetails', this)");
-  }
+  // showDetails(button) {
+  //   const row = app.domFunctions.getChildByIdr(this.widgetDOM, 'calendarRow');
+  //   const detailsCell = row.insertCell(-1);
+  //   new widgetDetails('calendar', detailsCell, this.calendarID);
+  //   button.value = "Hide Details";
+  //   button.setAttribute("onclick", "app.widget('hideDetails', this)");
+  // }
+  //
+  // hideDetails(button) {
+  //   const row = app.domFunctions.getChildByIdr(this.widgetDOM, 'calendarRow');
+  //   row.deleteCell(-1);
+  //   button.value = "Show Details";
+  //   button.setAttribute("onclick", "app.widget('showDetails', this)");
+  // }
 }

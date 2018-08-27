@@ -9,6 +9,8 @@ class widgetSVG {
     this.containedWidgets = [];
     this.callerID = callerID;
 
+    this.nodeLabel = app.metaData.getNode('mindmap').nodeLabel;
+
     // constants for drawing
     this.width = 1200; // Width of the SVG element
     this.height = 600; // Height of the SVG element
@@ -58,7 +60,11 @@ class widgetSVG {
         ondrop="app.widget('dropAdd', this, event)"
         oncontextmenu="event.preventDefault()"
         onmousedown="app.widget('dragStart', this, event)"
-    </svg></td></tr></table></div></div>`;
+    </svg></td>
+    <td id = "detailsPane" class="hidden">
+      <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
+      <b idr="nodeLabel">#${this.mapID}: ${this.name}</b>
+    </td></tr></table></div></div>`;
 
     const parent = document.getElementById('widgets');
     const caller = document.getElementById(this.callerID);
@@ -83,10 +89,13 @@ class widgetSVG {
       .attr("class", "selectBox hidden");
     this.selectBox = app.domFunctions.getChildByIdr(this.SVG_DOM, "selectBox");
 
-
     this.d3Functions = new d3Functions(this);
     this.clicks = new mindmapClick(this, this.SVG_DOM, this.d3Functions);
     this.keys = new mindmapKeypress(this.d3Functions, this.newChild.bind(this), this.newSibling.bind(this), this); // Navigation is likely to be standard, but effects of tab and enter may change
+
+    this.detailsPane = document.getElementById('detailsPane');
+    this.containedWidgets.push(app.idCounter);
+    this.details = new widgetDetails('mindmap', this.detailsPane, this.mapID);
 
     if (data) {
       this.loadComplete(data);
@@ -160,6 +169,8 @@ class widgetSVG {
         this.name = data[0].mindmap.properties.name;
         const nameText = app.domFunctions.getChildByIdr(this.widgetDOM, 'name');
         nameText.textContent = this.name;
+        const detailsName = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeLabel');
+        detailsName.textContent = `${this.mapID}: ${this.name}`;
       }
 
       /*
@@ -224,16 +235,12 @@ class widgetSVG {
   }
 
   toggleWidgetDetails(button) {
-    const row = app.domFunctions.getChildByIdr(this.widgetDOM, 'svgRow');
     if (button.value == "Show Details") {
-      const detailsCell = row.insertCell(-1);
-      this.containedWidgets.push(app.idCounter);
-      new widgetDetails('mindmap', detailsCell, this.mapID);
+      this.detailsPane.classList.remove("hidden");
       button.value = "Hide Details";
-
     }
     else {
-      row.deleteCell(-1);
+      this.detailsPane.classList.add("hidden");
       button.value = "Show Details";
     }
   }
@@ -904,6 +911,10 @@ class widgetSVG {
     count.value = this.d3Functions.count;
     obj.changes.push(count);
     app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
+
+    // Meanwhile, save information from the details pane.
+    this.details.dataNode.id = this.mapID;
+    this.details.saveAdd();
   }
 
   lookForEnter(input, evnt) { // Makes hitting enter do the same thing as blurring (e. g. inserting a new node or changing an existing one)

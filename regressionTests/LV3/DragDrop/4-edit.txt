@@ -1,1 +1,0 @@
-[{"id":"0","idr":"item7","action":"dblclick"},{"id":"0","idr":"edit","value":"Grave: stone","action":"blur"},{"id":"0","idr":"item9","action":"dblclick"},{"id":"0","idr":"edit","value":"Greek: ∑","action":"blur"},{"id":"0","idr":"item0","action":"dblclick"},{"id":"0","idr":"edit","value":"Number: 42","action":"blur"}]

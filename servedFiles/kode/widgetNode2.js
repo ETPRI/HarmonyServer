@@ -23,8 +23,6 @@ constructor(callerID, queryObjectName, id, name) {
   this.relationsTo      = {}; // place holder for relations   (n)->
   this.addSaveDOM       = {};
   this.tableDOM         = {};
-  this.fromDOM          = {}; // Is this ever used?
-  this.toDOM            = {}; // Is this ever used?
   this.endDOM           = {}; // sub widget
   this.startDOM         = {}; // sub widget
 
