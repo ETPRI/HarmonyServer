@@ -109,7 +109,7 @@ complete(nodes) {
   let ordering = []; // Stores the ordered IDs, as stored in the table
   const orderedNodes = []; // Stores ordered DATA, which is reproducible and human-readable, for testing
   if (nodes[0] && nodes[0].view.properties.order) { // If at least one node and an ordering were returned...
-    ordering = nodes[0].view.properties.order;
+    ordering = JSON.parse(nodes[0].view.properties.order);
   }
 
   // Start building HTML for the table. Note the ondrop event in the template, which causes all rows to have the same ondrop event.
@@ -125,7 +125,7 @@ complete(nodes) {
   // in the link to the node.
   for (let i = 0; i < ordering.length; i++) {
     // Find the item in nodes which matches, if any
-    const relation = nodes.filter(node => node.r.id == ordering[i]);
+    const relation = nodes.filter(node => node.r.properties.GUID == ordering[i]);
     if (relation[0]) { // If that relation still exists, add it to the table and delete it from the list of relations
       html = this.addLine(relation[0], html, orderedNodes);
       // Remove from array
@@ -191,7 +191,7 @@ addLine(relation, html, orderedNodes) {
     }
 
     // Add this node's data to the list of relations that already exist.
-    this.existingRelations[rel.id] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
+    this.existingRelations[rel.properties.GUID] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
 
     // Default is that this is NOT the logged-in user's view. The row can only be dragged,
     // the cells can't be interacted with at all and the delete button is not needed.
@@ -208,7 +208,7 @@ addLine(relation, html, orderedNodes) {
       editHTML = `ondblclick="app.widget('edit', this, event)"`
     }
 
-    html += trHTML + `<td>${++this.idrRow}</td> <td>${rel.id}</td>
+    html += trHTML + `<td>${++this.idrRow}</td> <td>${rel.properties.GUID}</td>
                       <td idr="content${this.idrContent++}">${nodeID}</td>
                       <td idr="content${this.idrContent++}">${name}</td>
                       <td>${type}</td>
@@ -424,11 +424,11 @@ saveSync(button) {
 // Then calls the appropriate function - deleteNode(), addNode(), replaceNode(), modifyNode(), or processNext()
 // to skip a row that doesn't need to change the DB. (All other functions this can call eventually call processNext() again).
 processNext(data, rows, prevFunction) {
-  // The only processing function that returns data is addNode, which returns ID(r). Check for existence of data[0] to distinguish from an empty array, which deletion returns
-  // If processNext gets data, it is the ID from an addNode call. Extract the ID and add it to the order array.
+  // The only processing function that returns data is addNode, which returns a relation. Check for existence of data[0] to distinguish from an empty array, which deletion returns
+  // If processNext gets data, it is the relation from an addNode call. Extract the GUID and add it to the order array.
   if (prevFunction == "add") {
     // example of data from addNode: [{link:{identity:{high:0, low:xxxx}}}]
-    const id = data[0].link.id;
+    const id = data[0].link.GUID.low;
     this.order.push(id.toString());
   }
 
