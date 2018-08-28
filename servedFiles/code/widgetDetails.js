@@ -232,6 +232,7 @@ popupOK(button) {
 buildDataNode() {   // put in one field label and input row for each field - includes creating dragdrop table
   let fieldCount = 0;
   let value = "";
+  let hiddenFields = 0;
 
   // Clear any existing data
   while (this.tBodyDOM.hasChildNodes()) {
@@ -256,6 +257,7 @@ buildDataNode() {   // put in one field label and input row for each field - inc
     if (this.formFieldsDisplayed.indexOf(fieldName) == -1) { // If the field shouldn't be visible
       row.setAttribute('class', 'notShown');
       row.hidden = true;
+      hiddenFields++;
     }
 
     this.tBodyDOM.appendChild(row);
@@ -308,7 +310,12 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   const button = document.createElement("input");
   const mainCell = app.domFunctions.getChildByIdr(this.widgetDOM, 'main');
   mainCell.appendChild(button);
-  button.outerHTML = `<input type="button" value="Show All" onclick = "app.widget('showHideAllFields', this)">`;
+  if (hiddenFields == 0) {
+    button.outerHTML = `<input type="button" value="Show All (0)" disabled>`;
+  }
+  else {
+    button.outerHTML = `<input type="button" value="Show All (${hiddenFields})" onclick = "app.widget('showHideAllFields', this)">`;
+  }
   button.setAttribute('style', 'text-align:center');
 
   const trashHTML = `<b>Trash Node</b>
@@ -346,8 +353,8 @@ buildDataNode() {   // put in one field label and input row for each field - inc
 
 showHideAllFields(button) {
   const hiddenFields = this.tBodyDOM.getElementsByClassName('notShown');
-  switch(button.value) {
-    case 'Show All':
+  switch(button.value.slice(0,9)) {
+    case 'Show All ':
       for (let i = 0; i < hiddenFields.length; i++) {
         hiddenFields[i].hidden = false;
       }
@@ -357,7 +364,7 @@ showHideAllFields(button) {
     for (let i = 0; i < hiddenFields.length; i++) {
       hiddenFields[i].hidden = true;
     }
-    button.value = "Show All";
+    button.value = `Show All (${hiddenFields.length})`;
     break;
   }
 }
