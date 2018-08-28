@@ -31,6 +31,7 @@ constructor(label, container, id, name, callerID) { // Label: the type of node d
     this.formFieldsDisplayed  = this.queryObject.formFieldsDisplayed;
     this.orderBy              = this.queryObject.orderBy;
     this.newFields            = 0;
+    this.id                   = id;
 
     this.idWidget = app.idCounter;
     app.widgets[app.idCounter++] = this; // Add to app.widgets
@@ -67,6 +68,9 @@ finishConstructor(data) {
     app.regression.record(obj);
   }
 
+  else {
+  }
+
   this.buildWidget();
   this.buildDataNode();
 
@@ -92,7 +96,7 @@ buildWidget() { // public - build table header
 
   if (this.dataNode) {
     // we are edit mode
-    id = this.dataNode.id;
+    id = this.id;
     name = this.dataNode.properties.name;
   }
 
@@ -143,15 +147,20 @@ showPopup(label) {
   const labelInput = app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
   labelInput.value = label.textContent;
 
+  const tableCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
   if (this.fieldsDisplayed.indexOf(fieldName) != -1) {
-    const tableCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
     tableCheck.checked = true;
   }
+  else {
+    tableCheck.checked = false;
+  }
+  const formCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
   if (this.formFieldsDisplayed.indexOf(fieldName) != -1) {
-    const formCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
     formCheck.checked = true;
   }
-
+  else {
+    formCheck.checked = false;
+  }
 }
 
 popupCancel() {
@@ -395,13 +404,13 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
   // director function
   if (widgetElement == null || widgetElement.value === "Save") {
     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
-    if (this.dataNode.properties._trash === true && checkbox.checked === false && app.login.userID) { // If the node was trashed and now shouldn't be
+    if (this.dataNode && this.dataNode.properties._trash === true && checkbox.checked === false && app.login.userID) { // If the node was trashed and now shouldn't be
       this.untrashNode();
     }
-    else if (!(this.dataNode.properties._trash === true) && checkbox.checked === true && app.login.userID) { // If the node was not trashed and now should be
+    else if (this.dataNode && !(this.dataNode.properties._trash === true) && checkbox.checked === true && app.login.userID) { // If the node was not trashed and now should be
       this.trashNode();
     }
-    else if (this.dataNode.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData") && app.login.userID) { // If the node was and should stay trashed, but the reason has changed
+    else if (this.dataNode && this.dataNode.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData") && app.login.userID) { // If the node was and should stay trashed, but the reason has changed
       this.updateReason();
     }
     else { // If the node's trash status isn't changing, only the data, go straight to save().
@@ -415,7 +424,7 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
 trashNode() {
   this.dataNode.properties._trash = true;
   const user = app.login.userID;
-  const node = this.dataNode.id;
+  const node = this.id;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
   reasonInp.setAttribute("class",""); // remove changedData class from reason
@@ -438,7 +447,7 @@ trashNode() {
 
 updateReason() {
   const user = app.login.userID;
-  const node = this.dataNode.id;
+  const node = this.id;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
   this.dataNode.properties.reason = reason;
@@ -466,7 +475,7 @@ updateReason() {
 untrashNode() {
   this.dataNode.properties._trash = false;
   const user = app.login.userID;
-  const node = this.dataNode.id;
+  const node = this.id;
 
   const obj = {};
   obj.from = {};
@@ -490,7 +499,7 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
   let tr = this.tBodyDOM.firstElementChild;
 
   let data={};
-  let newFieldsExist = false;
+  let newFields = {};
   let reordered = false;
   let currentFields = [];
 
@@ -518,10 +527,10 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
       const valueCell = nameCell.nextElementSibling;
       const value = valueCell.firstElementChild.value;
       if (name != "") {
-        newFieldsExist = true;
         const fieldName = name.replace(/\s/g, "");
         // Add new field to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
         this.fields[fieldName] = {label: name};
+        newFields[fieldName] = {label: name};
         data[fieldName] = value;
         currentFields.push(fieldName);
       }
@@ -555,8 +564,8 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
   }
 
   // Change metadata node if needed
-  if (newFieldsExist || renamed || reordered) {
-    this.updateMetaData();
+  if (Object.keys(newFields).length > 0 || renamed || reordered) {
+    this.updateMetaData(newFields);
   }
 
   const obj = {};
@@ -566,7 +575,7 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
   app.nodeFunctions.createNode(obj, this, 'addComplete');
 }
 
-updateMetaData() {
+updateMetaData(newFields) {
   const metadataObj = {};
   metadataObj.from = {};
   metadataObj.from.id = app.login.userID;
@@ -577,12 +586,12 @@ updateMetaData() {
   metadataObj.rel.return = false;
   metadataObj.to = {};
   metadataObj.to.type = "M_MetaData";
+  metadataObj.to.name = "metadata";
   metadataObj.to.properties = {};
   metadataObj.to.properties.name = this.queryObjectName;
-  metadataObj.to.return = false;
   metadataObj.changes = [];
 
-  const propertyNames = ['fields', 'fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
+  const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
   for (let i = 0; i < propertyNames.length; i++) {
     const change = {};
     change.item = "rel";
@@ -590,12 +599,33 @@ updateMetaData() {
     change.value = app.stringEscape(JSON.stringify(this[propertyNames[i]]));
     metadataObj.changes.push(change);
   }
-  app.nodeFunctions.changeRelation(metadataObj);
+  app.nodeFunctions.changeRelation(metadataObj, this, 'updateFields', newFields);
+}
+
+updateFields(data, newFields) { // should contain only the metadata node, under the name "metadata"
+  if (Object.keys(newFields).length > 0) {
+    let fields = JSON.parse(data[0].metadata.properties.fields);
+    for (let fieldName in newFields) { // Add all new fields to the fields object
+      fields[fieldName] = newFields[fieldName];
+    }
+    const obj = {};
+    obj.node = {};
+    obj.node.type = "M_MetaData";
+    obj.node.properties = {};
+    obj.node.properties.name = this.queryObjectName;
+    obj.changes = [];
+    const update = {};
+    update.property = "fields";
+    update.value = app.stringEscape(JSON.stringify(fields));
+    obj.changes.push(update);
+    app.nodeFunctions.changeNode(obj);
+  }
 }
 
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
   this.dataNode = data[0].n; // takes single nodes
-  const id = this.dataNode.id;
+  this.id = this.dataNode.id;
+  const id = this.id;
   const name = this.dataNode.properties.name;
   const nodeLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeLabel");
   nodeLabel.textContent=`${this.nodeLabel}#${id}: ${name}`;
@@ -645,7 +675,7 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
   let tr = this.tBodyDOM.firstElementChild;
 
   let data = [];
-  let newFieldsExist = false;
+  let newFields = {};
   let reordered = false;
   let currentFields = [];
 
@@ -669,10 +699,11 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
       const valueCell = nameCell.nextElementSibling;
       const value = valueCell.firstElementChild.value;
       if (name != "") {
-        newFieldsExist = true;
         const fieldName = name.replace(/\s/g, "");
         // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
         this.fields[fieldName] = {label: name};
+        newFields[fieldName] = {label: name};
+        this.formFieldsDisplayed.push(fieldName);
         currentFields.push(fieldName);
 
         // Add field name and value to list of changes
@@ -732,8 +763,8 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
   }
 
   // Change metadata node if needed
-  if (newFieldsExist || renamed || reordered) {
-    this.updateMetaData();
+  if (Object.keys(newFields).length > 0 || renamed || reordered) {
+    this.updateMetaData(newFields);
   }
 
   if (data===[]) {
@@ -752,7 +783,7 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
     const obj = {};
     obj.node = {};
     obj.node.name = "n";
-    obj.node.id = this.dataNode.id;
+    obj.node.id = this.id;
     obj.changes = data;
 
     app.nodeFunctions.changeNode(obj, this, 'saveData');

@@ -274,9 +274,9 @@ class widgetLogin {
       let properties = row.metadata.properties; // default values
       const name = properties.name;
 
-      const propertyNames = ['fields', 'fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
+      const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
       for (let i = 0; i < propertyNames.length; i++) {
-        if (row.settings && row.settings.properties[propertyNames[i]]) { // user-specific values overrule defaults if they are present
+        if (row.settings && row.settings.properties[propertyNames[i]]) { // user-specific values overrule defaults if they are present, except for "fields"
           properties[propertyNames[i]] = row.settings.properties[propertyNames[i]];
         }
 

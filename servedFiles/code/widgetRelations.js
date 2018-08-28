@@ -23,6 +23,7 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
   this.idrContent   = 0;            // Number of existing editable cells added to table
   this.idrRow       = 0;            // Number of existing rows added to the table
   this.order = [];                  // Order of relations set by the current user
+  this.placeholders = [];
 
   // Add to app.widgets
   app.widgets[app.idCounter++] = this;
@@ -62,15 +63,15 @@ findLinks(data) { // data should include the view found by the previous function
     this.viewNodeID = data[0].view.id;
   }
   const obj = {};
-  obj.from = {};
-  obj.from.name = "view";
-  obj.from.id = this.viewNodeID;
-  obj.to = {};
-  obj.to.name = "a";
+  obj.required = {};
+  obj.required.name = "view";
+  obj.required.id = this.viewNodeID;
+  obj.optional = {};
+  obj.optional.name = "a";
   obj.rel = {};
   obj.rel.name = "r";
   obj.rel.type = "Link";
-  app.nodeFunctions.changeRelation(obj, this, 'rComplete');
+  app.nodeFunctions.findOptionalRelation(obj, this, 'rComplete');
 }
 
 // Takes the list of nodes in this user's view and begins building the widget by adding a "Save" or "Sync" button,
@@ -107,9 +108,13 @@ complete(nodes) {
   const logNodes = JSON.parse(JSON.stringify(nodes)); // Need a copy that WON'T have stuff deleted, in order to log it later
   app.stripIDs(logNodes); // May as well go ahead and remove the IDs now
   let ordering = []; // Stores the ordered IDs, as stored in the table
+  let placeholders = [];
   const orderedNodes = []; // Stores ordered DATA, which is reproducible and human-readable, for testing
   if (nodes[0] && nodes[0].view.properties.order) { // If at least one node and an ordering were returned...
-    ordering = JSON.parse(nodes[0].view.properties.order);
+    ordering = nodes[0].view.properties.order;
+  }
+  if (nodes[0] && nodes[0].view.properties.placeholders) { // if at least one node was returned and it has placeholders
+    placeholders = nodes[0].view.properties.placeholders;
   }
 
   // Start building HTML for the table. Note the ondrop event in the template, which causes all rows to have the same ondrop event.
@@ -124,15 +129,25 @@ complete(nodes) {
   // NOTE: Uses Neo4j IDs. Should look into a better way of storing this information. Maybe I could include an "order number"
   // in the link to the node.
   for (let i = 0; i < ordering.length; i++) {
-    // Find the item in nodes which matches, if any
-    const relation = nodes.filter(node => node.r.properties.GUID == ordering[i]);
-    if (relation[0]) { // If that relation still exists, add it to the table and delete it from the list of relations
-      html = this.addLine(relation[0], html, orderedNodes);
-      // Remove from array
-      const index = nodes.indexOf(relation[0]);
-      delete nodes[index];
+    // Check whether this should be a placeholder
+    if (ordering[i].charAt(0) === "p") {
+      const index = parseInt(ordering[i].slice(1));
+      const comment = placeholders[index];
+      html = this.addLine(null, html, orderedNodes, comment);
+      // remove from array
+      delete placeholders[index];
     }
-  }
+    else {
+    // Find the item in nodes which matches, if any
+      const relation = nodes.filter(node => node.r && node.r.properties && node.r.properties.GUID == ordering[i]);
+      if (relation[0]) { // If that relation still exists, add it to the table and delete it from the list of relations
+        html = this.addLine(relation[0], html, orderedNodes);
+        // Remove from array
+        const index = nodes.indexOf(relation[0]);
+        delete nodes[index];
+      } // end if (relationship found)
+    } // end else (not placeholder)
+  } // end for (each item in ordering)
 
   // logging
   const obj = {};
@@ -150,10 +165,19 @@ complete(nodes) {
   // add unordered data, if any. NOTE: Think about whether this is still needed.
   // If a user stores relations, don't they also automatically store an ordering which includes all those relations?
   for (let i = 0; i < nodes.length; i++) {
-    if (nodes[i] !== undefined) { // Some entries will be undefined because they were added as ordered data and deleted. Skip them.
+    // Some entries will be undefined because they were added as ordered data and deleted. Skip them.
+    // Also, it's possible that only the view was found, not a node - skip this.
+    if (nodes[i] !== undefined && nodes[i].a) {
       html = this.addLine(nodes[i], html);
     }
   }
+
+  for (let i = 0; i < placeholders.length; i++) {
+    if (placeholders[i] !== undefined) { // Some entries will be undefined because they were added as ordered data and deleted. Skip them.
+      html = this.addLine(null, html, null, placeholders[i]);
+    }
+  }
+
   // At this point, "html" should contain almost all the HTML needed to render a table of all stored relations.
   // It just needs the closing </tbody> tag (<table> and </table> are in the rComplete line that called this function).
   return html + "</tbody>";
@@ -164,57 +188,54 @@ complete(nodes) {
 // Adds to the existing HTML to produce another row in a table of relations, then adds data on the current node to orderedNodes.
 // Makes the row draggable, and allows dropping and editing if the table being built is of the logged-in user's view.
 // NOTE: Section on placeholders needs work.
-addLine(relation, html, orderedNodes) {
-  const rel = relation.r; // The relation described in this row of the table
-  const node = relation.a; // The node which that relation links to
-  let nodeID = node.id; // The ID of said node...
-  let name = node.properties.name; // its name...
-  let type = node.labels[0]; // and its type.
-  let comment = ""; // The comment, if any, that the user who created this view left for this node.
-
-
-  // NOTE: CLEAN THIS UP! Placeholders aren't directly circular anymore. Need to think about how best to handle them.
-  // If this node is a placeholder going the wrong way, just move along.
-  if ("direction" in rel.properties && rel.properties.direction !== this.relationType) {
-    this.idrRow++; // This probably isn't necessary, but honestly this whole section needs a rewrite, so why worry about its performance?
-  }
-  // If it's a placeholder going the right way or a real relation, add it to the table...
-  else {
-    if ("direction" in rel.properties) { // but if it's a placeholder, don't show the node ID, name or type.
-      nodeID = "";
-      name = "";
-      type = "";
-    }
+addLine(relation, html, orderedNodes, placeholderComment) {
+  let nodeID = "";
+  let name = "";
+  let type = "";
+  let comment = "";
+  let GUID = "";
+  if (relation != null) {
+    const rel = relation.r; // The relation described in this row of the table
+    const node = relation.a; // The node which that relation links to
+    nodeID = node.id; // The ID of said node...
+    name = node.properties.name; // its name...
+    type = node.labels[0]; // and its type.
+    GUID = rel.properties.GUID; // the relation ID
+    comment = ""; // The comment, if any, that the user who created this view left for this node.
 
     if ("comment" in rel.properties) { // It's now possible to have a blank comment, so allow for that
       comment = rel.properties.comment;
     }
 
     // Add this node's data to the list of relations that already exist.
-    this.existingRelations[rel.properties.GUID] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
+    this.existingRelations[GUID] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
+  } // end if (relation exists)
+  else { // placeholder relation
+    comment = placeholderComment;
+  }
 
-    // Default is that this is NOT the logged-in user's view. The row can only be dragged,
-    // the cells can't be interacted with at all and the delete button is not needed.
-    let trHTML = `<tr idr="item${this.idrRow}" draggable="true" ondragstart="app.widget('drag', this, event)">`;
-    let deleteHTML = "";
-    let editHTML = "";
+  // Default is that this is NOT the logged-in user's view. The row can only be dragged,
+  // the cells can't be interacted with at all and the delete button is not needed.
+  let trHTML = `<tr idr="item${this.idrRow}" draggable="true" ondragstart="app.widget('drag', this, event)">`;
+  let deleteHTML = "";
+  let editHTML = "";
 
-    // If this is the logged-in user's view, they get the full functionality - ability to drag, drop and delete.
-    if (app.login.userID && app.login.userID == this.viewID) {
-      trHTML = `<tr idr="item${this.idrRow}" ondrop="app.widget('dropData', this, event)"
-                ondragover="app.widget('allowDrop', this, event)" draggable="true"
-                ondragstart="app.widget('drag', this, event)">`
-      deleteHTML = `<td><button idr="delete${this.idrRow}" onclick="app.widget('markForDeletion', this)">Delete</button></td>`;
-      editHTML = `ondblclick="app.widget('edit', this, event)"`
-    }
+  // If this is the logged-in user's view, they get the full functionality - ability to drag, drop and delete.
+  if (app.login.userID && app.login.userID == this.viewID) {
+    trHTML = `<tr idr="item${this.idrRow}" ondrop="app.widget('dropData', this, event)"
+              ondragover="app.widget('allowDrop', this, event)" draggable="true"
+              ondragstart="app.widget('drag', this, event)">`
+    deleteHTML = `<td><button idr="delete${this.idrRow}" onclick="app.widget('markForDeletion', this)">Delete</button></td>`;
+    editHTML = `ondblclick="app.widget('edit', this, event)"`
+  }
 
-    html += trHTML + `<td>${++this.idrRow}</td> <td>${rel.properties.GUID}</td>
-                      <td idr="content${this.idrContent++}">${nodeID}</td>
-                      <td idr="content${this.idrContent++}">${name}</td>
-                      <td>${type}</td>
-                      <td idr="content${this.idrContent++}" ${editHTML}>${comment}</td>
-                      ${deleteHTML}</tr>`;
-  } // end else (real relation or placeholder in right direction)
+  html += trHTML + `<td>${++this.idrRow}</td> <td>${GUID}</td>
+                    <td idr="content${this.idrContent++}">${nodeID}</td>
+                    <td idr="content${this.idrContent++}">${name}</td>
+                    <td>${type}</td>
+                    <td idr="content${this.idrContent++}" ${editHTML}>${comment}</td>
+                    ${deleteHTML}</tr>`;
+
 
   // If an array of ordered nodes was passed in, add this line to it
   if (orderedNodes) {
@@ -428,7 +449,7 @@ processNext(data, rows, prevFunction) {
   // If processNext gets data, it is the relation from an addNode call. Extract the GUID and add it to the order array.
   if (prevFunction == "add") {
     // example of data from addNode: [{link:{identity:{high:0, low:xxxx}}}]
-    const id = data[0].link.GUID.low;
+    const id = data[0].link.properties.GUID;
     this.order.push(id.toString());
   }
 
@@ -436,6 +457,13 @@ processNext(data, rows, prevFunction) {
     const row = rows.pop();
     if (row.classList.contains("deletedData")) { // If the relation has been marked for deletion, delete it. No need to add to order array.
       this.deleteNode(row, rows);
+    }
+    // if this is a placeholder relation, add it to the placeholders array. Doesn't matter whether it's changed or not,
+    // as long as it's not deleted. Add to order array as well.
+    else if (row.children[2].textContent === "" && row.getAttribute('idr') !== 'insertContainer') {
+      this.placeholders.push(row.children[5].textContent); // add comment to array
+      this.order.push(`p${this.placeholders.length-1}`); // add index to order array, prefaced by "p" for "placeholder"
+      this.processNext(null, rows);
     }
     else if (row.classList.contains("newData")) { // If the relation is new, add it. Can't add to order array yet - that will be done once a relation ID is assigned.
       this.addNode(row, rows);
@@ -469,14 +497,20 @@ processNext(data, rows, prevFunction) {
     obj.node.name = "view";
     obj.node.id = this.viewNodeID;
     obj.changes = [];
-    const change = {};
-    change.property = "order";
-    change.value = JSON.stringify(this.order);
-    change.string = false;
-    obj.changes.push(change);
+    const orderChange = {};
+    orderChange.property = "order";
+    orderChange.value = JSON.stringify(this.order);
+    orderChange.string = false;
+    obj.changes.push(orderChange);
+    const placeholderChange = {};
+    placeholderChange.property = "placeholders";
+    placeholderChange.value = JSON.stringify(this.placeholders);
+    placeholderChange.string = false;
+    obj.changes.push(placeholderChange);
     app.nodeFunctions.changeNode(obj, this, 'findLinks'); // Can skip the refresh method since we know viewNodeID already
 
-    this.order = []; // Finally, reset this.order.
+    this.placeholders = [];
+    this.order = []; // Finally, reset this.order and this.placeholders.
   }
 }
 
@@ -490,6 +524,10 @@ deleteNode(row, rows) {
   const idCell = cells[1];
   const id = idCell.textContent;
 
+  // Get the comment (used in the next step, to ensure only the desired relation is deleted)
+  const commentCell = cells[5];
+  const comment = commentCell.textContent;
+
   // delete the relation going to the other node in the view of this node,
   // find the user's view of the other node, and delete the relation from that view to this node.
   // ("user" is the user, "node" is the other node, "this" is this node, and "view" is the user's view of the other node.)
@@ -500,10 +538,10 @@ deleteNode(row, rows) {
   obj.rel = {};
   obj.rel.id = id;
   obj.rel.return = false;
-  app.nodeFunctions.deleteRelation(obj, this, 'findReverse', rows);
+  app.nodeFunctions.deleteRelation(obj, this, 'findReverse', rows, comment);
 }
 
-findReverse(data, rows) {
+findReverse(data, rows, comment) {
   // Get the type of the other relation to delete - it will be the "mirror image" of this one
   let otherRelType;
   switch (this.relationType) {
@@ -531,10 +569,10 @@ findReverse(data, rows) {
   obj.rel2 = {};
   obj.rel2.type = "Subject";
   obj.rel2.return = false;
-  app.nodeFunctions.changeTwoRelPattern(obj, this, 'deleteReverse', rows);
+  app.nodeFunctions.changeTwoRelPattern(obj, this, 'deleteReverse', rows, comment);
 }
 
-deleteReverse(data, rows) {
+deleteReverse(data, rows, comment) {
   const viewID = data[0].view.id;
   const obj = {};
   obj.from = {};
@@ -545,6 +583,8 @@ deleteReverse(data, rows) {
   obj.to.return = false;
   obj.rel = {};
   obj.rel.type = "Link";
+  obj.rel.properties = {};
+  obj.rel.properties.comment = comment;
   obj.rel.return = false;
   app.nodeFunctions.deleteRelation(obj, this, 'processNext', rows);
 }
@@ -603,14 +643,9 @@ addNode(row, rows) {
   let otherNodeID;
   let attributes = {};
 
-  // Get the ID of the other node, if one was specified
+  // Get the ID of the other node, if one was specified. Now that placeholders are not stored as links, this should ALWAYS HAPPEN.
   if (nodeIDcell.textContent != "") {
     otherNodeID = nodeIDcell.textContent;
-  }
-  // If no other node was specified, make a placeholder relationship with the original node, and give it a direction to mark it as a placeholder and show which way it goes
-  else {
-    otherNodeID = this.nodeID;
-    attributes.direction = this.relationType; // Not sure this is needed anymore
   }
 
   // Build a string of attributes for the relation. Each attribute takes the form name:value.

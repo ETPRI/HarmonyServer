@@ -731,58 +731,40 @@ class widgetSVG {
   processNodes(data, labels) {
     if (labels.length > 0) { // As long as there are more labels to process
       let label = labels.pop();
-      while (label == undefined) {
+      while (label == undefined && labels.length > 0) {
         label = labels.pop();
       }
-      const id = label.id;
-      const saved = this.d3Functions.savedObjects[id];
-      const original = this.d3Functions.objects[id].JSobj;
-      if (label.deleted) {
-        // First, remove the object from the roots array or its parent's children array
-        if (label.parent == "null") {
-          const rootIndex = this.d3Functions.roots.indexOf(original);
-          if (rootIndex != -1) {
-            this.d3Functions.roots.splice(rootIndex, 1);
-          }
-        }
-        else {
-          const parent = this.d3Functions.objects[label.parent].JSobj;
-          if (parent.children) {
-            const parentIndex = parent.children.indexOf(original);
-            if (parentIndex != -1) {
-              parent.children.splice(parentIndex, 1);
-            }
-          }
-          else if (parent._children) {
-            const parentIndex = parent._children.indexOf(original);
-            if (parentIndex != -1) {
-              parent._children.splice(parentIndex, 1);
-            }
-          }
-        }
+      if (label !== undefined) { // If a valid label was found
 
-        // Now, remove the DB relation, if it exists
-        if (saved && saved.inDB) {
-          const obj = {};
-          obj.from = {};
-          obj.from.id = this.mapID;
-          obj.to = {};
-          obj.to.id = saved.nodeID;
-          obj.rel = {};
-          obj.rel.type = "MapNode";
-          obj.rel.properties = {};
-          obj.rel.properties.id = label.id;
-          app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels);
-        }
-        else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
-          this.processNodes(null, labels);
-        }
-      } // end if (the label was deleted)
-      else { // If this label was NOT deleted
-        if (saved && saved.inDB) { // If the mindmap already has a relation for this label...
-          if (label.nodeID != saved.nodeID) { // and the label is no longer connected to that node...
-            saved.inDB = false;
-            labels.push(label); // Prepare to process the label a second time WITHOUT the relation, to check for a new relation...
+        const id = label.id;
+        const saved = this.d3Functions.savedObjects[id];
+        const original = this.d3Functions.objects[id].JSobj;
+        if (label.deleted) {
+          // First, remove the object from the roots array or its parent's children array
+          if (label.parent == "null") {
+            const rootIndex = this.d3Functions.roots.indexOf(original);
+            if (rootIndex != -1) {
+              this.d3Functions.roots.splice(rootIndex, 1);
+            }
+          }
+          else {
+            const parent = this.d3Functions.objects[label.parent].JSobj;
+            if (parent.children) {
+              const parentIndex = parent.children.indexOf(original);
+              if (parentIndex != -1) {
+                parent.children.splice(parentIndex, 1);
+              }
+            }
+            else if (parent._children) {
+              const parentIndex = parent._children.indexOf(original);
+              if (parentIndex != -1) {
+                parent._children.splice(parentIndex, 1);
+              }
+            }
+          }
+
+          // Now, remove the DB relation, if it exists
+          if (saved && saved.inDB) {
             const obj = {};
             obj.from = {};
             obj.from.id = this.mapID;
@@ -792,31 +774,55 @@ class widgetSVG {
             obj.rel.type = "MapNode";
             obj.rel.properties = {};
             obj.rel.properties.id = label.id;
-            app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels); // And delete the relation
+            app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels);
           }
           else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
             this.processNodes(null, labels);
           }
-        }
-        else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
-          if (label.nodeID != null) { // If there is a node associated with this label
-            const obj = {};
-            obj.from = {};
-            obj.from.id = this.mapID;
-            obj.to = {};
-            obj.to.id = label.nodeID;
-            obj.rel = {};
-            obj.rel.type = "MapNode";
-            obj.rel.merge = true;
-            obj.rel.properties = {};
-            obj.rel.properties.id = label.id;
-            app.nodeFunctions.createRelation(obj, this, "processNodes", labels); // Create the relation
+        } // end if (the label was deleted)
+        else { // If this label was NOT deleted
+          if (saved && saved.inDB) { // If the mindmap already has a relation for this label...
+            if (label.nodeID != saved.nodeID) { // and the label is no longer connected to that node...
+              saved.inDB = false;
+              labels.push(label); // Prepare to process the label a second time WITHOUT the relation, to check for a new relation...
+              const obj = {};
+              obj.from = {};
+              obj.from.id = this.mapID;
+              obj.to = {};
+              obj.to.id = saved.nodeID;
+              obj.rel = {};
+              obj.rel.type = "MapNode";
+              obj.rel.properties = {};
+              obj.rel.properties.id = label.id;
+              app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels); // And delete the relation
+            }
+            else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
+              this.processNodes(null, labels);
+            }
           }
-          else { // If there is no new relation, no need to do anything except call processNodes.
-            this.processNodes(null, labels);
-          }
-        } // end else (no existing relation)
-      } // end else (the label was not deleted)
+          else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
+            if (label.nodeID != null) { // If there is a node associated with this label
+              const obj = {};
+              obj.from = {};
+              obj.from.id = this.mapID;
+              obj.to = {};
+              obj.to.id = label.nodeID;
+              obj.rel = {};
+              obj.rel.type = "MapNode";
+              obj.rel.merge = true;
+              obj.rel.properties = {};
+              obj.rel.properties.id = label.id;
+              app.nodeFunctions.createRelation(obj, this, "processNodes", labels); // Create the relation
+            }
+            else { // If there is no new relation, no need to do anything except call processNodes.
+              this.processNodes(null, labels);
+            }
+          } // end else (no existing relation)
+        } // end else (the label was not deleted)
+      } // end if (a valid label was found)
+      else {
+        this.setAttributes();
+      }
     } // end if (there are more labels)
     else {
       this.setAttributes();
@@ -913,7 +919,7 @@ class widgetSVG {
     app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
 
     // Meanwhile, save information from the details pane.
-    this.details.dataNode.id = this.mapID;
+    this.details.id = this.mapID;
     this.details.saveAdd();
   }
 

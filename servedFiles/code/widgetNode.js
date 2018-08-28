@@ -5,17 +5,19 @@ constructor(callerID, queryObjectName, id, name) {
 
 finishConstructor(data) {
   super.finishConstructor(data);
-  this.buildStart();
+  if (this.id !== null) {
+    this.buildStart();
+  }
 }
 
 buildStart() {
   this.containedWidgets.push(app.idCounter);
-  new widgetView(this.startDOM, this.dataNode.id, "start", this, 'buildEnd');
+  new widgetView(this.startDOM, this.id, "start", this, 'buildEnd');
 }
 
 buildEnd() {
   this.containedWidgets.push(app.idCounter);
-  new widgetView(this.endDOM, this.dataNode.id, "end");
+  new widgetView(this.endDOM, this.id, "end");
 }
 
 buildWidget() { // public - build table header
