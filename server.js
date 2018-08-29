@@ -111,6 +111,7 @@ const neo4j  = require('neo4j-driver').v1;
 // Create a driver instance, for the user neo4j with password neo4j.
 // It should be enough to have a single driver per database per application.
 const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo3i"));
+startNeo4j();
 //const driver = new neo4j.driver("bolt://localhost:7687", neo4j.auth.driver("neo4j", "paleo3i"));
 //const driver = neo4j.v1.driver("bolt://localhost", neo4j.v1.auth.basic("neo4j", "paleo3i"));
 
@@ -121,6 +122,82 @@ const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo
 //   console.log(`About to exit with code: ${code}`);
 // });
 
+function startNeo4j() {
+  console.log("Checking metadata...\n");
+  const session = driver.session();
+  var nodes = [];
+  var fields = [];
+  query = "MATCH (n:M_MetaData) return n.name, n.fields";
+  session
+    .run(query)
+    .subscribe({
+      onNext: function (record) {
+        nodes.push(record._fields[0]);
+        fields.push(record._fields[1]);
+      },
+      onCompleted: function () {
+        for (let i = 0; i < nodes.length; i++) {
+          getKeys(nodes[i], JSON.parse(fields[i]));
+        }
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+  });
+}
+
+function getKeys(node, fields) {
+  const session = driver.session();
+  var keys = [];
+  let query = `MATCH (p:${node}) unwind keys(p) as key RETURN distinct key`;
+  session
+    .run(query)
+    .subscribe({
+      onNext: function (record) {
+        keys.push(record._fields[0]);
+      },
+      // at this point, we have a keys array which includes all keys found for this node type,
+      // and a fields object which should contain a key for every field. If it doesn't, then that key needs to be added.
+      // So go through all the keys from the DB and add any that are missing to fields.
+      onCompleted: function () {
+        let mismatch = false;
+        for (let i = 0; i < keys.length; i++) {
+          if (!(keys[i] in fields) && keys[i].slice(0,2) !== 'M_') { // If this key is missing from the fields object, and isn't metadata
+            fields[keys[i]] = {label: keys[i]}; // assume its name is also its label
+            console.log (`Mismatch! Node type ${node} was missing key ${keys[i]}; adding now.\n`);
+            mismatch = true;
+          }
+        }
+        if (mismatch) {
+          updateFields(node, fields);
+        }
+        else {
+          console.log (`Node type ${node} has no mismatches.\n`);
+        }
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+  });
+}
+
+function updateFields(node, fields) {
+  const session = driver.session();
+  let query = `MATCH (m:M_MetaData {name:"${node}"}) set m.fields = "${stringEscape(JSON.stringify(fields))}"`;
+  session
+    .run(query)
+    .subscribe({
+      onCompleted: function () {
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+  });
+
+}
 
 function runNeo4j(query, response)
 {
@@ -141,8 +218,8 @@ function runNeo4j(query, response)
       .subscribe({
         onNext: function (record) {
         const obj={};
-      for (let i=0; i< record.length; i++) {
-        obj[record.keys[i]]=record._fields[i];
+        for (let i=0; i< record.length; i++) {
+          obj[record.keys[i]]=record._fields[i];
         }
         ret.push(obj);
           console.log("%s/n",JSON.stringify(obj));
@@ -415,7 +492,7 @@ function backupRels(query, response) {
   if (query.minimum > 0) {
     where = `where ID(r) > ${query.minimum}`;
   }
-  const backupQuery = `match (a)-[r:${query.name}]->(b) ${where} return a.GUID as a, b.GUID as b, r order by ID(r) limit ${query.blocksize}`;
+  const backupQuery = `match (a)-[r:${query.name}]->(b) ${where} return a.M_GUID as a, b.M_GUID as b, r order by ID(r) limit ${query.blocksize}`;
   let data = [];
 
   session
@@ -563,7 +640,7 @@ function restoreRels(query, response) {
         let relText = "";
 
         for (let i = 0; i < data.length; i++) { // for every relation...
-          nodeText += `(a${i} {GUID:'${data[i].a.low}'}), (b${i} {GUID:'${data[i].b.low}'}), `
+          nodeText += `(a${i} {M_GUID:'${data[i].a.low}'}), (b${i} {M_GUID:'${data[i].b.low}'}), `
 
           const rProps = data[i].r.properties;
           let rProperties = "";

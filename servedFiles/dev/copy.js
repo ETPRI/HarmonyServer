@@ -239,7 +239,7 @@ class copy {
     let relText = "";
 
     for (let i = 0; i < data.length; i++) { // for every relation...
-      nodeText += `(a${i} {GUID:'${data[i].a.properties.GUID.low}'}), (b${i} {GUID:'${data[i].b.properties.GUID.low}'}), `
+      nodeText += `(a${i} {M_GUID:'${data[i].a.properties.M_GUID.low}'}), (b${i} {M_GUID:'${data[i].b.properties.M_GUID.low}'}), `
 
       const rProps = data[i].r.properties;
       let rProperties = "";

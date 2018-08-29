@@ -113,8 +113,8 @@ class widgetSVG {
       alert ("Error: Mind map not found");
     }
     else { // If a result was returned - which should always happen
-      if (data[0].mindmap.properties.roots) {
-        this.d3Functions.roots = JSON.parse(data[0].mindmap.properties.roots);
+      if (data[0].mindmap.properties.M_roots) {
+        this.d3Functions.roots = JSON.parse(data[0].mindmap.properties.M_roots);
 
         // Go through all objects, make them reference d3Functions, add to objects array
         let nonRootObjs = [];
@@ -162,8 +162,8 @@ class widgetSVG {
         }
       }
 
-      if (data[0].mindmap.properties.count) {
-        this.d3Functions.count = data[0].mindmap.properties.count;
+      if (data[0].mindmap.properties.M_count) {
+        this.d3Functions.count = data[0].mindmap.properties.M_count;
       }
       if (data[0].mindmap.properties.name) {
         this.name = data[0].mindmap.properties.name;
@@ -909,11 +909,11 @@ class widgetSVG {
     obj.node.id = this.mapID;
     obj.changes = [];
     const roots = {};
-    roots.property = "roots";
+    roots.property = "M_roots";
     roots.value = app.stringEscape(JSON.stringify(rootsCopy));
     obj.changes.push(roots);
     const count = {};
-    count.property = "count";
+    count.property = "M_count";
     count.value = this.d3Functions.count;
     obj.changes.push(count);
     app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');

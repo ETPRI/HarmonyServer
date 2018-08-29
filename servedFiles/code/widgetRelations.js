@@ -139,7 +139,7 @@ complete(nodes) {
     }
     else {
     // Find the item in nodes which matches, if any
-      const relation = nodes.filter(node => node.r && node.r.properties && node.r.properties.GUID == ordering[i]);
+      const relation = nodes.filter(node => node.r && node.r.properties && node.r.properties.M_GUID == ordering[i]);
       if (relation[0]) { // If that relation still exists, add it to the table and delete it from the list of relations
         html = this.addLine(relation[0], html, orderedNodes);
         // Remove from array
@@ -200,19 +200,18 @@ addLine(relation, html, orderedNodes, placeholderComment) {
     nodeID = node.id; // The ID of said node...
     name = node.properties.name; // its name...
     type = node.labels[0]; // and its type.
-    GUID = rel.properties.GUID; // the relation ID
+    GUID = rel.properties.M_GUID; // the relation ID
     comment = ""; // The comment, if any, that the user who created this view left for this node.
 
     if ("comment" in rel.properties) { // It's now possible to have a blank comment, so allow for that
       comment = rel.properties.comment;
     }
-
-    // Add this node's data to the list of relations that already exist.
-    this.existingRelations[GUID] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
   } // end if (relation exists)
   else { // placeholder relation
     comment = placeholderComment;
   }
+  // Add this node's data to the list of relations that already exist.
+  this.existingRelations[this.idrRow] = {'comment':comment, 'nodeID':nodeID, 'name':name, 'type':type};
 
   // Default is that this is NOT the logged-in user's view. The row can only be dragged,
   // the cells can't be interacted with at all and the delete button is not needed.
@@ -269,11 +268,12 @@ createDragDrop(widgetRel) {
   dragDrop.changeComment = function(input) { // input should be the edit object, which is still attached to the row being edited
     const commentCell = input.parentElement; // Get the cell that was just edited
     const row = commentCell.parentElement;
-    const IDcell = row.children[1];
-    const ID = IDcell.textContent; // Get the node ID of the row that was changed
+    const idr = row.getAttribute('idr').slice(4); // the idr is like "itemxxx"
+    // const IDcell = row.children[1];
+    // const ID = IDcell.textContent; // Get the node ID of the row that was changed
 
-    if (ID in this.existingRelations) { // If that node is an existing relation (that is, it's been saved)...
-      if (input.value != this.existingRelations[ID].comment) { // and the new value is DIFFERENT from the saved value...
+    if (idr in this.existingRelations) { // If that node is an existing relation (that is, it's been saved)...
+      if (input.value != this.existingRelations[idr].comment) { // and the new value is DIFFERENT from the saved value...
         commentCell.classList.add("changedData"); // mark it as "changed data".
       }
       else { // If the node exists, and the new value is THE SAME AS the saved value...
@@ -291,6 +291,7 @@ createDragDrop(widgetRel) {
     // Get the idr of the row that was dragged to
     let row = input;
     let idr = row.getAttribute("idr");
+    let idrInt = idr.slice(4); // remove the "item" at the start
 
     // Get the data from the element that was being dragged
     const dataText = evnt.dataTransfer.getData("text/plain");
@@ -329,24 +330,24 @@ createDragDrop(widgetRel) {
         }
 
         // Get the relation ID for the row that was just updated.
-        const IDcell = row.children[1];
-        const ID = IDcell.textContent;
+        // const IDcell = row.children[1];
+        // const ID = IDcell.textContent;
         // If this relation was already in the database, check whether any data that was added differs from what's recorded.
         // Mark the cells as changed or not accordingly.
-        if (ID in this.existingRelations) {
-          if (nodeIDcell.textContent != this.existingRelations[ID].nodeID) { // Check the node ID...
+        if (idrInt in this.existingRelations) {
+          if (nodeIDcell.textContent != this.existingRelations[idrInt].nodeID) { // Check the node ID...
             nodeIDcell.classList.add("changedData");
           } else {
             nodeIDcell.classList.remove("changedData");
           }
 
-          if (nameCell.textContent != this.existingRelations[ID].name) { // and the name...
+          if (nameCell.textContent != this.existingRelations[idrInt].name) { // and the name...
             nameCell.classList.add("changedData");
           } else {
             nameCell.classList.remove("changedData");
           }
 
-          if (typeCell.textContent != this.existingRelations[ID].type) { // and the type.
+          if (typeCell.textContent != this.existingRelations[idrInt].type) { // and the type.
             typeCell.classList.add("changedData");
           } else {
             typeCell.classList.remove("changedData");
@@ -449,7 +450,7 @@ processNext(data, rows, prevFunction) {
   // If processNext gets data, it is the relation from an addNode call. Extract the GUID and add it to the order array.
   if (prevFunction == "add") {
     // example of data from addNode: [{link:{identity:{high:0, low:xxxx}}}]
-    const id = data[0].link.properties.GUID;
+    const id = data[0].link.properties.M_GUID;
     this.order.push(id.toString());
   }
 
