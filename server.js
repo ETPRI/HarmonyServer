@@ -123,7 +123,7 @@ startNeo4j();
 // });
 
 function startNeo4j() {
-  console.log("Checking metadata...\n");
+  console.log("Checking metadata...");
   const session = driver.session();
   var nodes = [];
   var fields = [];
@@ -165,7 +165,7 @@ function getKeys(node, fields) {
         for (let i = 0; i < keys.length; i++) {
           if (!(keys[i] in fields) && keys[i].slice(0,2) !== 'M_') { // If this key is missing from the fields object, and isn't metadata
             fields[keys[i]] = {label: keys[i]}; // assume its name is also its label
-            console.log (`Mismatch! Node type ${node} was missing key ${keys[i]}; adding now.\n`);
+            console.log (`Mismatch! Node type ${node} was missing key ${keys[i]}; adding now.`);
             mismatch = true;
           }
         }
@@ -173,7 +173,7 @@ function getKeys(node, fields) {
           updateFields(node, fields);
         }
         else {
-          console.log (`Node type ${node} has no mismatches.\n`);
+          console.log (`Node type ${node} has no mismatches.`);
         }
         session.close();
       },
@@ -440,10 +440,10 @@ function backupNodes(query, response) {
 
   let where = "";
   if (query.minimum > 0) {
-    where = `where ID(n) > ${query.minimum}`;
+    where = `where n.M_GUID > ${query.minimum}`;
   }
 
-  const backupQuery = `match (n: ${query.name}) ${where} return n order by ID(n) limit ${query.blocksize}`;
+  const backupQuery = `match (n: ${query.name}) ${where} return n order by n.M_GUID limit ${query.blocksize}`;
   let data = [];
 
   session
@@ -454,6 +454,7 @@ function backupNodes(query, response) {
         for (let i=0; i< record.length; i++) {
           currentObj[record.keys[i]]=record._fields[i];
         }
+        delete currentObj.n.identity;
         data.push(currentObj);
 
         console.log("%s/n",JSON.stringify(currentObj));
@@ -465,7 +466,7 @@ function backupNodes(query, response) {
         });
 
         // send progress back to client
-        const lastID = data[data.length-1].n.identity.low;
+        const lastID = data[data.length-1].n.properties.M_GUID.low;
         const update = {"numNodes":data.length, "lastID":lastID};
         response.end(JSON.stringify(update));
         session.close();
@@ -490,9 +491,9 @@ function backupRels(query, response) {
 
   let where = "";
   if (query.minimum > 0) {
-    where = `where ID(r) > ${query.minimum}`;
+    where = `where r.M_GUID > ${query.minimum}`;
   }
-  const backupQuery = `match (a)-[r:${query.name}]->(b) ${where} return a.M_GUID as a, b.M_GUID as b, r order by ID(r) limit ${query.blocksize}`;
+  const backupQuery = `match (a)-[r:${query.name}]->(b) ${where} return a.M_GUID as a, b.M_GUID as b, r order by r.M_GUID limit ${query.blocksize}`;
   let data = [];
 
   session
@@ -503,6 +504,9 @@ function backupRels(query, response) {
         for (let i=0; i< record.length; i++) {
           currentObj[record.keys[i]]=record._fields[i];
         }
+        delete currentObj.r.identity;
+        delete currentObj.r.start;
+        delete currentObj.r.end;
         data.push(currentObj);
         console.log("%s/n",JSON.stringify(currentObj));
       },
@@ -513,7 +517,7 @@ function backupRels(query, response) {
         });
 
         // send progress back to client
-        const lastID = data[data.length-1].r.identity.low;
+        const lastID = data[data.length-1].r.properties.M_GUID.low;
         const update = {"numRels":data.length, "lastID":lastID};
         response.end(JSON.stringify(update));
         session.close();
@@ -698,7 +702,6 @@ function restoreRels(query, response) {
     response.end("Out of rels");
   }
 }
-
 
 function stringEscape(text) {
   let string = JSON.stringify(text);
