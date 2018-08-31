@@ -757,6 +757,7 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
     let formFieldsDisplayed = [];
     for (let i = 0; i < currentFields.length; i++) {
       const fieldName = currentFields[i];
+      // This is wrong - a field could be in formFieldsDisplayed but not in fieldsDisplayed.
       fieldsDisplayed.push(fieldName);
       formFieldsDisplayed.push(fieldName);
       fields[fieldName] = this.fields[fieldName];

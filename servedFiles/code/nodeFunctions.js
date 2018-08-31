@@ -17,10 +17,10 @@ class nodeFunctions {
     const node = this.buildSearchString(dataObj, strings, "where", "node");
 
     let command = "create";
-    let oncreate = "set node.M_GUID = ID(node)";
+    let oncreate = `set node.M_GUID = '${uuidv1()}'`;
     if (dataObj.merge === true) {
       command = "merge";
-      oncreate = "on create set node.M_GUID = ID(node)";
+      oncreate = `on create set node.M_GUID = '${uuidv1()}'`;
     }
 
     if (strings.ret != "") {
@@ -95,7 +95,7 @@ class nodeFunctions {
     let oncreate = "";
     if (dataObj.merge === true) {
       command = 'merge';
-      oncreate = 'on create set node.M_GUID = ID(node)';
+      oncreate = `on create set node.M_GUID = '${uuidv1()}'`;
     }
 
     const query = `${command} (${node}) ${strings.where} ${oncreate} ${changes} ${strings.ret}`;
@@ -156,11 +156,11 @@ class nodeFunctions {
 
 
     let command = "create";
-    let oncreate = "set rel.M_GUID = ID(rel)";
+    let oncreate = `set rel.M_GUID = '${uuidv1()}'`;
 
     if (dataObj.rel && dataObj.rel.merge === true) {
       command = "merge";
-      oncreate = "on create set rel.M_GUID = ID(rel)";
+      oncreate = `on create set rel.M_GUID = '${uuidv1()}'`;
     }
 
     if (strings.ret != "" && dataObj.distinct) {
@@ -305,7 +305,7 @@ class nodeFunctions {
 
     if (dataObj.rel.merge === true) {
       command = 'merge';
-      oncreate = 'on create set rel.M_GUID = ID(rel)'
+      oncreate = `on create set rel.M_GUID = '${uuidv1()}'`;
     }
 
     const query = `match (${from}), (${to}) ${strings.nodesWhere} ${command} (from)-[${rel}]->(to) ${strings.relWhere} ${oncreate} ${changes} ${strings.ret}`;
@@ -644,10 +644,10 @@ class nodeFunctions {
 
     const query = `match (per), (start), (end)
                  where ID(per) = ${app.login.userID} and ID(start) = ${dataObj.startID} and ID(end)=${dataObj.endID}
-                 merge (per)-[r1:Owner]->(view:M_View {direction:"start"})-[r2:Subject]->(start) on create set r1.M_GUID = ID(r1), view.M_GUID = ID(view), r2.M_GUID = ID(r2)
-                 merge (view)-[endLink:Link${attributeString}]->(end) on create set endLink.M_GUID = ID(endLink)
-                 merge (per)-[r3:Owner]->(view2:M_View {direction:"end"})-[r4:Subject]->(end) on create set r3.M_GUID = ID(r3), view2.M_GUID = ID(view2), r4.M_GUID = ID(r4)
-                 merge (view2)-[startLink:Link${attributeString}]->(start) on create set startLink.M_GUID = ID(startLink)
+                 merge (per)-[r1:Owner]->(view:M_View {direction:"start"})-[r2:Subject]->(start) on create set r1.M_GUID = '${uuidv1()}', view.M_GUID = '${uuidv1()}', r2.M_GUID = '${uuidv1()}'
+                 merge (view)-[endLink:Link${attributeString}]->(end) on create set endLink.M_GUID = '${uuidv1()}'
+                 merge (per)-[r3:Owner]->(view2:M_View {direction:"end"})-[r4:Subject]->(end) on create set r3.M_GUID = '${uuidv1()}', view2.M_GUID = '${uuidv1()}', r4.M_GUID = '${uuidv1()}'
+                 merge (view2)-[startLink:Link${attributeString}]->(start) on create set startLink.M_GUID = '${uuidv1()}'
                  return ${dataObj.relation} as link`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }

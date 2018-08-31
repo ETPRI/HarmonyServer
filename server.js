@@ -105,6 +105,24 @@ http.createServer(function (request, response) {
 
 console.log('Server running at http://127.0.0.1:8080');
 
+// test();
+
+// test code goes here--------------------------
+function test() {
+  const obj = {a:"1", b:1};
+  fs.writeFile('test.txt', JSON.stringify(obj), (err) => {
+    if (err) throw err;
+    else {
+      fs.readFile('test.txt', (err, data) => {
+        if (err) throw err;
+        else {
+          let newData = JSON.parse(data);
+        }
+      });
+    }
+  });
+}
+
 // neo4j  --------------------------------------
 const neo4j  = require('neo4j-driver').v1;
 
@@ -439,8 +457,8 @@ function backupNodes(query, response) {
   const session = driver.session();
 
   let where = "";
-  if (query.minimum > 0) {
-    where = `where n.M_GUID > ${query.minimum}`;
+  if (query.minimum !== 0) {
+    where = `where n.M_GUID > '${query.minimum}'`;
   }
 
   const backupQuery = `match (n: ${query.name}) ${where} return n order by n.M_GUID limit ${query.blocksize}`;
@@ -455,9 +473,19 @@ function backupNodes(query, response) {
           currentObj[record.keys[i]]=record._fields[i];
         }
         delete currentObj.n.identity;
-        data.push(currentObj);
+        // try to order the object
+        const keys = Object.keys(currentObj.n.properties);
+        keys.sort();
+        const newObj = {};
+        newObj.n = {};
+        newObj.n.labels = currentObj.n.labels; // Leave everything except the individual properties the same
+        newObj.n.properties = {};
+        for (let i = 0; i < keys.length; i++) {
+          newObj.n.properties[keys[i]] = currentObj.n.properties[keys[i]]; // Put properties back in alphabetical order
+        }
+        data.push(newObj);
 
-        console.log("%s/n",JSON.stringify(currentObj));
+        console.log("%s/n",JSON.stringify(newObj));
       },
       onCompleted: function () {
         // store data
@@ -466,7 +494,7 @@ function backupNodes(query, response) {
         });
 
         // send progress back to client
-        const lastID = data[data.length-1].n.properties.M_GUID.low;
+        const lastID = data[data.length-1].n.properties.M_GUID;
         const update = {"numNodes":data.length, "lastID":lastID};
         response.end(JSON.stringify(update));
         session.close();
@@ -490,8 +518,8 @@ function backupRels(query, response) {
   const session = driver.session();
 
   let where = "";
-  if (query.minimum > 0) {
-    where = `where r.M_GUID > ${query.minimum}`;
+  if (query.minimum !== 0) {
+    where = `where r.M_GUID > '${query.minimum}'`;
   }
   const backupQuery = `match (a)-[r:${query.name}]->(b) ${where} return a.M_GUID as a, b.M_GUID as b, r order by r.M_GUID limit ${query.blocksize}`;
   let data = [];
@@ -517,7 +545,7 @@ function backupRels(query, response) {
         });
 
         // send progress back to client
-        const lastID = data[data.length-1].r.properties.M_GUID.low;
+        const lastID = data[data.length-1].r.properties.M_GUID;
         const update = {"numRels":data.length, "lastID":lastID};
         response.end(JSON.stringify(update));
         session.close();
@@ -575,21 +603,24 @@ function restoreNodes(query, response) {
           const props = data[i].n.properties;
           let properties = "";
           for (let propName in props) { // loop through all properties and create text to set them...
-            // If the property is an object with a low and high value, take the low one
+            // If the property is an object with a low and high value (a number), take the low value
             let value = props[propName];
             if (typeof value.low !== "undefined") {
-              value = JSON.stringify(value.low);
+              value = value.low;
             }
-            else if (typeof value !== "string") {
-              value = JSON.stringify(value);
+            else if (typeof value === "string") { // if it's a string, string escape it and put it in quotes
+              value = `"${stringEscape(value)}"`;
             }
-            properties += `${propName}: '${stringEscape(value)}', `;
+            else { // if it's neither a number nor a string, stringify it
+              value = `${JSON.stringify(value)}`;
+            }
+            properties += `${propName}: ${value}, `;
           }
           if (properties.length > 0) {
             properties = properties.slice(0, properties.length - 2); // remove the last ", "
           }
 
-          let nodeText = `(n${i}:${data[i].n.labels[0]} {${properties}}), `; // Crate text to make the node
+          let nodeText = `(n${i}:${data[i].n.labels[0]} {${properties}}), `; // Create text to make the node
           steps += nodeText; // add to the request
         } // end for (create command to restore each node)
         if (steps.length > 7) { // If at least one node needs to be added - which SHOULD always be the case
@@ -644,7 +675,7 @@ function restoreRels(query, response) {
         let relText = "";
 
         for (let i = 0; i < data.length; i++) { // for every relation...
-          nodeText += `(a${i} {M_GUID:'${data[i].a.low}'}), (b${i} {M_GUID:'${data[i].b.low}'}), `
+          nodeText += `(a${i} {M_GUID:'${data[i].a}'}), (b${i} {M_GUID:'${data[i].b}'}), `
 
           const rProps = data[i].r.properties;
           let rProperties = "";
@@ -652,12 +683,22 @@ function restoreRels(query, response) {
             let value = rProps[propName];
 
             if (typeof value.low !== "undefined") {
-              value = JSON.stringify(value.low);
+              value = value.low;
             }
-            else if (typeof value !== "string") {
-              value = JSON.stringify(value);
+            else if (typeof value === "string") { // if it's a string, string escape it and put it in quotes
+              value = `"${stringEscape(value)}"`;
             }
-            rProperties += `${propName}: '${stringEscape(value)}', `;
+            else { // if it's neither a number nor a string, stringify it
+              value = `${JSON.stringify(value)}`;
+            }
+
+            // if (typeof value.low !== "undefined") {
+            //   value = JSON.stringify(value.low);
+            // }
+            // else if (typeof value !== "string") {
+            //   value = JSON.stringify(value);
+            // }
+            rProperties += `${propName}: ${value}, `;
           }
           if (rProperties.length > 0) {
             rProperties = rProperties.slice(0, rProperties.length - 2); // remove the last ", "
@@ -706,9 +747,9 @@ function restoreRels(query, response) {
 function stringEscape(text) {
   let string = JSON.stringify(text);
   string = string.substring(1, string.length-1);
-  if (string.indexOf("'") > -1) {
-    string = string.replace(/'/g, "\\'");
-  }
+  // if (string.indexOf("'") > -1) {
+  //   string = string.replace(/'/g, "\\'");
+  // }
   return string;
 }
 

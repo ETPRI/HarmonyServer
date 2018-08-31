@@ -449,9 +449,8 @@ processNext(data, rows, prevFunction) {
   // The only processing function that returns data is addNode, which returns a relation. Check for existence of data[0] to distinguish from an empty array, which deletion returns
   // If processNext gets data, it is the relation from an addNode call. Extract the GUID and add it to the order array.
   if (prevFunction == "add") {
-    // example of data from addNode: [{link:{identity:{high:0, low:xxxx}}}]
     const id = data[0].link.properties.M_GUID;
-    this.order.push(id.toString());
+    this.order.push(id);
   }
 
   if (rows.length >0) { // If there are more rows to process...
