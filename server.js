@@ -535,8 +535,20 @@ function backupRels(query, response) {
         delete currentObj.r.identity;
         delete currentObj.r.start;
         delete currentObj.r.end;
-        data.push(currentObj);
-        console.log("%s/n",JSON.stringify(currentObj));
+
+        // try to order the object
+        const keys = Object.keys(currentObj.n.properties);
+        keys.sort();
+        const newObj = {};
+        newObj.n = {};
+        newObj.n.labels = currentObj.n.labels; // Leave everything except the individual properties the same
+        newObj.n.properties = {};
+        for (let i = 0; i < keys.length; i++) {
+          newObj.n.properties[keys[i]] = currentObj.n.properties[keys[i]]; // Put properties back in alphabetical order
+        }
+        data.push(newObj);
+
+        console.log("%s/n",JSON.stringify(newObj));
       },
       onCompleted: function () {
         // store data

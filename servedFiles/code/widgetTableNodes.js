@@ -127,8 +127,8 @@ class widgetTableNodes {
 
     <table class="widgetBody">
       <thead idr = "headerRow">
-      <tr><th></th><th></th>#headerSearch#</tr>
-      <tr><th>#</th><th>ID</th>#header#</tr>
+      <tr><th></th><th hidden></th>#headerSearch#</tr>
+      <tr><th>#</th><th hidden>ID</th>#header#</tr>
       </thead>
       <tbody idr = "data"> </tbody>
     </table>
@@ -234,14 +234,13 @@ class widgetTableNodes {
 
       // Create a cell for rowCount and append it
       cell = document.createElement('td');
-      text = document.createTextNode(rowCount++);
-      cell.appendChild(text);
       row.appendChild(cell);
+      cell.outerHTML = `<td idr = "edit${i}" onClick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${rowCount++}</td>`;
 
       // Create a cell for ID and append it
       cell = document.createElement('td');
       row.appendChild(cell);
-      cell.outerHTML = `<td idr = "edit${i}" onClick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${r[i]["n"].id}</td>`;
+      cell.outerHTML = `<td hidden>${r[i].n.id}</td>`;
 
       // For each display field, create a cell and append it
       for (let j=0; j<this.fieldsDisplayed.length; j++) {
@@ -409,7 +408,9 @@ class widgetTableNodes {
   }
 
   edit(element){
-    const id = element.innerHTML;
+    // NOTE: This is brittle - assumes that an element can only be edited by clicking the row number,
+    // and that the ID is always next to the row number. Think about changing later.
+    const id = element.nextElementSibling.innerHTML; // the id is in the next (hidden) cell
     if (this.queryObject.nodeLabel == 'mindmap') {
       new widgetSVG(this.idWidget, id);
     }

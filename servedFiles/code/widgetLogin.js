@@ -284,6 +284,19 @@ class widgetLogin {
           app.metaData.node[name][propertyNames[i]] = JSON.parse(properties[propertyNames[i]]);
         }
       }
+
+      // Now check the fields. If a field is in the relation, then overwrite THAT SPECIFIC FIELD in properties.
+      let fields = JSON.parse(properties.fields); // fields from metadata object
+      if (row.settings && row.settings.properties.fields) {
+        const relFields = JSON.parse(row.settings.properties.fields); // fields from relation
+        for (let name in relFields) {
+          // Replace label (and if, somehow, the user had a field the node didn't, add it)
+          fields[name].label = relFields[name].label;
+        } // end for (every field in the relation)
+      } // end if (there are fields stored in the relation)
+
+      // Then plug the result into app.metaData.node[name].fields
+      app.metaData.node[name].fields = fields;
     } // end for (each metadata node)
 
     // Once metadata are updated, can call app.menuNodesInit to update dropdown list

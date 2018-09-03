@@ -119,7 +119,7 @@ complete(nodes) {
 
   // Start building HTML for the table. Note the ondrop event in the template, which causes all rows to have the same ondrop event.
   let html       = `<thead><tr idr='template' ondrop="app.widget('dropData', this, event)">
-                    <th>#</th> <th>R#</th> <th>N#</th> <th>Name</th> <th>Type</th> <th editable>Comment</th>
+                    <th>#</th> <th hidden>R#</th> <th hidden>N#</th> <th>Name</th> <th>Type</th> <th editable>Comment</th>
                     </tr></thead><tbody idr='container'>`;
   this.idrRow     = 0;
   this.idrContent = 0;
@@ -197,7 +197,7 @@ addLine(relation, html, orderedNodes, placeholderComment) {
   if (relation != null) {
     const rel = relation.r; // The relation described in this row of the table
     const node = relation.a; // The node which that relation links to
-    nodeID = node.id; // The ID of said node...
+    nodeID = node.properties.M_GUID; // The ID of said node...
     name = node.properties.name; // its name...
     type = node.labels[0]; // and its type.
     GUID = rel.properties.M_GUID; // the relation ID
@@ -228,8 +228,8 @@ addLine(relation, html, orderedNodes, placeholderComment) {
     editHTML = `ondblclick="app.widget('edit', this, event)"`
   }
 
-  html += trHTML + `<td>${++this.idrRow}</td> <td>${GUID}</td>
-                    <td idr="content${this.idrContent++}">${nodeID}</td>
+  html += trHTML + `<td>${++this.idrRow}</td> <td hidden>${GUID}</td>
+                    <td hidden idr="content${this.idrContent++}">${nodeID}</td>
                     <td idr="content${this.idrContent++}">${name}</td>
                     <td>${type}</td>
                     <td idr="content${this.idrContent++}" ${editHTML}>${comment}</td>

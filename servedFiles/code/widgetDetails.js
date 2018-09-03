@@ -231,8 +231,7 @@ popupOK(button) {
 
 buildDataNode() {   // put in one field label and input row for each field - includes creating dragdrop table
   let fieldCount = 0;
-  let value = "";
-  let hiddenFields = 0;
+  this.hiddenFields = 0;
 
   // Clear any existing data
   while (this.tBodyDOM.hasChildNodes()) {
@@ -245,51 +244,18 @@ buildDataNode() {   // put in one field label and input row for each field - inc
     table.parentElement.removeChild(table.nextElementSibling);
   }
 
+  for (let i = 0; i < this.formFieldsDisplayed.length; i++) {
+    this.addRow(this.formFieldsDisplayed[i], fieldCount++);
+  } // end for (every field to be displayed)
+
   for (let fieldName in this.fields) {
-
-    // Create a table row
-    const row = document.createElement('tr');
-    row.setAttribute('ondrop', "app.widget('drop', this, event)");
-    row.setAttribute("ondragover", "app.widget('allowDrop', this, event)");
-    row.setAttribute('ondragstart', "app.widget('drag', this, event)");
-    row.setAttribute('draggable', "true")
-
-    if (this.formFieldsDisplayed.indexOf(fieldName) == -1) { // If the field shouldn't be visible
+    if (this.formFieldsDisplayed.indexOf(fieldName) == -1) { // For every hidden field
+      const row = this.addRow(fieldName, fieldCount);
       row.setAttribute('class', 'notShown');
       row.hidden = true;
-      hiddenFields++;
+      this.hiddenFields++;
     }
-
-    this.tBodyDOM.appendChild(row);
-
-    // Create the first cell, a th cell containing the label as text
-    const header = document.createElement('th');
-    row.appendChild(header);
-    const labelText = document.createTextNode(this.fields[fieldName].label);
-    header.appendChild(labelText);
-    header.setAttribute('oncontextmenu', "event.preventDefault(); app.widget('showPopup', this)");
-    header.setAttribute('db', fieldName);
-    header.setAttribute('idr', `th${fieldName}`);
-
-    // Create the second cell, a td cell containing an input which has an idr, an onChange event, and a value which may be an empty string
-    if (this.dataNode) {
-      const d=this.dataNode.properties;
-      value = d[fieldName];
-      if (value) { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
-        value = value.replace(/"/g, "&quot;");
-      }
-      else {
-        value = "";
-      }
-    }
-
-    const dataField = document.createElement('td');
-    row.appendChild(dataField);
-    const input = document.createElement('input');
-    dataField.appendChild(input);
-    input.outerHTML = `<input type = "text" db = ${fieldName} idr = "input${fieldCount++}" onChange = "app.widget('changed',this)" value = "${value}">`
-    value="";
-  }
+  } // end for (every field in this.fields)
 
   this.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetNode contains"
   // Create the new dragDrop table
@@ -310,11 +276,11 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   const button = document.createElement("input");
   const mainCell = app.domFunctions.getChildByIdr(this.widgetDOM, 'main');
   mainCell.appendChild(button);
-  if (hiddenFields == 0) {
+  if (this.hiddenFields == 0) {
     button.outerHTML = `<input type="button" value="Show All (0)" disabled>`;
   }
   else {
-    button.outerHTML = `<input type="button" value="Show All (${hiddenFields})" onclick = "app.widget('showHideAllFields', this)">`;
+    button.outerHTML = `<input type="button" value="Show All (${this.hiddenFields})" onclick = "app.widget('showHideAllFields', this)">`;
   }
   button.setAttribute('style', 'text-align:center');
 
@@ -349,6 +315,48 @@ buildDataNode() {   // put in one field label and input row for each field - inc
 
   // Create new field box
   this.addField();
+}
+
+addRow(fieldName, fieldCount) {
+  let value = "";
+
+  // Create a table row
+  const row = document.createElement('tr');
+  row.setAttribute('ondrop', "app.widget('drop', this, event)");
+  row.setAttribute("ondragover", "app.widget('allowDrop', this, event)");
+  row.setAttribute('ondragstart', "app.widget('drag', this, event)");
+  row.setAttribute('draggable', "true")
+
+  this.tBodyDOM.appendChild(row);
+
+  // Create the first cell, a th cell containing the label as text
+  const header = document.createElement('th');
+  row.appendChild(header);
+  const labelText = document.createTextNode(this.fields[fieldName].label);
+  header.appendChild(labelText);
+  header.setAttribute('oncontextmenu', "event.preventDefault(); app.widget('showPopup', this)");
+  header.setAttribute('db', fieldName);
+  header.setAttribute('idr', `th${fieldName}`);
+
+  // Create the second cell, a td cell containing an input which has an idr, an onChange event, and a value which may be an empty string
+  if (this.dataNode) {
+    const d=this.dataNode.properties;
+    value = d[fieldName];
+    if (value) { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
+      value = value.replace(/"/g, "&quot;");
+    }
+    else {
+      value = "";
+    }
+  }
+
+  const dataField = document.createElement('td');
+  row.appendChild(dataField);
+  const input = document.createElement('input');
+  dataField.appendChild(input);
+  input.outerHTML = `<input type = "text" db = ${fieldName} idr = "input${fieldCount}" onChange = "app.widget('changed',this)" value = "${value}">`
+
+  return row;
 }
 
 showHideAllFields(button) {
@@ -757,9 +765,12 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
     let formFieldsDisplayed = [];
     for (let i = 0; i < currentFields.length; i++) {
       const fieldName = currentFields[i];
-      // This is wrong - a field could be in formFieldsDisplayed but not in fieldsDisplayed.
-      fieldsDisplayed.push(fieldName);
-      formFieldsDisplayed.push(fieldName);
+      if (this.fieldsDisplayed.indexOf(fieldName) !== -1) {
+        fieldsDisplayed.push(fieldName);
+      }
+      if (this.formFieldsDisplayed.indexOf(fieldName) !== -1) {
+        formFieldsDisplayed.push(fieldName);
+      }
       fields[fieldName] = this.fields[fieldName];
     }
     this.fields = fields;
