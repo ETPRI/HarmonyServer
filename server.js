@@ -384,6 +384,9 @@ function findNodes(query, response) {
           nodesDone[i].name = data[i].L;
           nodesDone[i].target = data[i].count.low;
         }
+        nodesDone.sort(function(a,b) {
+          return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);
+        });
         fs.appendFile(`${finalPath}/nodeMetaData.txt`, JSON.stringify(nodesDone), (err) => {
           if (err) throw err;
         });
@@ -431,6 +434,9 @@ function findRels(query, response) {
           relsDone[i].name = data[i].type;
           relsDone[i].target = data[i].count.low;
         }
+        relsDone.sort(function(a,b) {
+          return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);
+        });
         fs.appendFile(`${finalPath}/relMetaData.txt`, JSON.stringify(relsDone), (err) => {
           if (err) throw err;
         });
@@ -537,14 +543,16 @@ function backupRels(query, response) {
         delete currentObj.r.end;
 
         // try to order the object
-        const keys = Object.keys(currentObj.n.properties);
+        const keys = Object.keys(currentObj.r.properties);
         keys.sort();
         const newObj = {};
-        newObj.n = {};
-        newObj.n.labels = currentObj.n.labels; // Leave everything except the individual properties the same
-        newObj.n.properties = {};
+        newObj.a = currentObj.a;
+        newObj.b = currentObj.b;
+        newObj.r = {};
+        newObj.r.type = currentObj.r.type; // Leave everything except the individual properties the same
+        newObj.r.properties = {};
         for (let i = 0; i < keys.length; i++) {
-          newObj.n.properties[keys[i]] = currentObj.n.properties[keys[i]]; // Put properties back in alphabetical order
+          newObj.r.properties[keys[i]] = currentObj.r.properties[keys[i]]; // Put properties back in alphabetical order
         }
         data.push(newObj);
 

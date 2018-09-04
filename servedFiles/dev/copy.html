@@ -2,17 +2,21 @@
 <script src="copy.js"></script>
 
 <b>Copy to another DB</b><br>
+Notes: No need to enter "http" - that is added by the program.
+If entering an IP address, DO include the port number (unless it's a default port).<br>
 Destination URL: <input type="text" id="copyDestination"><br>
 <input type="button" id="startCopyTo" value="start" onclick="copy.checkOtherDB(copy)"><br><hr>
 
 <b>Copy from another DB (not yet written)</b><br>
+Notes: No need to enter "http" - that is added by the program.
+If entering an IP address, DO include the port number (unless it's a default port).<br>
 Source URL: <input type="text" id="copySource"><br>
-<input type="button" id="startCopyFrom" value="start" onclick="copy.checkDB(copy, startCopyFrom)"><br><hr>
+<input type="button" id="startCopyFrom" value="start" onclick="copy.checkLocalDB(copy, startCopyFrom)"><br><hr>
 
 <b>Backup to local file</b><br>
 <input type="button" id="startBackup" value="start" onclick="copy.startBackup(copy)"><br><hr>
 
-<b>Restore from backup file (not yet written)</b><br>
+<b>Restore from backup file</b><br>
 Source folder (name only - path to backups/Neo4j is hardcoded): <input type="text" id="backupSource"><br>
 <input type="button" id="startRestore" value="start" onclick="copy.checkLocalDB(copy)"><br><hr>
 

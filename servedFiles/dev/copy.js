@@ -53,6 +53,8 @@ class copy {
       // call back function when state of send changes
       if (this.readyState == 4 && this.status == 200) {
       copy.nodes = JSON.parse(this.responseText);
+      // clear progress bar before starting
+      copy.progress.innerHTML = "";
       for (let i = 0; i < copy.nodes.length; i++) {
         copy.nodesDone[i] = 0;
         copy.progress.innerHTML +=
@@ -280,6 +282,8 @@ class copy {
     xhttp.onreadystatechange = function() {
       // call back function when state of send changes
       if (this.readyState == 4 && this.status == 200) {
+        // clear progress bar before starting
+        copy.progress.innerHTML = "";
         // Update progress bar and nodesDone array...
         const nodesDone = [];
         const results = JSON.parse(this.responseText); // array of node objects, containing name and target.
@@ -418,6 +422,8 @@ class copy {
         // Update progress bar and nodesDone array...
         const nodesDone = [];
         const results = JSON.parse(this.responseText); // array of node objects, containing name and target.
+        // clear progress bar before starting
+        copy.progress.innerHTML = "";
         for (let i = 0; i < results.length; i++) {
           copy.progress.innerHTML +=
           `<tr><td>Node</td><td>${results[i].name}</td><td id="nodeCount_${results[i].name}">0</td><td>${results[i].target}</td></tr>`;
