@@ -13,14 +13,18 @@ class nodeFunctions {
   dataObj.merge = boolean setting whether to merge the node (that is, if it already exists, don't create a new one). Defaults to false.
   */
   createNode(dataObj, methodObj, methodName, ...args) {
+    this.getUUIDs(1, this, 'finishCreateNode', dataObj, methodObj, methodName, ...args);
+  }
+
+  finishCreateNode(IDs, dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""}; // where won't be used here, but I'm including it for consistency
     const node = this.buildSearchString(dataObj, strings, "where", "node");
 
     let command = "create";
-    let oncreate = `set node.M_GUID = '${uuidv1()}'`;
+    let oncreate = `set node.M_GUID = '${IDs[0]}'`;
     if (dataObj.merge === true) {
       command = "merge";
-      oncreate = `on create set node.M_GUID = '${uuidv1()}'`;
+      oncreate = `on create set node.M_GUID = '${IDs[0]}'`;
     }
 
     if (strings.ret != "") {
@@ -66,6 +70,10 @@ class nodeFunctions {
   ANY nodes which match the other values (type, ID and properties) will have the changes applied to them - no matter how many such nodes there are.
   */
   changeNode(dataObj, methodObj, methodName, ...args) {
+    this.getUUIDs(1, this, 'finishChangeNode', dataObj, methodObj, methodName, ...args);
+  }
+
+  finishChangeNode(IDs, dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""};
     // Build the string representing the node - what goes in the parentheses
     const node = this.buildSearchString(dataObj.node, strings, "where", "node");
@@ -95,7 +103,7 @@ class nodeFunctions {
     let oncreate = "";
     if (dataObj.merge === true) {
       command = 'merge';
-      oncreate = `on create set node.M_GUID = '${uuidv1()}'`;
+      oncreate = `on create set node.M_GUID = '${IDs[0]}'`;
     }
 
     const query = `${command} (${node}) ${strings.where} ${oncreate} ${changes} ${strings.ret}`;
@@ -125,6 +133,10 @@ class nodeFunctions {
   The data object can also contain a boolean, dataObj.distinct. It defaults to false. If true, then duplicate items are removed from the results.
   */
   createRelation(dataObj, methodObj, methodName, ...args) {
+    this.getUUIDs(1, this, 'finishCreateRelation', dataObj, methodObj, methodName, ...args);
+  }
+
+  finishCreateRelation(IDs, dataObj, methodObj, methodName, ...args) {
     const strings = {ret:"", where:""};
 
     // Build the string representing the "from" node - what goes in the first set of parentheses
@@ -156,11 +168,11 @@ class nodeFunctions {
 
 
     let command = "create";
-    let oncreate = `set rel.M_GUID = '${uuidv1()}'`;
+    let oncreate = `set rel.M_GUID = '${IDs[0]}'`;
 
     if (dataObj.rel && dataObj.rel.merge === true) {
       command = "merge";
-      oncreate = `on create set rel.M_GUID = '${uuidv1()}'`;
+      oncreate = `on create set rel.M_GUID = '${IDs[0]}'`;
     }
 
     if (strings.ret != "" && dataObj.distinct) {
@@ -257,6 +269,10 @@ class nodeFunctions {
   Example for updating login information: [{item:"rel", property:"username", value:"Amy"}, {item:"rel", property:"password", value:"myPassword"}]
   */
   changeRelation(dataObj, methodObj, methodName, ...args) {
+    this.getUUIDs(1, this, 'finishChangeRelation', dataObj, methodObj, methodName, ...args);
+  }
+
+  finishChangeRelation(IDs, dataObj, methodObj, methodName, ...args) {
     // These strings are stored in an object so they can be passed in and out of methods and updated
     const strings = {ret:"", nodesWhere:"", relWhere:""};
 
@@ -305,7 +321,7 @@ class nodeFunctions {
 
     if (dataObj.rel.merge === true) {
       command = 'merge';
-      oncreate = `on create set rel.M_GUID = '${uuidv1()}'`;
+      oncreate = `on create set rel.M_GUID = '${IDs[0]}'`;
     }
 
     const query = `match (${from}), (${to}) ${strings.nodesWhere} ${command} (from)-[${rel}]->(to) ${strings.relWhere} ${oncreate} ${changes} ${strings.ret}`;
@@ -633,6 +649,10 @@ class nodeFunctions {
   relation: either "endLink" or "startLink" - the relation to be returned.
   */
   addNodeToView(dataObj, methodObj, methodName, ...args) {
+    this.getUUIDs(8, this, 'finishAddNodeToView', dataObj, methodObj, methodName, ...args);    
+  }
+
+  finishAddNodeToView(IDs, dataObj, methodObj, methodName, ...args) {
     let attributeString = "";
     for (let attribute in dataObj.attributes) {
       attributeString += `${attribute}: "${dataObj.attributes[attribute]}", `;
@@ -644,10 +664,10 @@ class nodeFunctions {
 
     const query = `match (per), (start), (end)
                  where ID(per) = ${app.login.userID} and ID(start) = ${dataObj.startID} and ID(end)=${dataObj.endID}
-                 merge (per)-[r1:Owner]->(view:M_View {direction:"start"})-[r2:Subject]->(start) on create set r1.M_GUID = '${uuidv1()}', view.M_GUID = '${uuidv1()}', r2.M_GUID = '${uuidv1()}'
-                 merge (view)-[endLink:Link${attributeString}]->(end) on create set endLink.M_GUID = '${uuidv1()}'
-                 merge (per)-[r3:Owner]->(view2:M_View {direction:"end"})-[r4:Subject]->(end) on create set r3.M_GUID = '${uuidv1()}', view2.M_GUID = '${uuidv1()}', r4.M_GUID = '${uuidv1()}'
-                 merge (view2)-[startLink:Link${attributeString}]->(start) on create set startLink.M_GUID = '${uuidv1()}'
+                 merge (per)-[r1:Owner]->(view:M_View {direction:"start"})-[r2:Subject]->(start) on create set r1.M_GUID = '${IDs[0]}', view.M_GUID = '${IDs[1]}', r2.M_GUID = '${IDs[2]}'
+                 merge (view)-[endLink:Link${attributeString}]->(end) on create set endLink.M_GUID = '${IDs[3]}'
+                 merge (per)-[r3:Owner]->(view2:M_View {direction:"end"})-[r4:Subject]->(end) on create set r3.M_GUID = '${IDs[4]}', view2.M_GUID = '${IDs[5]}', r4.M_GUID = '${IDs[6]}'
+                 merge (view2)-[startLink:Link${attributeString}]->(start) on create set startLink.M_GUID = '${IDs[7]}'
                  return ${dataObj.relation} as link`;
     this.sendQuery(query, methodObj, methodName, ...args);
   }
@@ -724,6 +744,22 @@ class nodeFunctions {
       else changes += `,${changeArray[i].item}.${changeArray[i].property} = ${value}`;
     }
     return changes;
+  }
+
+  // Asks the server for the given number of UUIDs, then passes them, along with any other supplied args, to the given method.
+  getUUIDs(number, nodeObject, nodeMethod, ...args) {
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const IDs = JSON.parse(this.responseText);
+        nodeObject[nodeMethod](IDs, ...args);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "uuid", "query": number};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   sendQuery(query, methodObj, methodName, ...args) {

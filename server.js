@@ -10,6 +10,7 @@ var http = require('http');
 var fs   = require('fs');
 var path = require('path');
 var url  = require('url');
+var uuidv1 = require('uuid/v1')
 
 http.createServer(function (request, response) {
     console.log('request ', request.url);
@@ -43,6 +44,8 @@ http.createServer(function (request, response) {
           case "backupNeo4j":
             processBackup(obj.query, response);
             break;
+          case "uuid":
+            createUUID(obj.query, response);
           default:
             console.log("Error server = %s\n", obj.server );
         }
@@ -217,8 +220,7 @@ function updateFields(node, fields) {
 
 }
 
-function runNeo4j(query, response)
-{
+function runNeo4j(query, response) {
     console.log('runNeo4j - %s',query);
 
     if (query === 'server:exit') {
@@ -252,7 +254,6 @@ function runNeo4j(query, response)
       });
 }
 
-
 // ------------------------------------------ Gremlin stuff ---------
 
 const Gremlin = require('gremlin');
@@ -270,8 +271,7 @@ const client = Gremlin.createClient(
     }
 );
 
-function runGremlin2(query, response)
-{
+function runGremlin2(query, response) {
     console.log('runGremlin - %s',query);
     return(client.execute(query, { }, (err, results) => {
         if (err) {
@@ -762,6 +762,20 @@ function restoreRels(query, response) {
   else {
     response.end("Out of rels");
   }
+}
+
+//--------------Helper functions---------------------------------------------
+
+function createUUID(query, response) { // query should indicate the number of IDs needed
+  let num = parseInt(query);
+  if (num === NaN || num < 1) { // Must be a positive number. Default is one ID.
+    num = 1;
+  }
+  let IDs = [];
+  for (let i = 0; i < num; i++) {
+    IDs[i] = uuidv1();
+  }
+  response.end(JSON.stringify(IDs));
 }
 
 function stringEscape(text) {
