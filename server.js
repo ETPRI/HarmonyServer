@@ -1224,8 +1224,9 @@ CRUD.addNodeToView = function(obj, response) {
   for (let attribute in dataObj.attributes) {
     attributeString += `${attribute}: "${dataObj.attributes[attribute]}", `;
   }
-  if (attributeString.length > 0) { // if any attributes were found, the string needs to have the last ", " removed,
-                                    // and it needs to be enclosed in curly braces.
+  
+  // if any attributes were found, the string needs to have the last ", " removed, and it needs to be enclosed in curly braces.
+  if (attributeString.length > 0) {
     attributeString = ` {${attributeString.slice(0, -2)}}`;
   }
 

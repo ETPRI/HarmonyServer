@@ -379,6 +379,9 @@ class widgetLogin {
         const relFields = JSON.parse(row.settings.properties.fields); // fields from relation
         for (let name in relFields) {
           // Replace label (and if, somehow, the user had a field the node didn't, add it)
+          if (!(name in fields)) {
+            fields[name] = {};
+          }
           fields[name].label = relFields[name].label;
         } // end for (every field in the relation)
       } // end if (there are fields stored in the relation)
