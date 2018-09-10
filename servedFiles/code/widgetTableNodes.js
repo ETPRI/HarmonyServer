@@ -33,7 +33,19 @@ class widgetTableNodes {
 
   ////////////////////////////////////////////////////////////////////
   search() { // public - call when data changes
-    app.nodeFunctions.tableNodeSearch(this.buildQuery(), this, 'buildData');
+    const xhttp = new XMLHttpRequest();
+    const nodes = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        nodes.buildData(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "ID": app.login.userID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   searchOnEnter(input, evnt) { // Makes hitting enter run a search
@@ -487,7 +499,20 @@ class widgetTableNodes {
     obj.to.return = false;
     obj.rel = {};
     obj.rel.type = "Permissions";
-    app.nodeFunctions.changeRelation(obj, this, 'checkPermission', ID, button, toAdd);
+
+    const xhttp = new XMLHttpRequest();
+    const nodes = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        nodes.checkPermission(data, ID, button, toAdd);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   checkPermission(data, ID, button, toAdd) {
@@ -496,7 +521,19 @@ class widgetTableNodes {
       obj.rel = {};
       obj.rel.id = data[0].rel.id;
       obj.rel.return = false;
-      app.nodeFunctions.deleteRelation(obj, this, 'givePermission', toAdd, ID, data[0].rel.properties.username, data[0].rel.properties.password);
+
+      const xhttp = new XMLHttpRequest();
+      const nodes = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          nodes.givePermission(button, toAdd, ID, data[0].rel.properties.username, data[0].rel.properties.password);
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
 
     else { // If there was no relation to delete, need to ask for a new username and password
@@ -508,7 +545,7 @@ class widgetTableNodes {
 
       // If they entered data, create a link from them to the Admin table
       if (username && password) {
-        this.givePermission(null, toAdd, ID, username, password);
+        this.givePermission(button, toAdd, ID, username, password);
       }
     }
   }
@@ -518,34 +555,48 @@ class widgetTableNodes {
       const row = button.parentElement.parentElement;
       ID = row.children[1].textContent;
 
-      password;
       name = prompt("Enter the username:", "");
       if (name) {
         password = prompt("Enter the password:", "");
       }
 
-      // We should be making a new user, but check the button just in case.
+      // We should be making a new user (if we were making an admin, the info would be passed in), but check the button just in case.
       if (button.value == "Make User") {
         toAdd = "User";
       }
-    }
+    } // end if (info was not passed in)
 
-    const obj = {};
-    obj.from = {};
-    obj.from.id = ID;
-    obj.from.return = false;
-    obj.to = {};
-    obj.to.type = "M_LoginTable";
-    obj.to.properties = {};
-    obj.to.properties.name = toAdd;
-    obj.to.return = false;
-    obj.rel = {};
-    obj.rel.type = "Permissions";
-    obj.rel.properties = {};
-    obj.rel.properties.username = name;
-    obj.rel.properties.password = password;
-    obj.rel.return = false;
-    app.nodeFunctions.createRelation(obj, this, 'search');
+    if (toAdd && ID && name && password) { // if the user has entered data, not cancelled
+      const obj = {};
+      obj.from = {};
+      obj.from.id = ID;
+      obj.from.return = false;
+      obj.to = {};
+      obj.to.type = "M_LoginTable";
+      obj.to.properties = {};
+      obj.to.properties.name = toAdd;
+      obj.to.return = false;
+      obj.rel = {};
+      obj.rel.type = "Permissions";
+      obj.rel.properties = {};
+      obj.rel.properties.username = name;
+      obj.rel.properties.password = password;
+      obj.rel.return = false;
+
+      const xhttp = new XMLHttpRequest();
+      const nodes = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          nodes.search(data);
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
+    }
   }
 
   removePermission(button) { // Remove ALL permissions from this user
@@ -562,6 +613,19 @@ class widgetTableNodes {
     obj.rel = {};
     obj.rel.type = "Permissions"; // Any permissions link
     obj.rel.return = false;
-    app.nodeFunctions.deleteRelation(obj, this, 'search');
+
+    const xhttp = new XMLHttpRequest();
+    const nodes = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        nodes.search(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes

@@ -50,7 +50,20 @@ constructor(label, container, id, name, callerID) { // Label: the type of node d
       obj.rel.name = "r";
       obj.rel.type = "Trash";
       obj.rel.direction = "left"; // (n)<-[rel]-(a)
-      app.nodeFunctions.findOptionalRelation(obj, this, 'finishConstructor');
+
+      const xhttp = new XMLHttpRequest();
+      const details = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          details.finishConstructor(data);
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
     else { // If no ID was passed in
        this.finishConstructor();
@@ -224,7 +237,12 @@ popupOK(button) {
   formFieldsDisplayed.value = app.stringEscape(JSON.stringify(this.formFieldsDisplayed));
   obj.changes.push(formFieldsDisplayed);
 
-  app.nodeFunctions.changeRelation(obj);
+  const xhttp = new XMLHttpRequest();
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
+
   // close popup
   this.fieldPopup.hidden = true;
 }
@@ -457,7 +475,20 @@ trashNode() {
   obj.rel.properties = {};
   obj.rel.properties.reason = app.stringEscape(reason);
   obj.rel.return = false;
-  app.nodeFunctions.createRelation(obj, this, 'trashUntrash');
+
+  const xhttp = new XMLHttpRequest();
+  const details = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      details.trashUntrash(data);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 updateReason() {
@@ -484,7 +515,20 @@ updateReason() {
   change.property = "reason";
   change.value = app.stringEscape(reason);
   obj.changes.push(change);
-  app.nodeFunctions.changeRelation(obj, this, 'trashUntrash');
+
+  const xhttp = new XMLHttpRequest();
+  const details = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      details.trashUntrash(data);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 untrashNode() {
@@ -502,7 +546,20 @@ untrashNode() {
   obj.rel = {};
   obj.rel.type = "Trash";
   obj.rel.return = false;
-  app.nodeFunctions.deleteRelation(obj, this, 'trashUntrash');
+
+  const xhttp = new XMLHttpRequest();
+  const details = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      details.trashUntrash(data);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 trashUntrash(data) {
@@ -587,7 +644,20 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
   obj.name = "n";
   obj.type = this.queryObjectName;
   obj.properties = data;
-  app.nodeFunctions.createNode(obj, this, 'addComplete');
+
+  const xhttp = new XMLHttpRequest();
+  const details = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      details.addComplete(data);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 updateMetaData(newFields) {
@@ -614,7 +684,20 @@ updateMetaData(newFields) {
     change.value = app.stringEscape(JSON.stringify(this[propertyNames[i]]));
     metadataObj.changes.push(change);
   }
-  app.nodeFunctions.changeRelation(metadataObj, this, 'updateFields', newFields);
+
+  const xhttp = new XMLHttpRequest();
+  const details = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      details.updateFields(data, newFields);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 updateFields(data, newFields) { // should contain only the metadata node, under the name "metadata"
@@ -633,7 +716,12 @@ updateFields(data, newFields) { // should contain only the metadata node, under 
     update.property = "fields";
     update.value = app.stringEscape(JSON.stringify(fields));
     obj.changes.push(update);
-    app.nodeFunctions.changeNode(obj);
+
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 }
 
@@ -805,7 +893,19 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
     obj.node.id = this.id;
     obj.changes = data;
 
-    app.nodeFunctions.changeNode(obj, this, 'saveData');
+    const xhttp = new XMLHttpRequest();
+    const details = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        details.saveData(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 }
 

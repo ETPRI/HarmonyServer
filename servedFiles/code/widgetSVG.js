@@ -32,7 +32,20 @@ class widgetSVG {
       obj.required.name = "mindmap";
       obj.required.type = "mindmap";
       obj.required.id = this.mapID;
-      app.nodeFunctions.findOptionalRelation(obj, this, 'buildWidget');
+
+      const xhttp = new XMLHttpRequest();
+      const SVG = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          SVG.buildWidget(data);
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
 
     else {
@@ -652,7 +665,20 @@ class widgetSVG {
         obj.rel.type = "Owner";
         obj.to = {};
         obj.to.id = app.login.userID;
-        app.nodeFunctions.changeRelation(obj, this, "checkNameExists", name, newMap);
+
+        const xhttp = new XMLHttpRequest();
+        const SVG = this;
+
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            const data = JSON.parse(this.responseText);
+            SVG.checkNameExists(data, name, newMap);
+          }
+        };
+
+        xhttp.open("POST","");
+        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+        xhttp.send(JSON.stringify(queryObject));         // send request to server
       }
     }
     else {
@@ -673,7 +699,20 @@ class widgetSVG {
         obj.rel.type = "Owner";
         obj.to = {};
         obj.to.id = app.login.userID;
-        app.nodeFunctions.changeRelation(obj, this, "checkNameExists", name, newMap);
+
+        const xhttp = new XMLHttpRequest();
+        const SVG = this;
+
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            const data = JSON.parse(this.responseText);
+            SVG.checkNameExists(data, name, newMap);
+          }
+        };
+
+        xhttp.open("POST","");
+        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+        xhttp.send(JSON.stringify(queryObject));         // send request to server
       }
     }
     else {
@@ -690,7 +729,20 @@ class widgetSVG {
       obj.type = "mindmap";
       obj.properties = {};
       obj.properties.name = name;
-      app.nodeFunctions.createNode(obj, this, "setOwner"); // If this is a new map or a new copy, it belongs to the user who made it
+
+      const xhttp = new XMLHttpRequest();
+      const SVG = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          SVG.setOwner(data); // If this is a new map or a new copy, it belongs to the user who made it
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
     else {
       if (this.owner) { // If the mindmap already has an owner, it still belongs to them
@@ -715,7 +767,20 @@ class widgetSVG {
     obj.to.id = app.login.userID;
     obj.rel = {};
     obj.rel.type = "Owner";
-    app.nodeFunctions.createRelation(obj, this, "startNodes");
+
+    const xhttp = new XMLHttpRequest();
+    const SVG = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        SVG.startNodes(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   startNodes() {
@@ -774,7 +839,20 @@ class widgetSVG {
             obj.rel.type = "MapNode";
             obj.rel.properties = {};
             obj.rel.properties.id = label.id;
-            app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels);
+
+            const xhttp = new XMLHttpRequest();
+            const SVG = this;
+
+            xhttp.onreadystatechange = function() {
+              if (this.readyState == 4 && this.status == 200) {
+                const data = JSON.parse(this.responseText);
+                SVG.processNodes(data, labels);
+              }
+            };
+
+            xhttp.open("POST","");
+            const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+            xhttp.send(JSON.stringify(queryObject));         // send request to server
           }
           else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
             this.processNodes(null, labels);
@@ -794,7 +872,20 @@ class widgetSVG {
               obj.rel.type = "MapNode";
               obj.rel.properties = {};
               obj.rel.properties.id = label.id;
-              app.nodeFunctions.deleteRelation(obj, this, "processNodes", labels); // And delete the relation
+
+              const xhttp = new XMLHttpRequest();
+              const SVG = this;
+
+              xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                  const data = JSON.parse(this.responseText);
+                  SVG.processNodes(data, labels);
+                }
+              };
+
+              xhttp.open("POST","");
+              const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+              xhttp.send(JSON.stringify(queryObject));         // send request to server
             }
             else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
               this.processNodes(null, labels);
@@ -812,7 +903,20 @@ class widgetSVG {
               obj.rel.merge = true;
               obj.rel.properties = {};
               obj.rel.properties.id = label.id;
-              app.nodeFunctions.createRelation(obj, this, "processNodes", labels); // Create the relation
+
+              const xhttp = new XMLHttpRequest();
+              const SVG = this;
+
+              xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                  const data = JSON.parse(this.responseText);
+                  SVG.processNodes(data, labels);
+                }
+              };
+
+              xhttp.open("POST","");
+              const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+              xhttp.send(JSON.stringify(queryObject));         // send request to server
             }
             else { // If there is no new relation, no need to do anything except call processNodes.
               this.processNodes(null, labels);
@@ -916,7 +1020,20 @@ class widgetSVG {
     count.property = "M_count";
     count.value = this.d3Functions.count;
     obj.changes.push(count);
-    app.nodeFunctions.changeNode(obj, this.d3Functions, 'update');
+
+    const xhttp = new XMLHttpRequest();
+  	const d3 = this.d3Functions;
+
+  	xhttp.onreadystatechange = function() {
+  		if (this.readyState == 4 && this.status == 200) {
+  			const data = JSON.parse(this.responseText);
+  			d3.update(data);
+  		}
+  	};
+
+  	xhttp.open("POST","");
+  	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+  	xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Meanwhile, save information from the details pane.
     this.details.id = this.mapID;

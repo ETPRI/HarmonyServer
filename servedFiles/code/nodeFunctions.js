@@ -27,8 +27,13 @@ class nodeFunctions {
       oncreate = `on create set node.M_GUID = '${IDs[0]}'`;
     }
 
-    if (strings.ret != "") {
-      strings.ret = `return ${strings.ret}`;
+    // return the node's GUID to compare it to the one that it would have been assigned
+    // (needed to tell whether a merge resulted in creation)
+    if (strings.ret === "") {
+      strings.ret = "return node.M_GUID as GUID"
+    }
+    else {
+      strings.ret = `return ${strings.ret}, node.M_GUID as GUID`;
     }
 
     const query = `${command} (${node}) ${oncreate} ${strings.ret}`;
@@ -649,7 +654,7 @@ class nodeFunctions {
   relation: either "endLink" or "startLink" - the relation to be returned.
   */
   addNodeToView(dataObj, methodObj, methodName, ...args) {
-    this.getUUIDs(8, this, 'finishAddNodeToView', dataObj, methodObj, methodName, ...args);    
+    this.getUUIDs(8, this, 'finishAddNodeToView', dataObj, methodObj, methodName, ...args);
   }
 
   finishAddNodeToView(IDs, dataObj, methodObj, methodName, ...args) {
@@ -762,6 +767,64 @@ class nodeFunctions {
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
+  // Every change to the DB - the creation or deletion of a node or relation, or a change to an attribute of a node or relation -
+  // will result in the creation of a changeLog object. createChangeLog takes as arguments an array of GUIDs, one for each
+  // change to record, and an array of change objects. Each object's keys represent all the attributes that changeLog object
+  // should have. Typical attributes are:
+  // item_GUID (the GUID of the node or relation which was changed)
+  // user_GUID (the GUID of the user who made the change)
+  // action (creation, change, or deletion)
+  // to_GUID, from_GUID (only for creation of relations)
+  // label (only for creation)
+  // attribute (only for change)
+  // value (only for change)
+  // In addition, a changeLog object will have a GUID, which is taken from the array of IDs which was passed in,
+  // and a number, which is incremented from the highest number already in the DB, which should be found earlier and passed in.
+  checkChangeLog(IDs, changesArray, nodeFunctions) {
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const result = JSON.parse(this.responseText);
+        let num = 0; // Default (if there are no numbered changeLogs so far) is to start at 0
+        // n.number should be a number, so the max should be either a number or null.
+        if (result[0].num.low) { // If the low value exists, this is a number (not null)
+          num = result[0].num.low + 1; // If there are already numbered changeLogs, start just after the highest-numbered one
+        }
+        nodeFunctions.createChangeLog(num, IDs, changesArray);
+      }
+    };
+
+    let steps = `match (n:changeLog) return max(n.number) as num`;
+
+    const obj = {"server": "neo4j", "query": steps};  // create object to send to server
+    xhttp2.send(JSON.stringify(obj));         // send request to server
+  }
+
+  createChangeLog(changeNum, IDs, changesArray) {
+    const xhttp = new XMLHttpRequest();
+
+    // No onreadystatechange event this time - I don't need to DO anything after creating the change logs - at least for now.
+
+    let steps = "create ";
+    for (let i = 0; i < changesArray.length; i++) {
+      let propString = "";
+      let props = changesArray[i]; // an object containing attributes and values
+      for (let propName in props) {
+        propString += `${propName}: '${app.stringEscape(props[propName])}', `;
+      }
+      propString += `M_GUID: '${IDs[i]}', number: ${changeNum + i}`;
+
+      steps += `(n${i}:changeLog {${propString}}), `;
+    }
+
+    if (steps.length > 7) { // If at least one changeLog node needs to be added - which SHOULD always be the case
+      steps = steps.slice(0, steps.length - 2);
+      const obj = {"server": "neo4j", "query": steps};  // create object to send to server
+      xhttp2.send(JSON.stringify(obj));         // send request to server
+    }
+  }
+
   sendQuery(query, methodObj, methodName, ...args) {
     const xhttp = new XMLHttpRequest();
 
@@ -772,7 +835,7 @@ class nodeFunctions {
         // identity variables, specifically, should be rewritten as "id" for ease of typing later.
         // Also, row objects from metadata queries may include an id or count variable, which should also be rewritten.
         const result = JSON.parse(this.responseText);
-        for (let i = 0; i < result.length; i++) {
+        for (let i = 0; i < result.length; i++) { // for every row, start by simplifying the count and ID if they exist...
           const row = result[i];
           if (row.count) {
             row.count = row.count.low;
@@ -781,7 +844,7 @@ class nodeFunctions {
             row.id = row.id.low;
           }
 
-          for (let item in row) {
+          for (let item in row) { // for every item in the row, replace the identity if it exists
             const entry = row[item];
             if (entry && entry.identity && entry.identity.low) {
               const IDobj = entry.identity;
@@ -789,18 +852,21 @@ class nodeFunctions {
               entry.id = ID;
               delete entry.identity;
             }
+            // Is this necessary? Wouldn't the next step get it?
             if (entry && entry.properties && entry.properties.count && entry.properties.count.low) {
               entry.properties.count = entry.properties.count.low;
             }
 
-            if (entry && entry.properties) {
-              for (let property in entry.properties) {
+            if (entry && entry.properties) { // If the item has properties...
+              for (let property in entry.properties) { // then for every property...
+                const value = entry.properties[property];
                 // This is the best set of criteria I can see to recognize an Integer object without using Neo4j functions:
                 // It has exactly two own properties (high and low), "high" is 0 and "low" is an integer.
-                const value = entry.properties[property];
-                if (typeof value === "object" && Object.keys(value).length == 2
+                // Note: I have since learned that very large integers can have a value in "high" as well.
+                // I don't see it coming up often, and if it does, we'll probably need to leave the Integer alone anyway.
+                if (typeof value === "object" && Object.keys(value).length == 2 // if the property is an Integer with no high value...
                     && "low" in value && Number.isInteger(value.low) && "high" in value && value.high === 0) {
-                  entry.properties[property] = value.low;
+                  entry.properties[property] = value.low; // simplify it.
                 } // end if (value is a Neo4j integer)
               } // end for (every property in the item)
             } // end if (the item has properties)

@@ -89,7 +89,20 @@ class widgetLogin {
     obj.properties = {};
     obj.properties.name = "User";
     obj.return = false;
-    app.nodeFunctions.createNode(obj, this, "mergeAdmin");
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        login.mergeAdmin(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   mergeAdmin() { // then merge the Admin table...
@@ -99,7 +112,20 @@ class widgetLogin {
     obj.properties = {};
     obj.properties.name = "Admin";
     obj.return = false;
-    app.nodeFunctions.createNode(obj, this, "checkAdmin");
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        login.checkAdmin(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   checkAdmin() { // Now we know that the admin table exists. Search for any person with a link to it.
@@ -115,7 +141,20 @@ class widgetLogin {
     obj.rel = {};
     obj.rel.type = "Permissions";
     obj.rel.return = false;
-    app.nodeFunctions.changeRelation(obj, this, "checkAdminUser");
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        login.checkAdminUser(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   // If there are no real admins, create a temporary admin account with username and password of "admin".
@@ -128,13 +167,31 @@ class widgetLogin {
       obj.properties = {};
       obj.properties.name = "Temporary Admin Account";
       obj.merge = true;
-      app.nodeFunctions.createNode(obj, this, 'linkTempAdmin'); //... and call another function to link it to the admin table.
+
+      const xhttp = new XMLHttpRequest();
+      const login = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          login.linkTempAdmin(data); //... and call another function to link it to the admin table.
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
     else { // if at least one user is an admin, delete the temporary admin node if it exists
       const obj = {};
       obj.type = "tempAdmin";
       obj.return = false;
-      app.nodeFunctions.deleteNode(obj);
+
+      const xhttp = new XMLHttpRequest();
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
   }
 
@@ -156,7 +213,12 @@ class widgetLogin {
     obj.rel.properties.username = "admin";
     obj.rel.properties.password = "admin";
     obj.rel.return = false;
-    app.nodeFunctions.createRelation(obj);
+
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   // Checks to make sure the user entered both a name and password, then searches for a user with that name and password.
@@ -181,7 +243,20 @@ class widgetLogin {
       obj.rel.properties.username = name;
       obj.rel.properties.password = password;
       obj.rel.return = false;
-      app.nodeFunctions.changeRelation(obj, this, 'loginComplete');
+
+      const xhttp = new XMLHttpRequest();
+      const login = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          login.loginComplete(data);
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
   }
 
@@ -252,7 +327,20 @@ class widgetLogin {
     metadataObj.optional = {};
     metadataObj.optional.id = this.userID;
     metadataObj.optional.return = false;
-    app.nodeFunctions.findOptionalRelation(metadataObj, this, 'updateMetaData');
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        login.updateMetaData(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": metadataObj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // log
     const obj = {};

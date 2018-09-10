@@ -20,7 +20,6 @@ buildApp() {
 	// before their constructors can run.
 	this.metaData  			= new metaData();
 	this.domFunctions 	= new domFunctions();
-	this.nodeFunctions 	= new nodeFunctions();
 	this.login 					= new widgetLogin();
 	this.regression 		= new regressionTesting();
 	this.checkEmpty 		= new checkEmpty();
@@ -60,7 +59,20 @@ checkMetaData() {
 	const obj = {};
 	obj.node = {};
 	obj.node.type = "M_MetaData";
-	this.nodeFunctions.changeNode(obj, this, 'addMetaData');
+
+	const xhttp = new XMLHttpRequest();
+	const appObj = this;
+
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			const data = JSON.parse(this.responseText);
+			appObj.addMetaData(data);
+		}
+	};
+
+	xhttp.open("POST","");
+	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+	xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 addMetaData(data) {
@@ -76,7 +88,12 @@ addMetaData(data) {
 			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
 			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
 			obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
-			this.nodeFunctions.createNode(obj);
+
+			const xhttp = new XMLHttpRequest();
+
+	    xhttp.open("POST","");
+			const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+			xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 	}
 
@@ -361,7 +378,11 @@ presetCalendars() {
 	obj.return = false;
 	obj.merge = true;
 
-	this.nodeFunctions.createNode(obj);
+	const xhttp = new XMLHttpRequest();
+
+	xhttp.open("POST","");
+	const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+	xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 // refresh widget with new database call. domElement is the search button that triggered the search.

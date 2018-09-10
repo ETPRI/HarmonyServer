@@ -328,7 +328,12 @@ class regressionTesting {
   		// Remove nodes and relationships
       const obj = {};
       obj.return = false;
-      app.nodeFunctions.deleteNode(obj);
+
+      const xhttp = new XMLHttpRequest();
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
 
   		// reset all variables to ensure same state every time "Clear All" is chosen
   		app.idCounter = 0; // reset ID counter

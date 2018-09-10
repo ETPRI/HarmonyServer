@@ -19,7 +19,19 @@ constructor (nameQueryObject, id) {
   this.dropdownId = id;
   this.widgetID = app.idCounter;
 
-  app.nodeFunctions.getMetadata(nameQueryObject, this, 'queryComplete');
+  const xhttp = new XMLHttpRequest();
+  const table = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      table.queryComplete(data);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "getMetaData", "ID": app.login.userID, "query": nameQueryObject};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 queryComplete(data) {
@@ -197,7 +209,20 @@ showReasons(element) {
   obj.to.id = id;
   obj.rel = {};
   obj.rel.type = "Trash";
-  app.nodeFunctions.changeRelation(obj, this, 'buildReasons');
+
+  const xhttp = new XMLHttpRequest();
+  const table = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      table.buildReasons(data);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 buildReasons(data) {

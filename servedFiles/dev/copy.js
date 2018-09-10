@@ -173,7 +173,7 @@ class copy {
     }
     if (steps.length > 7) { // If at least one node needs to be added - which SHOULD always be the case
       steps = steps.slice(0, steps.length - 2);
-      const obj = {"server": "neo4j", "query": steps};  // crearte object to send to server
+      const obj = {"server": "neo4j", "query": steps};  // create object to send to server
       xhttp2.send(JSON.stringify(obj));         // send request to server
     }
     else { // this should never happen - but may as well prepare for it

@@ -65,7 +65,20 @@ class dataBrowser {
       obj.rel = {};
       obj.rel.name = "inRel";
       obj.rel.direction = "left"; // (required)<-[rel]-(optional)
-      app.nodeFunctions.findOptionalRelation(obj, this, 'findOuts', data.nodeID, cell);
+
+      const xhttp = new XMLHttpRequest();
+      const dataBrowser = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const newData = JSON.parse(this.responseText);
+          dataBrowser.findOuts(newData, data.nodeID, cell);
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
   }
 
@@ -78,7 +91,20 @@ class dataBrowser {
     obj.optional.name = "out";
     obj.rel = {};
     obj.rel.name = "outRel";
-    app.nodeFunctions.findOptionalRelation(obj, this, 'processData', data, cell);
+
+    const xhttp = new XMLHttpRequest();
+    const dataBrowser = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const newData = JSON.parse(this.responseText);
+        dataBrowser.processData(newData, data, cell);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   processData(outData, inData, cell) {
@@ -336,7 +362,20 @@ class dataBrowser {
         obj.rel = {};
         obj.rel.name = "inRel";
         obj.rel.direction = "left"; // (required)<-[rel]-(optional)
-        app.nodeFunctions.findOptionalRelation(obj, this, 'findOuts', ID, newCell);
+
+        const xhttp = new XMLHttpRequest();
+        const dataBrowser = this;
+
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            const newData = JSON.parse(this.responseText);
+            dataBrowser.findOuts(newData, ID, newCell);
+          }
+        };
+
+        xhttp.open("POST","");
+        const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+        xhttp.send(JSON.stringify(queryObject));         // send request to server
       }
     }
   }

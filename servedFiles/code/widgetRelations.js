@@ -53,7 +53,20 @@ refresh() {
     obj.rel2 = {};
     obj.rel2.type = "Subject";
     obj.rel2.return = false;
-    app.nodeFunctions.changeTwoRelPattern(obj, this, 'findLinks');
+
+    const xhttp = new XMLHttpRequest();
+    const relation = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        relation.findLinks(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
   else this.findLinks();
 }
@@ -71,7 +84,20 @@ findLinks(data) { // data should include the view found by the previous function
   obj.rel = {};
   obj.rel.name = "r";
   obj.rel.type = "Link";
-  app.nodeFunctions.findOptionalRelation(obj, this, 'rComplete');
+
+  const xhttp = new XMLHttpRequest();
+  const relation = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relation.rComplete(data);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 // Takes the list of nodes in this user's view and begins building the widget by adding a "Save" or "Sync" button,
@@ -507,7 +533,20 @@ processNext(data, rows, prevFunction) {
     placeholderChange.value = JSON.stringify(this.placeholders);
     placeholderChange.string = false;
     obj.changes.push(placeholderChange);
-    app.nodeFunctions.changeNode(obj, this, 'findLinks'); // Can skip the refresh method since we know viewNodeID already
+
+    const xhttp = new XMLHttpRequest();
+  	const relations = this;
+
+  	xhttp.onreadystatechange = function() {
+  		if (this.readyState == 4 && this.status == 200) {
+  			const data = JSON.parse(this.responseText);
+  			relations.findLinks(data);
+  		}
+  	};
+
+  	xhttp.open("POST","");
+  	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+  	xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     this.placeholders = [];
     this.order = []; // Finally, reset this.order and this.placeholders.
@@ -536,9 +575,23 @@ deleteNode(row, rows) {
   obj.to = {};
   obj.to.name = "node";
   obj.rel = {};
-  obj.rel.id = id;
+  obj.rel.properties = {};
+  obj.rel.properties.M_GUID = id;
   obj.rel.return = false;
-  app.nodeFunctions.deleteRelation(obj, this, 'findReverse', rows, comment);
+
+  const xhttp = new XMLHttpRequest();
+  const relation = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relation.findReverse(data, rows, comment);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 findReverse(data, rows, comment) {
@@ -569,7 +622,20 @@ findReverse(data, rows, comment) {
   obj.rel2 = {};
   obj.rel2.type = "Subject";
   obj.rel2.return = false;
-  app.nodeFunctions.changeTwoRelPattern(obj, this, 'deleteReverse', rows, comment);
+
+  const xhttp = new XMLHttpRequest();
+  const relation = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relation.deleteReverse(data, rows, comment);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 deleteReverse(data, rows, comment) {
@@ -586,7 +652,20 @@ deleteReverse(data, rows, comment) {
   obj.rel.properties = {};
   obj.rel.properties.comment = comment;
   obj.rel.return = false;
-  app.nodeFunctions.deleteRelation(obj, this, 'processNext', rows);
+
+  const xhttp = new XMLHttpRequest();
+  const relation = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relation.processNext(data, rows);
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 // A workaround for the fact that Neo4j doesn't let you change the nodes a relationship is attached to.
@@ -621,7 +700,20 @@ modifyNode (row, rows) {
   change.property = "comment";
   change.value = app.stringEscape(comment);
   obj.changes.push(change);
-  app.nodeFunctions.changeRelation(obj, this, 'processNext', rows, "modify");
+
+  const xhttp = new XMLHttpRequest();
+  const relation = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relation.processNext(data, rows, "modify");
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 // Adds a new relation to the node being viewed. If a destination node was specified for the relation,
@@ -685,7 +777,20 @@ addNode(row, rows) {
   obj.endID = endID;
   obj.attributes = attributes;
   obj.relation = relation;
-  app.nodeFunctions.addNodeToView(obj, this, 'processNext', rows, "add");
+
+  const xhttp = new XMLHttpRequest();
+  const relationObj = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relationObj.processNext(data, rows, "add");
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "addNodeToView", "ID": app.login.userID, "query": obj};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 // Fires when a row from any relations table - whether it's the fully interactive table for a logged-in user,

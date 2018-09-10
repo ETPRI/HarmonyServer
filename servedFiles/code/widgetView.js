@@ -45,7 +45,20 @@ class widgetView {
     obj.rel2 = {};
     obj.rel2.type = "Subject";
     obj.rel2.return = false;
-    app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
+
+    const xhttp = new XMLHttpRequest();
+    const view = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        view.buildViews(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   // Adds the view widget to the page: A list of views, possibly an active view,
@@ -280,7 +293,20 @@ class widgetView {
     obj.rel2 = {};
     obj.rel2.type = "Subject";
     obj.rel2.return = false;
-    app.nodeFunctions.changeTwoRelPattern(obj, this, 'buildViews');
+
+    const xhttp = new XMLHttpRequest();
+    const view = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        view.buildViews(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // log click
     const recordObj = {};
@@ -400,7 +426,20 @@ class widgetView {
     obj.type = "M_View";
     obj.properties = {};
     obj.properties.direction = this.relationType;
-    app.nodeFunctions.createNode(obj, this, 'linkViewUser');
+
+    const xhttp = new XMLHttpRequest();
+    const view = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        view.linkViewUser(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Log click
     const recordObj = {};
@@ -424,7 +463,20 @@ class widgetView {
     obj.rel = {};
     obj.rel.type = "Owner";
     obj.rel.return = false;
-    app.nodeFunctions.createRelation(obj, this, 'linkViewNode', viewID);
+
+    const xhttp = new XMLHttpRequest();
+    const view = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        view.linkViewNode(data, viewID);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   linkViewNode(data, viewID) { // Connect the new view to the node and move on to addComplete
@@ -438,7 +490,20 @@ class widgetView {
     obj.rel = {};
     obj.rel.type = "Subject";
     obj.rel.return = false;
-    app.nodeFunctions.createRelation(obj, this, 'addComplete');
+
+    const xhttp = new XMLHttpRequest();
+    const view = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        view.addComplete(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   // Updates the page after a new view is added, by adding a row for the new view to the table of views,

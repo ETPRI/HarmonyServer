@@ -6,7 +6,20 @@ class checkEmpty {
   checkEmpty(button) {
     const obj = {};
     obj.node = {};
-    app.nodeFunctions.changeNode(obj, this, 'verifyEmpty');
+
+    const xhttp = new XMLHttpRequest();
+    const check = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        check.verifyEmpty(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   // Checks whether any nodes were found. If so, alert the user that an empty database is needed,
