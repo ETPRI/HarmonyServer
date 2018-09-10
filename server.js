@@ -11,6 +11,8 @@ var fs   = require('fs');
 var path = require('path');
 var url  = require('url');
 var uuidv1 = require('uuid/v1')
+const config  = require('./config');
+
 
 http.createServer(function (request, response) {
     console.log('request ', request.url);
@@ -105,9 +107,9 @@ http.createServer(function (request, response) {
         }
     });
 
-}).listen(8080);
+}).listen(config.port);
 
-console.log('Server running at http://127.0.0.1:8080');
+console.log(`Server running at http://127.0.0.1:${config.port}`);
 
 // test();
 
@@ -258,7 +260,6 @@ function runNeo4j(query, response) {
 // ------------------------------------------ Gremlin stuff ---------
 
 const Gremlin = require('gremlin');
-const config  = require('./config');
 const async   = require('async');
 
 const client = Gremlin.createClient(
@@ -1224,7 +1225,7 @@ CRUD.addNodeToView = function(obj, response) {
   for (let attribute in dataObj.attributes) {
     attributeString += `${attribute}: "${dataObj.attributes[attribute]}", `;
   }
-  
+
   // if any attributes were found, the string needs to have the last ", " removed, and it needs to be enclosed in curly braces.
   if (attributeString.length > 0) {
     attributeString = ` {${attributeString.slice(0, -2)}}`;
