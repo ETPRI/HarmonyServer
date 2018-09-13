@@ -44,7 +44,7 @@ class widgetSVG {
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
 
@@ -677,7 +677,7 @@ class widgetSVG {
         };
 
         xhttp.open("POST","");
-        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
         xhttp.send(JSON.stringify(queryObject));         // send request to server
       }
     }
@@ -711,7 +711,7 @@ class widgetSVG {
         };
 
         xhttp.open("POST","");
-        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
         xhttp.send(JSON.stringify(queryObject));         // send request to server
       }
     }
@@ -741,7 +741,7 @@ class widgetSVG {
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
     else {
@@ -779,7 +779,7 @@ class widgetSVG {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -851,7 +851,7 @@ class widgetSVG {
             };
 
             xhttp.open("POST","");
-            const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+            const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
             xhttp.send(JSON.stringify(queryObject));         // send request to server
           }
           else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
@@ -884,7 +884,7 @@ class widgetSVG {
               };
 
               xhttp.open("POST","");
-              const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+              const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
               xhttp.send(JSON.stringify(queryObject));         // send request to server
             }
             else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
@@ -894,15 +894,9 @@ class widgetSVG {
           else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
             if (label.nodeID != null) { // If there is a node associated with this label
               const obj = {};
-              obj.from = {};
-              obj.from.id = this.mapID;
-              obj.to = {};
-              obj.to.id = label.nodeID;
-              obj.rel = {};
-              obj.rel.type = "MapNode";
-              obj.rel.merge = true;
-              obj.rel.properties = {};
-              obj.rel.properties.id = label.id;
+              obj.from = {"id":this.mapID};
+              obj.to = {"id":label.nodeID};
+              obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "merge":true};
 
               const xhttp = new XMLHttpRequest();
               const SVG = this;
@@ -915,7 +909,7 @@ class widgetSVG {
               };
 
               xhttp.open("POST","");
-              const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+              const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
               xhttp.send(JSON.stringify(queryObject));         // send request to server
             }
             else { // If there is no new relation, no need to do anything except call processNodes.
@@ -1032,7 +1026,7 @@ class widgetSVG {
   	};
 
   	xhttp.open("POST","");
-  	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+  	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
   	xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Meanwhile, save information from the details pane.

@@ -332,7 +332,7 @@ class regressionTesting {
       const xhttp = new XMLHttpRequest();
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj, "GUID": app.login.userGUID};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
 
   		// reset all variables to ensure same state every time "Clear All" is chosen

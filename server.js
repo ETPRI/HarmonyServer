@@ -139,12 +139,7 @@ startNeo4j();
 //const driver = new neo4j.driver("bolt://localhost:7687", neo4j.auth.driver("neo4j", "paleo3i"));
 //const driver = neo4j.v1.driver("bolt://localhost", neo4j.v1.auth.basic("neo4j", "paleo3i"));
 
-// Close the driver when application exits.
-// This closes all used network connections.
-// process.on('exit', (code) => {
-//   driver.close();
-//   console.log(`About to exit with code: ${code}`);
-// });
+let changeCount = 0;
 
 function startNeo4j() {
   console.log("Checking metadata...");
@@ -160,6 +155,7 @@ function startNeo4j() {
         fields.push(record._fields[1]);
       },
       onCompleted: function () {
+        console.log(`${nodes.length} node types found.`);
         for (let i = 0; i < nodes.length; i++) {
           getKeys(nodes[i], JSON.parse(fields[i]));
         }
@@ -213,6 +209,25 @@ function updateFields(node, fields) {
   session
     .run(query)
     .subscribe({
+      onCompleted: function () {
+        getChangeCount();
+        session.close();
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+  });
+}
+
+function getChangeCount() {
+  const session = driver.session();
+  let query = `match (n:M_ChangeLog) return coalesce(max(n.number), 0) as max`;
+  session
+    .run(query)
+    .subscribe({
+      onNext: function (record) {
+        changeCount = record._fields[0];
+      },
       onCompleted: function () {
         session.close();
       },
@@ -629,14 +644,6 @@ backup.restoreNodes = function(query, response) {
           session
             .run(steps)
             .subscribe({ // I don't think we need to return the data we're creating
-              // onNext: function (record) {
-              //   const obj={};
-              //   for (let i=0; i< record.length; i++) {
-              //     obj[record.keys[i]]=record._fields[i];
-              //   }
-              //   data.push(obj);
-              //   console.log("%s/n",JSON.stringify(obj));
-              // },
               onCompleted: function () { // get the number and type of node restored and return it using response.end
                 const obj = {};
                 obj.numNodes = data.length;
@@ -693,12 +700,6 @@ backup.restoreRels = function(query, response) {
               value = `${JSON.stringify(value)}`;
             }
 
-            // if (typeof value.low !== "undefined") {
-            //   value = JSON.stringify(value.low);
-            // }
-            // else if (typeof value !== "string") {
-            //   value = JSON.stringify(value);
-            // }
             rProperties += `${propName}: ${value}, `;
           }
           if (rProperties.length > 0) {
@@ -714,14 +715,6 @@ backup.restoreRels = function(query, response) {
           session
             .run(steps)
             .subscribe({ // I don't think we need to return the data we're creating
-              // onNext: function (record) {
-              //   const obj={};
-              //   for (let i=0; i< record.length; i++) {
-              //     obj[record.keys[i]]=record._fields[i];
-              //   }
-              //   data.push(obj);
-              //   console.log("%s/n",JSON.stringify(obj));
-              // },
               onCompleted: function () { // get the number and type of rel restored and return it using response.end
                 const obj = {};
                 obj.numRels = data.length;
@@ -759,35 +752,36 @@ let CRUD = {};
 
 CRUD.createNode = function(obj, response) {
   let dataObj = obj.query;
+  let number = ++changeCount;
+  const uuid = uuidv1();
+
   const strings = {ret:"", where:""}; // where won't be used here, but I'm including it for consistency
-  const node = buildSearchString(dataObj, strings, "where", "node");
+  const changeLogData = {"userGUID":obj.GUID, "itemGUID":uuid, "changeLogs":""}
+  const node = buildSearchString(dataObj, strings, "where", "node", changeLogData);
 
-  let command = "create";
-  let oncreate = `set node.M_GUID = '${uuidv1()}'`;
-  if (dataObj.merge === true) {
-    command = "merge";
-    oncreate = `on create set node.M_GUID = '${uuidv1()}'`;
+  if (strings.ret !== "") {
+    strings.ret = `return ${strings.ret}`;
   }
 
-  // return the node's GUID to compare it to the one that it would have been assigned
-  // (needed to tell whether a merge resulted in creation)
-  if (strings.ret === "") {
-    strings.ret = "return node.M_GUID as GUID"
-  }
-  else {
-    strings.ret = `return ${strings.ret}, node.M_GUID as GUID`;
-  }
+  const changeUUID = uuidv1();
+  let changeLogs = `(change0:M_ChangeLog {number:${number}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
+                     action:'create', label:'${dataObj.type}', M_GUID:'${changeUUID}'}), ${changeLogData.changeLogs}`;
+  changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
-  const query = `${command} (${node}) ${oncreate} ${strings.ret}`;
+  const query = `create (${node}), ${changeLogs} set node.M_GUID = '${uuid}' ${strings.ret}`;
+
+  console.log(query);
   sendQuery(query, response);
 }
 
 CRUD.deleteNode = function(obj, response) {
   let dataObj = obj.query;
+
   const strings = {ret:"", where:""};
   const node = buildSearchString(dataObj, strings, "where", "node");
 
-  const query = `match (${node}) detach delete node`;
+  const query = `match (${node}) with node, node.M_GUID as id detach delete node
+                 create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}'})`;
   sendQuery(query, response);
 }
 
@@ -800,37 +794,76 @@ CRUD.changeNode = function(obj, response) {
   // Build the string representing the changes - what comes after the SET keyword
   // dataObj.changes should be an array, each entry in which includes a property, a value and possibly a string boolean
   let changes ="";
-  if (dataObj.changes) { // Think about how to combine this with buildChangesString later - only difference is no "item" entry
-    for (let i = 0; i < dataObj.changes.length; i++) {
-      let value = `"${dataObj.changes[i].value}"`;
-      if (dataObj.changes[i].string === false) { // default is that the new value is a string, but can be overridden
-        value = `${dataObj.changes[i].value}`;
-      }
+  let changeLogData = {"userGUID":obj.GUID, changeLogs:""};
+  if (dataObj.changes) {
+    changes = buildChangesString(dataObj.changes, changeLogData);
+  }
 
-      if (changes == "") {
-        changes = `set node.${dataObj.changes[i].property} = ${value}`;
-      }
-      else changes += `, node.${dataObj.changes[i].property} = ${value}`;
-    }
+  let changeLogs = "";
+  if (changeLogData.changeLogs.length > 0) {
+    changeLogs = `with node create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
   }
 
   if (strings.ret != "") {
     strings.ret = `return ${strings.ret}`;
   }
 
-  let command = 'match';
-  let oncreate = "";
-  if (dataObj.merge === true) {
-    command = 'merge';
-    oncreate = `on create set node.M_GUID = '${uuidv1()}'`;
-  }
+  if (dataObj.node.merge === true) {
+    const session = driver.session();
+    var result = [];
 
-  const query = `${command} (${node}) ${strings.where} ${oncreate} ${changes} ${strings.ret}`;
-  sendQuery(query, response);
+    const query = `match (${node}) ${strings.where} return node`; // search for the node and return it; make no changes
+    session
+      .run(query)
+      .subscribe({
+        onNext: function (record) {
+          const obj={};
+          for (let i=0; i< record.length; i++) {
+            obj[record.keys[i]]=record._fields[i];
+          }
+          result.push(obj);
+          console.log("%s/n",JSON.stringify(obj));
+        },
+        onCompleted: function () {
+          if (result.length > 0) { // if the node was found, make any changes and return it
+            const query2 = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret}`
+            sendQuery(query2, response);
+            session.close();
+          }
+
+          // if the node was not found, move any changes into the node.properties object and pass the node object it to createNode.
+          else {
+            if (!(dataObj.node.properties)) {
+              dataObj.node.properties = {};
+            }
+
+            // the changes array in this case will include "property" and "value"
+            if (obj.changes) {
+              for (let i = 0; i < obj.changes.length; i++) {
+                dataObj.node.properties[obj.changes[i].property] = obj.changes[i].value;
+              }
+            }
+
+            const query2 = {"query":dataObj.node, "GUID":obj.GUID};
+            CRUD.createNode(query2, response);
+            session.close();
+          }
+        },
+        onError: function (error) {
+          console.log(error);
+        }
+      });
+  } // end if (merging)
+
+  else {
+    const query = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret}`;
+    sendQuery(query, response);
+  }
 }
 
 CRUD.createRelation = function(obj, response) {
   let dataObj = obj.query;
+  let number = ++changeCount;
   const strings = {ret:"", where:""};
 
   // Build the string representing the "from" node - what goes in the first set of parentheses
@@ -851,22 +884,25 @@ CRUD.createRelation = function(obj, response) {
     to = buildSearchString({}, strings, "where", "to");
   }
 
-  // Build the string representing the relation - what goes in the brackets
+  // Build the string representing the relation - what goes in the brackets. This gets created, not found,
+  // so include changeLog data to record setting each attribute.
+  let uuid = uuidv1();
+  const changeLogData = {"userGUID":obj.GUID, "itemGUID":uuid, "changeLogs":""}
+
   let rel = "";
   if (dataObj.rel) {
-    rel = buildSearchString(dataObj.rel, strings, "where", "rel");
+    rel = buildSearchString(dataObj.rel, strings, "where", "rel", changeLogData);
   }
   else {
-    rel = buildSearchString({}, strings, "where", "rel");
+    rel = buildSearchString({}, strings, "where", "rel"); // if there's no rel object, there are no attributes to set - no need for changeLogData
   }
 
-  let command = "create";
-  let oncreate = `set rel.M_GUID = '${uuidv1()}'`;
-
-  if (dataObj.rel && dataObj.rel.merge === true) {
-    command = "merge";
-    oncreate = `on create set rel.M_GUID = '${uuidv1()}'`;
-  }
+  // finish the string to generate changeLogs
+  const changeUUID = uuidv1();
+  let changeLogs = `(change0:M_ChangeLog {number:${number}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
+                     to_GUID:to.M_GUID, from_GUID:from.M_GUID, label:'${dataObj.rel.type}',
+                     action:'create', M_GUID:'${changeUUID}'}), ${changeLogData.changeLogs}`;
+  changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
   if (strings.ret != "" && dataObj.distinct) {
     strings.ret = `return distinct ${strings.ret}`;
@@ -875,7 +911,8 @@ CRUD.createRelation = function(obj, response) {
     strings.ret = `return ${strings.ret}`;
   }
 
-  const query = `match (${from}), (${to}) ${strings.where} ${command} (from)-[${rel}]->(to) ${oncreate} ${strings.ret}`;
+  const query = `match (${from}), (${to}) ${strings.where}
+                 create (from)-[${rel}]->(to), ${changeLogs} set rel.M_GUID = '${uuid}' ${strings.ret}`;
   sendQuery(query, response);
 }
 
@@ -918,7 +955,9 @@ CRUD.deleteRelation = function(obj, response) {
     strings.ret = `return ${strings.ret}`;
   }
 
-  const query = `match (${from})-[${rel}]->(${to}) ${strings.where} delete rel ${strings.ret}`;
+  const query = `match (${from})-[${rel}]->(${to}) ${strings.where} with to, from, rel, rel.M_GUID as id
+                 delete rel create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}'})
+                 ${strings.ret}`;
   sendQuery(query, response);
 }
 
@@ -955,9 +994,16 @@ CRUD.changeRelation = function(obj, response) {
   }
 
   // Build the string representing the changes - what comes after the SET keyword
-  let changes = "";
+  // dataObj.changes should be an array, each entry in which includes an item, a property, a value and possibly a string boolean
+  let changes ="";
+  let changeLogData = {"userGUID":obj.GUID, changeLogs:""};
   if (dataObj.changes) {
-   changes = buildChangesString(dataObj.changes);
+    changes = buildChangesString(dataObj.changes, changeLogData);
+  }
+
+  let changeLogs = "";
+  if (changeLogData.changeLogs.length > 0) {
+    changeLogs = `with from, rel, to create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
   }
 
   if (strings.ret != "" && dataObj.distinct) {
@@ -967,16 +1013,47 @@ CRUD.changeRelation = function(obj, response) {
     strings.ret = `return ${strings.ret}`;
   }
 
-  let command = 'match';
-  let oncreate = "";
-
+  // Simulate merging without using the MERGE keyword
   if (dataObj.rel.merge === true) {
-    command = 'merge';
-    oncreate = `on create set rel.M_GUID = '${uuidv1()}'`;
-  }
+    const session = driver.session();
+    var result = [];
 
-  const query = `match (${from}), (${to}) ${strings.nodesWhere} ${command} (from)-[${rel}]->(to) ${strings.relWhere} ${oncreate} ${changes} ${strings.ret}`;
-  sendQuery(query, response);
+    // start by trying to match the whole pattern, as if not merging, but don't make any changes yet
+    const query = `match (${from}), (${to}) ${strings.nodesWhere}
+                   match (from)-[${rel}]->(to) ${strings.relWhere}
+                   return rel`;
+
+    session
+      .run(query)
+      .subscribe({
+        onNext: function (record) {
+          const obj={};
+          for (let i=0; i< record.length; i++) {
+            obj[record.keys[i]]=record._fields[i];
+          }
+          result.push(obj);
+          console.log("%s/n",JSON.stringify(obj));
+        },
+        onCompleted: function () {
+          // if the pattern was found, remove the merge flag (since no creation is needed) and call changeRelation again
+          if (result.length > 0) {
+            dataObj.rel.merge = false;
+            CRUD.changeRelation(obj,response); // obj contains dataObj and should be updated as dataObj changes
+          }
+          else { // if the pattern was not found, look for the nodes. Passing in the search strings will make it easier.
+            findNodesForMerge(from, to, strings.nodesWhere, obj, response);
+          }
+        },
+        onError: function (error) {
+          console.log(error);
+        }
+      });
+  } // end if (merging)
+
+  else {
+    const query = `match (${from}), (${to}) ${strings.nodesWhere} match (from)-[${rel}]->(to) ${strings.relWhere} ${changes} ${changeLogs} ${strings.ret}`;
+    sendQuery(query, response);
+  }
 }
 
 CRUD.findOptionalRelation = function(obj, response) {
@@ -985,7 +1062,7 @@ CRUD.findOptionalRelation = function(obj, response) {
   // Need TWO where clauses - one for the required node, one for the optional node and relation
   const strings = {ret:"", reqWhere:"", optWhere:""};
 
-  // Build the string representing the "from" node - what goes in the first set of parentheses
+  // Build the string representing the "required" node - what goes in the first set of parentheses
   let required = "";
   if (dataObj.required) {
     required = buildSearchString(dataObj.required, strings, "reqWhere", "required");
@@ -994,7 +1071,7 @@ CRUD.findOptionalRelation = function(obj, response) {
     required = buildSearchString({}, strings, "reqWhere", "required");
   }
 
-  // Build the string representing the "to" node - what goes in the second set of parentheses
+  // Build the string representing the "optional" node - what goes in the second set of parentheses
   let optional = "";
   if (dataObj.optional) {
     optional = buildSearchString(dataObj.optional, strings, "optWhere", "optional");
@@ -1013,9 +1090,16 @@ CRUD.findOptionalRelation = function(obj, response) {
   }
 
   // Build the string representing the changes - what comes after the SET keyword
-  let changes = "";
+  // dataObj.changes should be an array, each entry in which includes an item, a property, a value and possibly a string boolean
+  let changes ="";
+  let changeLogData = {"userGUID":obj.GUID, changeLogs:""};
   if (dataObj.changes) {
-   changes = buildChangesString(dataObj.changes);
+    changes = buildChangesString(dataObj.changes, changeLogData);
+  }
+
+  let changeLogs = "";
+  if (changeLogData.changeLogs.length > 0) {
+    changeLogs = `with required, rel, optional create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
   }
 
   // default is that the relation starts on the required node, but if the direction is specified, it can go backward
@@ -1027,7 +1111,8 @@ CRUD.findOptionalRelation = function(obj, response) {
   strings.ret = `return ${strings.ret}`;
 
   const query = `match (${required}) ${strings.reqWhere}
-                 optional match (required)${arrow}(${optional}) ${strings.optWhere} ${changes} ${strings.ret}`;
+                 optional match (required)${arrow}(${optional}) ${strings.optWhere}
+                 ${changes} ${changeLogs} ${strings.ret}`;
   sendQuery(query, response);
 }
 
@@ -1080,10 +1165,18 @@ CRUD.changeTwoRelPattern = function(obj, response) {
     rel2 = buildSearchString({}, strings, "where", "rel2");
   }
 
+
   // Build the string representing the changes - what comes after the SET keyword
-  let changes = "";
+  // dataObj.changes should be an array, each entry in which includes an item, a property, a value and possibly a string boolean
+  let changes ="";
+  let changeLogData = {"userGUID":obj.GUID, changeLogs:""};
   if (dataObj.changes) {
-   changes = buildChangesString(dataObj.changes);
+    changes = buildChangesString(dataObj.changes, changeLogData);
+  }
+
+  let changeLogs = "";
+  if (changeLogData.changeLogs.length > 0) {
+    changeLogs = `with start, middle, end, rel1, rel2 create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
   }
 
   if (strings.ret != "" && dataObj.distinct) {
@@ -1093,13 +1186,14 @@ CRUD.changeTwoRelPattern = function(obj, response) {
     strings.ret = `return ${strings.ret}`;
   }
 
-  const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where} ${changes} ${strings.ret}`;
+  const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where}
+                 ${changes} ${changeLogs} ${strings.ret}`;
   sendQuery(query, response);
 }
 
 CRUD.tableNodeSearch = function(obj, response) {
   let dataObj = obj.query;
-  let ID = obj.ID;
+  let GUID = obj.GUID;
 
   // Example search string:
   // match (n:type) where n.numField < value and n.stringField =~(?i)value
@@ -1110,7 +1204,7 @@ CRUD.tableNodeSearch = function(obj, response) {
   // Regexes apparently have to be in a where clause, not in curly braces, so for simplicity, put all criteria in where clause.
 
   // Build the where clause, starting with requirement that current user has not trashed this node
-  let where = `where ID(a)=${ID} and not (a)-[:Trash]->(${dataObj.name}) and `;
+  let where = `where a.M_GUID='${GUID}' and not (a)-[:Trash]->(${dataObj.name}) and `;
 
   for (let field in dataObj.where) {
     if (dataObj.where[field].fieldType == "string") {
@@ -1218,46 +1312,24 @@ CRUD.tableNodeSearch = function(obj, response) {
   sendQuery(query, response);
 }
 
-CRUD.addNodeToView = function(obj, response) {
-  let dataObj = obj.query;
-  let ID = obj.ID;
-  let attributeString = "";
-  for (let attribute in dataObj.attributes) {
-    attributeString += `${attribute}: "${dataObj.attributes[attribute]}", `;
-  }
-
-  // if any attributes were found, the string needs to have the last ", " removed, and it needs to be enclosed in curly braces.
-  if (attributeString.length > 0) {
-    attributeString = ` {${attributeString.slice(0, -2)}}`;
-  }
-
-  const query = `match (per), (start), (end)
-               where ID(per) = ${ID} and ID(start) = ${dataObj.startID} and ID(end)=${dataObj.endID}
-               merge (per)-[r1:Owner]->(view:M_View {direction:"start"})-[r2:Subject]->(start) on create set r1.M_GUID = '${uuidv1()}', view.M_GUID = '${uuidv1()}', r2.M_GUID = '${uuidv1()}'
-               merge (view)-[endLink:Link${attributeString}]->(end) on create set endLink.M_GUID = '${uuidv1()}'
-               merge (per)-[r3:Owner]->(view2:M_View {direction:"end"})-[r4:Subject]->(end) on create set r3.M_GUID = '${uuidv1()}', view2.M_GUID = '${uuidv1()}', r4.M_GUID = '${uuidv1()}'
-               merge (view2)-[startLink:Link${attributeString}]->(start) on create set startLink.M_GUID = '${uuidv1()}'
-               return ${dataObj.relation} as link`;
-  sendQuery(query, response);
-}
-
 CRUD.getMetaData = function(obj, response) {
   let queryName = obj.query;
-  let ID = obj.ID;
+  let GUID = obj.GUID;
 
   const metadataQueries = {
     nodes: "MATCH (n) unwind labels(n) as L RETURN  distinct L, count(L) as count"
     ,keysNode: "MATCH (p) unwind keys(p) as key RETURN  distinct key, labels(p) as label,  count(key) as count  order by key"
     ,relations: "MATCH (a)-[r]->(b) return distinct labels(a), type(r), labels(b), count(r) as count  order by type(r)"
     ,keysRelation: "match ()-[r]->() unwind keys(r) as key return distinct key, type(r), count(key) as count"
-    ,myTrash: `match (user)-[rel:Trash]->(node) where ID(user)=${ID} return id(node) as id, node.name as name, labels(node) as labels, rel.reason as reason, node`
+    ,myTrash: `match (user)-[rel:Trash]->(node) where user.M_GUID = '${GUID}' return id(node) as id, node.name as name, labels(node) as labels, rel.reason as reason, node`
     ,allTrash: `match ()-[rel:Trash]->(node) return ID(node) as id, node.name as name, count(rel) as count`
   }
 
   sendQuery(metadataQueries[queryName], response);
 }
 
-function buildSearchString(obj, strings, whereString, defaultName) {
+// changeLogData includes: userGUID, itemGUID, changeLogs
+function buildSearchString(obj, strings, whereString, defaultName, changeLogData) {
   let string = defaultName;
 
   if (!(obj.return && obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
@@ -1275,10 +1347,16 @@ function buildSearchString(obj, strings, whereString, defaultName) {
     string += `:${obj.type}`;
   }
 
-  if (obj.properties) {
+  if (obj.properties) { // If any properties were specified...
     let props = "";
-    for (let prop in obj.properties) {
-      if (props == "") {
+    for (let prop in obj.properties) { // go through all of them...
+      // add to the changeLog string if necessary...
+      if (changeLogData) {
+        changeLogData.changeLogs += `(change${changeCount++}:M_ChangeLog {number:${changeCount},
+                                     item_GUID:'${changeLogData.itemGUID}', user_GUID:'${changeLogData.userGUID}',
+                                     action:'change', attribute:'${prop}', value:'${obj.properties[prop]}', M_GUID:'${uuidv1()}'}), `;
+      }
+      if (props == "") { // and add each one to the props string.
         props = `${prop}: "${obj.properties[prop]}"`;
       }
       else props += `, ${prop}: "${obj.properties[prop]}"`;
@@ -1296,18 +1374,29 @@ function buildSearchString(obj, strings, whereString, defaultName) {
   return string;
 }
 
-function buildChangesString(changeArray) {
+// changeLogData includes: userGUID, changeLogs
+function buildChangesString(changeArray, changeLogData) {
   let changes = "";
-  for (let i = 0; i < changeArray.length; i++) {
-    let value = `"${changeArray[i].value}"`;
+  let item = "node"; // default, for changeNode
+  for (let i = 0; i < changeArray.length; i++) { // go through all changes...
+
+    let value = `"${changeArray[i].value}"`; // set the value of the attribute...
     if (changeArray[i].string === false) { // default is that the new value is a string, but can be overridden
       value = `${changeArray[i].value}`;
     }
+    if (changeArray[i].item) {
+      item = changeArray[i].item;
+    }
+
+    // add to the changeLog string
+    changeLogData.changeLogs += `(change${changeCount++}:M_ChangeLog {number:${changeCount},
+                                 item_GUID:${item}.M_GUID, user_GUID:'${changeLogData.userGUID}', M_GUID:'${uuidv1()}',
+                                 action:'change', attribute:'${changeArray[i].property}', value:'${value}'}), `;
 
     if (changes == "") {
-      changes = `set ${changeArray[i].item}.${changeArray[i].property} = ${value}`;
+      changes = `set ${item}.${changeArray[i].property} = ${value}`; // add to the string that implements changes
     }
-    else changes += `,${changeArray[i].item}.${changeArray[i].property} = ${value}`;
+    else changes += `,${item}.${changeArray[i].property} = ${value}`;
   }
   return changes;
 }
@@ -1375,6 +1464,70 @@ function sendQuery(query, response) {
     });
   }
 
+function findNodesForMerge(from, to, where, obj, response) {
+  // search for the nodes that the relation should be merged between. Make any changes to the nodes. Return them (just to prove something was there).
+  const dataObj = obj.query;
+  const nodeChanges = [];
+
+  if (dataObj.changes) { // If any changes were requested...
+    if (!dataObj.rel.properties) {
+      dataObj.rel.properties = {}; // make sure there is a properties object...
+    }
+
+    for (let i = 0; i < dataObj.changes.length; i++) {
+      if (dataObj.changes[i].item === "rel") { // move relation changes into properties object...
+        dataObj.rel.properties[dataObj.changes[i].property] = dataObj.changes[i].value;
+      }
+      else { // and get ready to make changes to the nodes.
+        nodeChanges.push(dataObj.changes[i]);
+      }
+    }
+  }
+
+  // build the string to make changes and the strings to create changeLogs
+  let changes ="";
+  let changeLogData = {"userGUID":obj.GUID, changeLogs:""};
+  if (nodeChanges.length > 0) {
+   changes = buildChangesString(nodeChanges, changeLogData);
+  }
+
+  let changeLogs = "";
+  if (changeLogData.changeLogs.length > 0) {
+    changeLogs = `with from, to create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
+  }
+
+  const query = `match (${from}), (${to}) ${where} ${changes} ${changeLogs} return from, to`;
+
+  const session = driver.session();
+  var result = [];
+
+  session
+    .run(query)
+    .subscribe({
+      onNext: function (record) {
+        const obj={};
+        for (let i=0; i< record.length; i++) {
+          obj[record.keys[i]]=record._fields[i];
+        }
+        result.push(obj);
+        console.log("%s/n",JSON.stringify(obj));
+      },
+      onCompleted: function () {
+        // If the start and end nodes were found, they have already had any changes applied - just call createRelation.
+        if (result.length > 0) {
+          CRUD.createRelation(obj, response);
+          session.close();
+        }
+        else { // If the nodes don't exist, just return the empty array that was received from the node search
+          response.end(JSON.stringify(result));
+          session.close();
+        }
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+    });
+}
 
 //--------------Helper functions---------------------------------------------
 

@@ -44,7 +44,7 @@ class widgetTableNodes {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "ID": app.login.userID};
+    const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -511,7 +511,7 @@ class widgetTableNodes {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -532,7 +532,7 @@ class widgetTableNodes {
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
 
@@ -594,7 +594,7 @@ class widgetTableNodes {
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
   }
@@ -625,7 +625,7 @@ class widgetTableNodes {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes

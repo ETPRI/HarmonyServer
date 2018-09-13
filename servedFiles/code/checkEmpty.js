@@ -18,7 +18,7 @@ class checkEmpty {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 

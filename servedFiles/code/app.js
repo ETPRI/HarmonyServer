@@ -57,8 +57,7 @@ buildApp() {
 
 checkMetaData() {
 	const obj = {};
-	obj.node = {};
-	obj.node.type = "M_MetaData";
+	obj.node = {"type":"M_MetaData"};
 
 	const xhttp = new XMLHttpRequest();
 	const appObj = this;
@@ -71,7 +70,7 @@ checkMetaData() {
 	};
 
 	xhttp.open("POST","");
-	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
 	xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -79,10 +78,7 @@ addMetaData(data) {
 	if (!data || data.length == 0) { // If no metadata nodes were found, add them.
 		let type;
 		for (type in this.metaData.node) {
-			const obj = {};
-			obj.type = "M_MetaData";
-			obj.properties = {};
-			obj.properties.name = type;
+			const obj = {"type":"M_MetaData", "properties":{"name":type}};
 			obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
 			obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
 			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
@@ -92,7 +88,7 @@ addMetaData(data) {
 			const xhttp = new XMLHttpRequest();
 
 	    xhttp.open("POST","");
-			const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+			const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
 			xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 	}
@@ -336,7 +332,6 @@ createDebug() {
 	}
 }
 
-
 // Runs when an item is chosen from the menu dropdown, or the New button is clicked.
 // Creates a table of whatever type of node is selected on the dropdown (nothing happens if the placeholder is selected).
 menuNodes(control) {
@@ -371,17 +366,12 @@ menuDBstats(dropDown){
 presetCalendars() {
 	// At the moment the only preset calendar is a dummy calendar that doesn't show events. This will change.
 	const obj = {};
-	obj.type = "calendar";
-	obj.properties = {};
-	obj.properties.name = "dummy";
-	obj.properties.description = "dummy calendar";
-	obj.return = false;
-	obj.merge = true;
+	obj.node = {"type":"calendar", "properties":{"name":"dummy", "description":"dummy calendar"}, "merge":true, "return":false};
 
 	const xhttp = new XMLHttpRequest();
 
 	xhttp.open("POST","");
-	const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
 	xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 

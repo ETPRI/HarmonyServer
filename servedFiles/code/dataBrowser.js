@@ -77,7 +77,7 @@ class dataBrowser {
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
   }
@@ -103,7 +103,7 @@ class dataBrowser {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -374,7 +374,7 @@ class dataBrowser {
         };
 
         xhttp.open("POST","");
-        const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+        const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
         xhttp.send(JSON.stringify(queryObject));         // send request to server
       }
     }

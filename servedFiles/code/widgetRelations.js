@@ -65,7 +65,7 @@ refresh() {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
   else this.findLinks();
@@ -96,7 +96,7 @@ findLinks(data) { // data should include the view found by the previous function
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -472,7 +472,7 @@ saveSync(button) {
 // Then calls the appropriate function - deleteNode(), addNode(), replaceNode(), modifyNode(), or processNext()
 // to skip a row that doesn't need to change the DB. (All other functions this can call eventually call processNext() again).
 processNext(data, rows, prevFunction) {
-  // The only processing function that returns data is addNode, which returns a relation. Check for existence of data[0] to distinguish from an empty array, which deletion returns
+  // The only processing function that returns data is addNode, which returns a relation.
   // If processNext gets data, it is the relation from an addNode call. Extract the GUID and add it to the order array.
   if (prevFunction == "add") {
     const id = data[0].link.properties.M_GUID;
@@ -545,7 +545,7 @@ processNext(data, rows, prevFunction) {
   	};
 
   	xhttp.open("POST","");
-  	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+  	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
   	xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     this.placeholders = [];
@@ -553,9 +553,7 @@ processNext(data, rows, prevFunction) {
   }
 }
 
-// Delete the relation represented by the given row from the DB. Also, delete the same relation
-// in the user's view of the OTHER node (e.g., if I think Alex is related to Amy, then I also think
-// Amy is related to Alex. If I delete one of those relations, I need to delete the other too).
+// Delete the relation represented by the given row from the DB.
 // Then call processNext() on the array of remaining rows.
 deleteNode(row, rows) {
   // Get the ID of the relation to delete
@@ -572,12 +570,8 @@ deleteNode(row, rows) {
   // ("user" is the user, "node" is the other node, "this" is this node, and "view" is the user's view of the other node.)
   // Then call processNext() to do the next row.
   const obj = {};
-  obj.to = {};
-  obj.to.name = "node";
-  obj.rel = {};
-  obj.rel.properties = {};
-  obj.rel.properties.M_GUID = id;
-  obj.rel.return = false;
+  obj.to = {"name":"node"};
+  obj.rel = {"properties":{"M_GUID":id}, "return":false};
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
@@ -585,86 +579,12 @@ deleteNode(row, rows) {
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      relation.findReverse(data, rows, comment);
+      relation.processNext(null, rows);
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
-}
-
-findReverse(data, rows, comment) {
-  // Get the type of the other relation to delete - it will be the "mirror image" of this one
-  let otherRelType;
-  switch (this.relationType) {
-    case "start": otherRelType = "end"; break;
-    case "end":   otherRelType = "start"; break;
-    case "peer":  otherRelType = "peer"; break;
-  }
-
-  const nodeID = data[0].node.id;
-  const obj = {};
-  obj.start = {};
-  obj.start.id = this.viewID;
-  obj.start.return = false;
-  obj.middle = {};
-  obj.middle.name = "view";
-  obj.middle.type = "M_View";
-  obj.middle.properties = {};
-  obj.middle.properties.direction = otherRelType;
-  obj.end = {};
-  obj.end.id = nodeID;
-  obj.end.return = false;
-  obj.rel1 = {};
-  obj.rel1.type = "Owner";
-  obj.rel1.return = false;
-  obj.rel2 = {};
-  obj.rel2.type = "Subject";
-  obj.rel2.return = false;
-
-  const xhttp = new XMLHttpRequest();
-  const relation = this;
-
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      relation.deleteReverse(data, rows, comment);
-    }
-  };
-
-  xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
-}
-
-deleteReverse(data, rows, comment) {
-  const viewID = data[0].view.id;
-  const obj = {};
-  obj.from = {};
-  obj.from.id = viewID;
-  obj.from.return = false;
-  obj.to = {};
-  obj.to.id = this.nodeID;
-  obj.to.return = false;
-  obj.rel = {};
-  obj.rel.type = "Link";
-  obj.rel.properties = {};
-  obj.rel.properties.comment = comment;
-  obj.rel.return = false;
-
-  const xhttp = new XMLHttpRequest();
-  const relation = this;
-
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      relation.processNext(data, rows);
-    }
-  };
-
-  xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -686,20 +606,13 @@ modifyNode (row, rows) {
   // Get the ID of the relation to update and the new comment to include
   const cells = row.children;
   const idCell = cells[1];
-  const id = idCell.textContent;
+  const GUID = idCell.textContent;
   const commentCell = cells[5];
   const comment = commentCell.textContent;
 
   const obj = {};
-  obj.rel = {};
-  obj.rel.id = id;
-  obj.rel.return = false;
-  obj.changes = [];
-  const change = {};
-  change.item = "rel";
-  change.property = "comment";
-  change.value = app.stringEscape(comment);
-  obj.changes.push(change);
+  obj.rel = {"properties":{"M_GUID":GUID}, "return":false};
+  obj.changes = [{"item":"rel", "property":"comment", "value":app.stringEscape(comment)}];
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
@@ -712,7 +625,7 @@ modifyNode (row, rows) {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -722,6 +635,39 @@ modifyNode (row, rows) {
 // at, you see the relation). If no other node was specified, a placeholder relation is added to the
 // original node. NOTE: The section on placeholders needs work.
 addNode(row, rows) {
+  // Start the query by searching for this user's view of this node.
+  const obj = {};
+  obj.start = {"id":app.login.userID, "return":false};
+  obj.rel1 = {"type":"Owner", "return":false};
+  obj.middle = {"type":"M_View", "properties":{"direction":this.relationType}};
+  obj.rel2 = {"type":"Subject", "return":false};
+  obj.end = {"id":this.nodeID, "return":false};
+
+  const xhttp = new XMLHttpRequest();
+  const relationObj = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      if (data.length > 0) {
+        relationObj.createLink(data[0].middle.id, row, rows);
+      }
+      else {
+        relationObj.createView(row, rows);
+      }
+    }
+  };
+
+  xhttp.open("POST","");
+  const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
+  xhttp.send(JSON.stringify(queryObject));         // send request to server
+}
+
+// Create the link to the other node (at this point, the view exists and is linked to the owner and subject)
+createLink(ID, row, rows) {
+  let attributes = {};
+  let otherNodeID;
+
   // Get the list of attributes of the relation (currently, just a comment, but could change)
   const widgetID = app.domFunctions.widgetGetId(row);
   const widget = document.getElementById(widgetID);
@@ -732,51 +678,49 @@ addNode(row, rows) {
   const relIDcell = cells[1];
   const relID = relIDcell.textContent;
   const nodeIDcell = cells[2];
-  let otherNodeID;
-  let attributes = {};
 
   // Get the ID of the other node, if one was specified. Now that placeholders are not stored as links, this should ALWAYS HAPPEN.
   if (nodeIDcell.textContent != "") {
     otherNodeID = nodeIDcell.textContent;
-  }
 
-  // Build a string of attributes for the relation. Each attribute takes the form name:value.
-  // Start at i = 5 because the first 5 columns describe the node or are auto-generated - they aren't attributes of the relation.
-  // Stop at headers.length-1 because the last cell just holds the delete button.
-  for (let i = 5; i < headers.length-1; i++) {
-    const text = cells[i].textContent;
-    if (text != "") {
-      attributes[headers[i].textContent.toLowerCase()] = app.stringEscape(text);
+    // Build a string of attributes for the relation. Each attribute takes the form name:value.
+    // Start at i = 5 because the first 5 columns describe the node or are auto-generated - they aren't attributes of the relation.
+    // Stop at headers.length-1 because the last cell just holds the delete button.
+    for (let i = 5; i < headers.length-1; i++) {
+      const text = cells[i].textContent;
+      if (text != "") {
+        attributes[headers[i].textContent.toLowerCase()] = app.stringEscape(text);
+      }
     }
+
+    const obj = {};
+    obj.from = {"id":ID};
+    obj.rel = {"type":"Link", "properties":attributes, "name":"link"};
+    obj.to = {"id":otherNodeID};
+
+    const xhttp = new XMLHttpRequest();
+    const relationObj = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        relationObj.processNext(data, rows, "add");
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+
+  } // end if (there is an ID for the other node)
+  else { // this should never happen, but just in case, if there's no other node ID, just call processNext.
+    this.processNext(null, rows);
   }
+}
 
-  // Get the IDs of the start and end nodes for the relation
-  let startID;
-  let endID;
-  let relation;
-  switch (this.relationType) {
-    case "start":
-      startID = this.nodeID;
-      endID = otherNodeID;
-      relation = "endLink";
-      break;
-    case "end":
-      startID = otherNodeID;
-      endID = this.nodeID;
-      relation = "startLink";
-      break;
-    case "peer": // Not yet implemented
-      break;
-  }
-
-  // Write the actual query: find the person whose view this is and the start and end nodes.
-  // Then add the relation to the person's view of each node.
-
-  const obj = {};
-  obj.startID = startID;
-  obj.endID = endID;
-  obj.attributes = attributes;
-  obj.relation = relation;
+// Create the user's view of the node
+createView(row, rows) {
+  const obj = {"type":"M_View", "properties":{"direction":this.relationType}};
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
@@ -784,13 +728,56 @@ addNode(row, rows) {
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      relationObj.processNext(data, rows, "add");
+      relationObj.createOwner(data[0].node.id, row, rows);
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "addNodeToView", "ID": app.login.userID, "query": obj};
+  const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
+}
+
+// Create the Owner and Subject relations for a new View node, then call createLink to add the Link relation.
+createOwner(ID, row, rows) {
+  const ownerObj = {};
+  ownerObj.from = {"id":app.login.userID};
+  ownerObj.rel = {"type":"Owner"};
+  ownerObj.to = {"id":ID};
+
+  const xhttp = new XMLHttpRequest();
+  const relationObj = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relationObj.createSubject(ID, row, rows);
+    }
+  };
+
+  xhttp.open("POST","");
+  const ownerQueryObject = {"server": "CRUD", "function": "createRelation", "query": ownerObj, "GUID": app.login.userGUID};
+  xhttp.send(JSON.stringify(ownerQueryObject));         // send request to server
+}
+
+createSubject(ID, row, rows) {
+  const subjectObj = {};
+  subjectObj.from = {"id":ID};
+  subjectObj.rel = {"type":"Subject"};
+  subjectObj.to = {"id":this.nodeID};
+
+  const xhttp = new XMLHttpRequest();
+  const relationObj = this;
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      const data = JSON.parse(this.responseText);
+      relationObj.createLink(ID, row, rows);
+    }
+  };
+
+  xhttp.open("POST","");
+  const subjectQueryObject = {"server": "CRUD", "function": "createRelation", "query": subjectObj, "GUID": app.login.userGUID};
+  xhttp.send(JSON.stringify(subjectQueryObject));         // send request to server
 }
 
 // Fires when a row from any relations table - whether it's the fully interactive table for a logged-in user,

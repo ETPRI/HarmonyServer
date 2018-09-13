@@ -57,7 +57,7 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -305,7 +305,7 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // log click
@@ -438,7 +438,7 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Log click
@@ -475,7 +475,7 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -502,7 +502,7 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 

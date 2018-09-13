@@ -30,7 +30,7 @@ constructor (nameQueryObject, id) {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "getMetaData", "ID": app.login.userID, "query": nameQueryObject};
+  const queryObject = {"server": "CRUD", "function": "getMetaData", "query": nameQueryObject, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -221,7 +221,7 @@ showReasons(element) {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 

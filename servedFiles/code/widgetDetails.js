@@ -62,7 +62,7 @@ constructor(label, container, id, name, callerID) { // Label: the type of node d
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
     else { // If no ID was passed in
@@ -211,36 +211,17 @@ popupOK(button) {
 
   // create or update link
   const obj = {};
-  obj.from = {};
-  obj.from.id = app.login.userID;
-  obj.rel = {};
-  obj.rel.type = "Settings";
-  obj.rel.merge = true;
-  obj.to = {};
-  obj.to.type = "M_MetaData";
-  obj.to.properties = {};
-  obj.to.properties.name = this.queryObjectName;
-  obj.changes = [];
-  const fields = {};
-  fields.item = 'rel';
-  fields.property = "fields";
-  fields.value = app.stringEscape(JSON.stringify(this.fields));
-  obj.changes.push(fields);
-  const fieldsDisplayed = {};
-  fieldsDisplayed.item = 'rel';
-  fieldsDisplayed.property = "fieldsDisplayed";
-  fieldsDisplayed.value = app.stringEscape(JSON.stringify(this.fieldsDisplayed));
-  obj.changes.push(fieldsDisplayed);
-  const formFieldsDisplayed = {};
-  formFieldsDisplayed.item = 'rel';
-  formFieldsDisplayed.property = "formFieldsDisplayed";
-  formFieldsDisplayed.value = app.stringEscape(JSON.stringify(this.formFieldsDisplayed));
-  obj.changes.push(formFieldsDisplayed);
+  obj.from = {"id":app.login.userID};
+  obj.rel = {"type":"Settings", "merge":true};
+  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+  obj.changes = [{"item":"rel", "property":"fields", "value":app.stringEscape(JSON.stringify(this.fields))},
+                 {"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
+                 {"item":"rel", "property":"formFieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
   const xhttp = new XMLHttpRequest();
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 
   // close popup
@@ -463,18 +444,9 @@ trashNode() {
   reasonInp.setAttribute("class",""); // remove changedData class from reason
 
   const obj = {};
-  obj.from = {};
-  obj.from.id = user;
-  obj.from.return = false;
-  obj.to = {};
-  obj.to.id = node;
-  obj.to.return = false;
-  obj.rel = {};
-  obj.rel.type = "Trash";
-  obj.rel.merge = true;
-  obj.rel.properties = {};
-  obj.rel.properties.reason = app.stringEscape(reason);
-  obj.rel.return = false;
+  obj.from = {"id":user, "return":false};
+  obj.to = {"id":node, "return":false};
+  obj.rel = {"type":"Trash", "merge":true, "properties":{"reason":app.stringEscape(reason)}, "return":false};
 
   const xhttp = new XMLHttpRequest();
   const details = this;
@@ -487,7 +459,7 @@ trashNode() {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -500,21 +472,10 @@ updateReason() {
   reasonInp.setAttribute("class","");
 
   const obj = {};
-  obj.from = {};
-  obj.from.id = user;
-  obj.from.return = false;
-  obj.to = {};
-  obj.to.id = node;
-  obj.to.return = false;
-  obj.rel = {};
-  obj.rel.type = "Trash";
-  obj.rel.return = false;
-  obj.changes = [];
-  const change = {};
-  change.item = "rel";
-  change.property = "reason";
-  change.value = app.stringEscape(reason);
-  obj.changes.push(change);
+  obj.from = {"id":user, "return":false};
+  obj.to = {"id":node, "return":false};
+  obj.rel = {"type":"Trash", "return":false};
+  obj.changes = [{"item":"rel", "property":"reason", "value":app.stringEscape(reason)}];
 
   const xhttp = new XMLHttpRequest();
   const details = this;
@@ -527,7 +488,7 @@ updateReason() {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -537,15 +498,9 @@ untrashNode() {
   const node = this.id;
 
   const obj = {};
-  obj.from = {};
-  obj.from.id = user;
-  obj.from.return = false;
-  obj.to = {};
-  obj.to.id = node;
-  obj.to.return = false;
-  obj.rel = {};
-  obj.rel.type = "Trash";
-  obj.rel.return = false;
+  obj.from = {"id":user, "return":false};
+  obj.to = {"id":node, "return":false};
+  obj.rel = {"type":"Trash", "return":false};
 
   const xhttp = new XMLHttpRequest();
   const details = this;
@@ -558,7 +513,7 @@ untrashNode() {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -656,24 +611,15 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 updateMetaData(newFields) {
   const metadataObj = {};
-  metadataObj.from = {};
-  metadataObj.from.id = app.login.userID;
-  metadataObj.from.return = false;
-  metadataObj.rel = {};
-  metadataObj.rel.type = "Settings";
-  metadataObj.rel.merge = true;
-  metadataObj.rel.return = false;
-  metadataObj.to = {};
-  metadataObj.to.type = "M_MetaData";
-  metadataObj.to.name = "metadata";
-  metadataObj.to.properties = {};
-  metadataObj.to.properties.name = this.queryObjectName;
+  metadataObj.from = {"id":app.login.userID, "return":false};
+  metadataObj.rel = {"type":"Settings", "merge":true, "return":false};
+  metadataObj.to = {"type":"M_MetaData", "name":"metadata", "properties":{"name":this.queryObjectName}};
   metadataObj.changes = [];
 
   const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
@@ -696,7 +642,7 @@ updateMetaData(newFields) {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": metadataObj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -720,7 +666,7 @@ updateFields(data, newFields) { // should contain only the metadata node, under 
     const xhttp = new XMLHttpRequest();
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 }
@@ -904,7 +850,7 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 }

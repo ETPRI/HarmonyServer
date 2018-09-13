@@ -10,6 +10,7 @@ class widgetLogin {
 
     // data to fill in when the user logs in - their ID, name and permissions level
     this.userID = null;
+    this.userGUID = null;
     this.userName = null;
     this.permissions = null;
 
@@ -84,11 +85,7 @@ class widgetLogin {
   // and sends the results to this.checkAdminUser().
   checkAdminTable() { // start by merging the User table...
     const obj = {};
-    obj.merge = true;
-    obj.type = "M_LoginTable";
-    obj.properties = {};
-    obj.properties.name = "User";
-    obj.return = false;
+    obj.node = {"type":"M_LoginTable", "properties":{"name":"User"}, "merge":true, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const login = this;
@@ -101,17 +98,13 @@ class widgetLogin {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   mergeAdmin() { // then merge the Admin table...
     const obj = {};
-    obj.merge = true;
-    obj.type = "M_LoginTable";
-    obj.properties = {};
-    obj.properties.name = "Admin";
-    obj.return = false;
+    obj.node = {"type":"M_LoginTable", "properties":{"name":"Admin"}, "merge":true, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const login = this;
@@ -124,23 +117,15 @@ class widgetLogin {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   checkAdmin() { // Now we know that the admin table exists. Search for any person with a link to it.
     const obj = {};
-    obj.from = {};
-    obj.from.name = "user";
-    obj.from.type = "people";
-    obj.to = {};
-    obj.to.type = "M_LoginTable";
-    obj.to.properties = {};
-    obj.to.properties.name = "Admin";
-    obj.to.return = false;
-    obj.rel = {};
-    obj.rel.type = "Permissions";
-    obj.rel.return = false;
+    obj.from = {"name":"user", "type":"people"};
+    obj.to = {"type":"M_LoginTable", "properties":{"name":"Admin"}, "return":false};
+    obj.rel = {"type":"Permissions", "return":false};
 
     const xhttp = new XMLHttpRequest();
     const login = this;
@@ -153,7 +138,7 @@ class widgetLogin {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -162,11 +147,7 @@ class widgetLogin {
   checkAdminUser(data) {
     if (data.length == 0) { // if no users are admins, create a temporary admin node if it doesn't exist...
       const obj = {};
-      obj.name = "tempAdmin";
-      obj.type = "tempAdmin";
-      obj.properties = {};
-      obj.properties.name = "Temporary Admin Account";
-      obj.merge = true;
+      obj.node = {"name":"tempAdmin", "type":"tempAdmin", "properties":{"name":"Temporary Admin Account"}, "merge":true};
 
       const xhttp = new XMLHttpRequest();
       const login = this;
@@ -179,7 +160,7 @@ class widgetLogin {
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
     else { // if at least one user is an admin, delete the temporary admin node if it exists
@@ -190,7 +171,7 @@ class widgetLogin {
       const xhttp = new XMLHttpRequest();
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj, "GUID": "setup"};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
   }
@@ -198,26 +179,14 @@ class widgetLogin {
   linkTempAdmin(data) { // Link the temporary admin account to the Admin table, if it wasn't already linked.
     const id = data[0].tempAdmin.id;
     const obj = {};
-    obj.from = {};
-    obj.from.id = id;
-    obj.from.return = false;
-    obj.to = {};
-    obj.to.type = "M_LoginTable";
-    obj.to.properties = {};
-    obj.to.properties.name = "Admin";
-    obj.to.return = false;
-    obj.rel = {};
-    obj.rel.type = "Permissions";
-    obj.rel.merge = true;
-    obj.rel.properties = {};
-    obj.rel.properties.username = "admin";
-    obj.rel.properties.password = "admin";
-    obj.rel.return = false;
+    obj.from = {"id":id, "return":false};
+    obj.to = {"type":"M_LoginTable", "properties":{"name":"Admin"}, "return":false};
+    obj.rel = {"type":"Permissions", "properties":{"username":"admin", "password":"admin"}, "merge":true, "return":false};
 
     const xhttp = new XMLHttpRequest();
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -232,17 +201,9 @@ class widgetLogin {
     }
     else {
       const obj = {};
-      obj.from = {};
-      obj.from.name = "user";
-      obj.to = {};
-      obj.to.name = "table";
-      obj.to.type = "M_LoginTable";
-      obj.rel = {};
-      obj.rel.type = "Permissions";
-      obj.rel.properties = {};
-      obj.rel.properties.username = name;
-      obj.rel.properties.password = password;
-      obj.rel.return = false;
+      obj.from = {"name":"user"};
+      obj.to = {"name":"table", "type":"M_LoginTable"};
+      obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
 
       const xhttp = new XMLHttpRequest();
       const login = this;
@@ -255,7 +216,7 @@ class widgetLogin {
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj};
+      const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
     }
   }
@@ -272,6 +233,7 @@ class widgetLogin {
   	else if (data.length == 1) { // Can actually log in
       this.userID = data[0].user.id; // Log the user in
       this.userName = data[0].user.properties.name;
+      this.userGUID = data[0].user.properties.M_GUID;
       this.permissions = data[0].table.properties.name;
   		this.info.textContent = `Logged in as ${this.userName} -- Role: ${this.permissions}`;
       this.info.classList.add('loggedIn');
@@ -339,7 +301,7 @@ class widgetLogin {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": metadataObj};
+    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": metadataObj, "GUID": "setup"};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // log
