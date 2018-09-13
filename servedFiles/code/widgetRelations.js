@@ -36,23 +36,11 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
 refresh() {
   if (this.viewNodeID == null) {
     const obj = {};
-    obj.start = {};
-    obj.start.id = this.viewID;
-    obj.start.return = false;
-    obj.middle = {};
-    obj.middle.name = "view";
-    obj.middle.type = "M_View";
-    obj.middle.properties = {};
-    obj.middle.properties.direction = this.relationType;
-    obj.end = {};
-    obj.end.id = this.nodeID;
-    obj.end.return = false;
-    obj.rel1 = {};
-    obj.rel1.type = "Owner";
-    obj.rel1.return = false;
-    obj.rel2 = {};
-    obj.rel2.type = "Subject";
-    obj.rel2.return = false;
+    obj.start = {"id":this.viewID, "return":false};
+    obj.rel1 = {"type":"Owner", "return":false};
+    obj.middle = {"name":"view", "type":"M_View", "properties":{"direction":this.relationType}};
+    obj.rel2 = {"type":"Subject", "return":false};
+    obj.end = {"id":this.nodeID, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const relation = this;
@@ -76,14 +64,9 @@ findLinks(data) { // data should include the view found by the previous function
     this.viewNodeID = data[0].view.id;
   }
   const obj = {};
-  obj.required = {};
-  obj.required.name = "view";
-  obj.required.id = this.viewNodeID;
-  obj.optional = {};
-  obj.optional.name = "a";
-  obj.rel = {};
-  obj.rel.name = "r";
-  obj.rel.type = "Link";
+  obj.required = {"name":"view", "id":this.viewNodeID};
+  obj.optional = {"name":"a"};
+  obj.rel = {"name":"r", "type":"Link"};
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
@@ -519,20 +502,9 @@ processNext(data, rows, prevFunction) {
 
     // Update view ordering and refresh
     const obj = {};
-    obj.node = {};
-    obj.node.name = "view";
-    obj.node.id = this.viewNodeID;
-    obj.changes = [];
-    const orderChange = {};
-    orderChange.property = "order";
-    orderChange.value = JSON.stringify(this.order);
-    orderChange.string = false;
-    obj.changes.push(orderChange);
-    const placeholderChange = {};
-    placeholderChange.property = "placeholders";
-    placeholderChange.value = JSON.stringify(this.placeholders);
-    placeholderChange.string = false;
-    obj.changes.push(placeholderChange);
+    obj.node = {"name":"view", "id":this.viewNodeID};
+    obj.changes = [{"property":"order", "value":JSON.stringify(this.order), "string":false},
+                   {"property":"placeholders", "value":JSON.stringify(this.placeholders), "string":false}];
 
     const xhttp = new XMLHttpRequest();
   	const relations = this;

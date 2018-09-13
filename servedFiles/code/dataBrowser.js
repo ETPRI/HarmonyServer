@@ -57,14 +57,9 @@ class dataBrowser {
     else {
       // query the DB for all info about this node and its relations, starting with the incoming relations
       const obj = {};
-      obj.required = {};
-      obj.required.name = "n";
-      obj.required.id = data.nodeID;
-      obj.optional = {};
-      obj.optional.name = "in";
-      obj.rel = {};
-      obj.rel.name = "inRel";
-      obj.rel.direction = "left"; // (required)<-[rel]-(optional)
+      obj.required = {"name":"n", "id":data.nodeID};
+      obj.optional = {"name":"in"};
+      obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
       const xhttp = new XMLHttpRequest();
       const dataBrowser = this;
@@ -84,13 +79,9 @@ class dataBrowser {
 
   findOuts(data, ID, cell) { // query the DB about outgoing relations, and pass along the incoming ones that were already found
     const obj = {};
-    obj.required = {};
-    obj.required.name = "n";
-    obj.required.id = ID;
-    obj.optional = {};
-    obj.optional.name = "out";
-    obj.rel = {};
-    obj.rel.name = "outRel";
+    obj.required = {"name":"n", "id":ID};
+    obj.optional = {"name":"out"};
+    obj.rel = {"name":"outRel"};
 
     const xhttp = new XMLHttpRequest();
     const dataBrowser = this;
@@ -354,14 +345,9 @@ class dataBrowser {
       else {
         // query the DB for all info about this node and its relations, starting with incoming relations
         const obj = {};
-        obj.required = {};
-        obj.required.name = "n";
-        obj.required.id = ID;
-        obj.optional = {};
-        obj.optional.name = "in";
-        obj.rel = {};
-        obj.rel.name = "inRel";
-        obj.rel.direction = "left"; // (required)<-[rel]-(optional)
+        obj.required = {"name":"n", "id":ID};
+        obj.optional = {"name":"in"};
+        obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
         const xhttp = new XMLHttpRequest();
         const dataBrowser = this;

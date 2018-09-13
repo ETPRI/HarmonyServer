@@ -29,22 +29,11 @@ class widgetView {
     this.add = null; // The "Add Me" button, which is visible when a user is logged in but doesn't have a view of this node
 
     const obj = {};
-    obj.start = {};
-    obj.start.name = "user";
-    obj.middle = {};
-    obj.middle.type = "M_View";
-    obj.middle.properties = {};
-    obj.middle.properties.direction = relationType;
-    obj.middle.return = false;
-    obj.end = {};
-    obj.end.id = nodeID;
-    obj.end.return = false;
-    obj.rel1 = {};
-    obj.rel1.type = "Owner";
-    obj.rel1.return = false;
-    obj.rel2 = {};
-    obj.rel2.type = "Subject";
-    obj.rel2.return = false;
+    obj.start = {"name":"user"};
+    obj.rel1 = {"type":"Owner", "return":false};
+    obj.middle = {"type":"M_View", "properties":{"direction":relationType}, "return":false};
+    obj.rel2 = {"type":"Subject", "return":false};
+    obj.end = {"id":nodeID, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -277,22 +266,11 @@ class widgetView {
     this.relations = {}; // reset list of existing relation DOM objects
     // Get the IDs and names of all the people with views of this node, and pass them to buildViews.
     const obj = {};
-    obj.start = {};
-    obj.start.name = "user";
-    obj.middle = {};
-    obj.middle.type = "M_View";
-    obj.middle.properties = {};
-    obj.middle.properties.direction = this.relationType;
-    obj.middle.return = false;
-    obj.end = {};
-    obj.end.id = this.nodeID;
-    obj.end.return = false;
-    obj.rel1 = {};
-    obj.rel1.type = "Owner";
-    obj.rel1.return = false;
-    obj.rel2 = {};
-    obj.rel2.type = "Subject";
-    obj.rel2.return = false;
+    obj.start = {"name":"user"};
+    obj.rel1 = {"type":"Owner", "return":false};
+    obj.middle = {"type":"M_View", "properties":{"direction":this.relationType}, "return":false};
+    obj.rel2 = {"type":"Subject", "return":false};
+    obj.end = {"id":this.nodeID, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -421,11 +399,7 @@ class widgetView {
   // Adds a new view to the database linked to the node being viewed and the logged-in user, then calls addComplete
   addUser(button) {
     // Create a view of this node for this user
-    const obj = {};
-    obj.name = "view";
-    obj.type = "M_View";
-    obj.properties = {};
-    obj.properties.direction = this.relationType;
+    const obj = {"name":"view", "type":"M_View", "properties":{"direction":this.relationType}};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -454,15 +428,9 @@ class widgetView {
     const viewID = data[0].view.id;
 
     const obj = {};
-    obj.from = {};
-    obj.from.id = app.login.userID;
-    obj.from.return = false;
-    obj.to = {};
-    obj.to.id = viewID;
-    obj.to.return = false;
-    obj.rel = {};
-    obj.rel.type = "Owner";
-    obj.rel.return = false;
+    obj.from = {"id":app.login.userID, "return":false};
+    obj.to = {"id":viewID, "return":false};
+    obj.rel = {"type":"Owner", "return":false};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -481,15 +449,9 @@ class widgetView {
 
   linkViewNode(data, viewID) { // Connect the new view to the node and move on to addComplete
     const obj = {};
-    obj.from = {};
-    obj.from.id = viewID;
-    obj.from.return = false;
-    obj.to = {};
-    obj.to.id = this.nodeID;
-    obj.to.return = false;
-    obj.rel = {};
-    obj.rel.type = "Subject";
-    obj.rel.return = false;
+    obj.from = {"id":viewID, "return":false};
+    obj.to = {"id":this.nodeID, "return":false};
+    obj.rel = {"type":"Subject", "return":false};
 
     const xhttp = new XMLHttpRequest();
     const view = this;

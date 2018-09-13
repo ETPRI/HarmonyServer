@@ -278,17 +278,11 @@ class widgetLogin {
   		alert ("Multiple such nodes found");
   	}
 
+    // Get the metadata nodes, and search for any links between them and this user
     const metadataObj = {};
-    metadataObj.required = {};
-    metadataObj.required.type = "M_MetaData";
-    metadataObj.required.name = "metadata";
-    metadataObj.rel = {};
-    metadataObj.rel.type = "Settings";
-    metadataObj.rel.name = "settings";
-    metadataObj.rel.direction = "left";
-    metadataObj.optional = {};
-    metadataObj.optional.id = this.userID;
-    metadataObj.optional.return = false;
+    metadataObj.required = {"type":"M_MetaData", "name":"metadata"};
+    metadataObj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
+    metadataObj.optional = {"id":this.userID, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const login = this;
@@ -350,6 +344,11 @@ class widgetLogin {
 
       // Then plug the result into app.metaData.node[name].fields
       app.metaData.node[name].fields = fields;
+
+      // Create a widgetTableNodes widget for this node type
+      app.widgets[name] = new widgetTableNodes(name, null);
+
+
     } // end for (each metadata node)
 
     // Once metadata are updated, can call app.menuNodesInit to update dropdown list

@@ -202,13 +202,9 @@ edit(element){
 showReasons(element) {
   const id = element.innerHTML;
   const obj = {};
-  obj.from = {};
-  obj.from.name = "user";
-  obj.to = {};
-  obj.to.name = "node";
-  obj.to.id = id;
-  obj.rel = {};
-  obj.rel.type = "Trash";
+  obj.from = {"name":"user"};
+  obj.to = {"name":"node", "id":id};
+  obj.rel = {"type":"Trash"};
 
   const xhttp = new XMLHttpRequest();
   const table = this;

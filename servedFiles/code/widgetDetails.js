@@ -40,16 +40,9 @@ constructor(label, container, id, name, callerID) { // Label: the type of node d
     // If we're editing, then the ID for the node was passed in.
     if (id) {
       const obj = {};
-      obj.required = {};
-      obj.required.name = "n";
-      obj.required.id = id;
-      obj.optional = {};
-      obj.optional.id = app.login.userID;
-      obj.optional.return = false;
-      obj.rel = {};
-      obj.rel.name = "r";
-      obj.rel.type = "Trash";
-      obj.rel.direction = "left"; // (n)<-[rel]-(a)
+      obj.required = {"name":"n", "id":id};
+      obj.optional = {"id":app.login.userID, "return":false};
+      obj.rel = {"name":"r", "type":"Trash", "direction":"left"};// (n)<-[rel]-(a)
 
       const xhttp = new XMLHttpRequest();
       const details = this;
@@ -595,10 +588,7 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
     this.updateMetaData(newFields);
   }
 
-  const obj = {};
-  obj.name = "n";
-  obj.type = this.queryObjectName;
-  obj.properties = data;
+  const obj = {"name":"n", "type":this.queryObjectName, "properties":data};
 
   const xhttp = new XMLHttpRequest();
   const details = this;
@@ -653,15 +643,8 @@ updateFields(data, newFields) { // should contain only the metadata node, under 
       fields[fieldName] = newFields[fieldName];
     }
     const obj = {};
-    obj.node = {};
-    obj.node.type = "M_MetaData";
-    obj.node.properties = {};
-    obj.node.properties.name = this.queryObjectName;
-    obj.changes = [];
-    const update = {};
-    update.property = "fields";
-    update.value = app.stringEscape(JSON.stringify(fields));
-    obj.changes.push(update);
+    obj.node = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+    obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}];
 
     const xhttp = new XMLHttpRequest();
 
@@ -834,9 +817,7 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
   }
   else {
     const obj = {};
-    obj.node = {};
-    obj.node.name = "n";
-    obj.node.id = this.id;
+    obj.node = {"name":"n", "id":this.id};
     obj.changes = data;
 
     const xhttp = new XMLHttpRequest();

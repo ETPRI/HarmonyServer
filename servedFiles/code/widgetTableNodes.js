@@ -216,13 +216,19 @@ class widgetTableNodes {
     const html5 = html4.replace('#header#',f);
 
     /*
-    Create new element, append to the widgets div in front of existing widgets
+    Create new element and append to tableHeader widget
     */
-    const parent = document.getElementById('widgets');
-    const child = parent.firstElementChild;
-    const newWidget = document.createElement('div'); // create placeholder div
-    parent.insertBefore(newWidget, child); // Insert the new div before the first existing one
+    const parent = document.getElementById('tableHeader');
+    let newWidget = document.createElement('div'); // create placeholder div
+    parent.append(newWidget); // Insert the new div before the first existing one
     newWidget.outerHTML = html5; // replace placeholder with the div that was just written
+
+    // make the new widget hidden, and give it a descriptive ID and special class
+    newWidget = document.getElementById(this.idWidget);
+    newWidget.hidden = true;
+    newWidget.setAttribute('id', this.queryObjectName);
+    this.idWidget = this.queryObjectName;
+    newWidget.classList.add('tableWidget');
   }
 
   buildData(data) {  // build dynamic part of table
@@ -377,10 +383,12 @@ class widgetTableNodes {
     const IDcell = nodeRow.children[1]; // The ID will always be the second cell in the table, after the number
     const ID = IDcell.textContent;
     const type = this.queryObject.nodeLabel;
+    const DBType = this.queryObjectName;
 
     const data = {};
     data.name = name;
     data.type = type;
+    data.DBType = DBType;
     data.nodeID = ID;
     data.details = [];
     for (let i = 0; i< this.fieldsDisplayed.length; i++) { // For every displayed field...
@@ -489,16 +497,11 @@ class widgetTableNodes {
       toAdd = "User";
     }
 
-    // Search for the relation to remove
+    // If this user has a relation to ANY login table, find it (and later, extract login details and delete it)
     const obj = {};
-    obj.from = {};
-    obj.from.id = ID;
-    obj.from.return = false;
-    obj.to = {};
-    obj.to.type = "M_LoginTable"; // If this user has a relation to ANY login table, find it (and later, extract login details and delete it)
-    obj.to.return = false;
-    obj.rel = {};
-    obj.rel.type = "Permissions";
+    obj.from = {"id":ID, "return":false};
+    obj.to = {"type":"M_LoginTable", "return":false};
+    obj.rel = {"type":"Permissions"};
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
@@ -518,9 +521,7 @@ class widgetTableNodes {
   checkPermission(data, ID, button, toAdd) {
     if (data.length > 0 && data[0].rel.properties.username && data[0].rel.properties.password) { // If a relation to delete was found
       const obj = {};
-      obj.rel = {};
-      obj.rel.id = data[0].rel.id;
-      obj.rel.return = false;
+      obj.rel = {"id":data[0].rel.id, "return":false};
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
@@ -568,20 +569,9 @@ class widgetTableNodes {
 
     if (toAdd && ID && name && password) { // if the user has entered data, not cancelled
       const obj = {};
-      obj.from = {};
-      obj.from.id = ID;
-      obj.from.return = false;
-      obj.to = {};
-      obj.to.type = "M_LoginTable";
-      obj.to.properties = {};
-      obj.to.properties.name = toAdd;
-      obj.to.return = false;
-      obj.rel = {};
-      obj.rel.type = "Permissions";
-      obj.rel.properties = {};
-      obj.rel.properties.username = name;
-      obj.rel.properties.password = password;
-      obj.rel.return = false;
+      obj.from = {"id":ID, "return":false};
+      obj.to = {"type":"M_LoginTable", "properties":{"name":toAdd}, "return":false};
+      obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
@@ -604,22 +594,16 @@ class widgetTableNodes {
     const ID = row.children[1].textContent;
 
     const obj = {};
-    obj.from = {};
-    obj.from.id = ID; // From this user
-    obj.from.return = false;
-    obj.to = {};
-    obj.to.type = "M_LoginTable"; // To any login table
-    obj.to.return = false;
-    obj.rel = {};
-    obj.rel.type = "Permissions"; // Any permissions link
-    obj.rel.return = false;
+    obj.from = {"id":ID, "return":false};
+    obj.to = {"type":"M_LoginTable", "return":false};
+    obj.rel = {"type":"Permissions", "return":false};
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
+        const data = JSON.parse(this.responseText); // I'm not sure what kind of response I was expecting - nothing is returned!
         nodes.search(data);
       }
     };

@@ -28,10 +28,7 @@ class widgetSVG {
 
     if (this.mapID) {
       const obj = {};
-      obj.required = {};
-      obj.required.name = "mindmap";
-      obj.required.type = "mindmap";
-      obj.required.id = this.mapID;
+      obj.required = {"name":"mindmap", "type":"mindmap", "id":this.mapID};
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
@@ -82,7 +79,14 @@ class widgetSVG {
     const parent = document.getElementById('widgets');
     const caller = document.getElementById(this.callerID);
     const newWidget = document.createElement('div'); // create placeholder div
-    parent.insertBefore(newWidget, caller); // Insert the new div before the first existing one
+
+    if (caller.parentElement == parent) { // If the caller is, itself, in the widgets div
+      parent.insertBefore(newWidget, caller); // Insert the new div before the caller
+    }
+    else {
+      parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
+    }
+
     newWidget.outerHTML = html; // replace placeholder with the div that was just written
     this.SVG_DOM = document.getElementById(`svg${this.widgetID}`);
     this.widgetDOM = document.getElementById(`${this.widgetID}`);
@@ -341,6 +345,7 @@ class widgetSVG {
       newObj.nodeID = data.nodeID;
       newObj.name = name;
       newObj.type = data.type;
+      newObj.DBType = data.DBType;
       newObj.details = data.details;
       this.d3Functions.editNode = null; // NOTE: Fix this; we shouldn't be assigning a variable just to unassign it later
 
@@ -383,6 +388,7 @@ class widgetSVG {
     labelObj.name = newObj.name;
     labelObj.nodeID = newObj.nodeID;
     labelObj.type = newObj.type;
+    labelObj.DBType = newObj.DBType;
     labelObj.details = newObj.details;
     this.makeSelectedNode(group);
   }
@@ -657,14 +663,9 @@ class widgetSVG {
       if (name != null) {
         newMap = true;
         const obj = {};
-        obj.from = {};
-        obj.from.type = "mindmap";
-        obj.from.properties = {};
-        obj.from.properties.name = name;
-        obj.rel = {};
-        obj.rel.type = "Owner";
-        obj.to = {};
-        obj.to.id = app.login.userID;
+        obj.from = {"type":"mindmap", "properties":{"name":name}};
+        obj.rel = {"type":"Owner"};
+        obj.to = {"id":app.login.userID};
 
         const xhttp = new XMLHttpRequest();
         const SVG = this;
@@ -691,14 +692,9 @@ class widgetSVG {
       name = prompt("Sorry, you already have a map with that name. Please choose another", name);
       if (name != null) {
         const obj = {};
-        obj.from = {};
-        obj.from.type = "mindmap";
-        obj.from.properties = {};
-        obj.from.properties.name = name;
-        obj.rel = {};
-        obj.rel.type = "Owner";
-        obj.to = {};
-        obj.to.id = app.login.userID;
+        obj.from = {"type":"mindmap", "properties":{"name":name}};
+        obj.rel = {"type":"Owner"};
+        obj.to = {"id":app.login.userID};
 
         const xhttp = new XMLHttpRequest();
         const SVG = this;
@@ -725,10 +721,7 @@ class widgetSVG {
     app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
 
     if (newMap) {
-      const obj = {};
-      obj.type = "mindmap";
-      obj.properties = {};
-      obj.properties.name = name;
+      const obj = {"type":"mindmap", "properties":{"name":name}};
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
@@ -761,12 +754,9 @@ class widgetSVG {
     }
 
     const obj = {};
-    obj.from = {};
-    obj.from.id = this.mapID;
-    obj.to = {};
-    obj.to.id = app.login.userID;
-    obj.rel = {};
-    obj.rel.type = "Owner";
+    obj.from = {"id":this.mapID};
+    obj.to = {"id":app.login.userID};
+    obj.rel = {"type":"Owner"};
 
     const xhttp = new XMLHttpRequest();
     const SVG = this;
@@ -831,14 +821,9 @@ class widgetSVG {
           // Now, remove the DB relation, if it exists
           if (saved && saved.inDB) {
             const obj = {};
-            obj.from = {};
-            obj.from.id = this.mapID;
-            obj.to = {};
-            obj.to.id = saved.nodeID;
-            obj.rel = {};
-            obj.rel.type = "MapNode";
-            obj.rel.properties = {};
-            obj.rel.properties.id = label.id;
+            obj.from = {"id":this.mapID};
+            obj.to = {"id":saved.nodeID};
+            obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
 
             const xhttp = new XMLHttpRequest();
             const SVG = this;
@@ -864,14 +849,9 @@ class widgetSVG {
               saved.inDB = false;
               labels.push(label); // Prepare to process the label a second time WITHOUT the relation, to check for a new relation...
               const obj = {};
-              obj.from = {};
-              obj.from.id = this.mapID;
-              obj.to = {};
-              obj.to.id = saved.nodeID;
-              obj.rel = {};
-              obj.rel.type = "MapNode";
-              obj.rel.properties = {};
-              obj.rel.properties.id = label.id;
+              obj.from = {"id":this.mapID};
+              obj.to = {"id":saved.nodeID};
+              obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
 
               const xhttp = new XMLHttpRequest();
               const SVG = this;
@@ -1003,17 +983,9 @@ class widgetSVG {
 
     // Run the actual query and callback to update
     const obj = {};
-    obj.node = {};
-    obj.node.id = this.mapID;
-    obj.changes = [];
-    const roots = {};
-    roots.property = "M_roots";
-    roots.value = app.stringEscape(JSON.stringify(rootsCopy));
-    obj.changes.push(roots);
-    const count = {};
-    count.property = "M_count";
-    count.value = this.d3Functions.count;
-    obj.changes.push(count);
+    obj.node = {"id":this.mapID};
+    obj.changes = [{"property":"M_roots", "value":app.stringEscape(JSON.stringify(rootsCopy))},
+                   {"property":"M_count", "value":this.d3Functions.count}];
 
     const xhttp = new XMLHttpRequest();
   	const d3 = this.d3Functions;
@@ -1181,7 +1153,7 @@ class widgetSVG {
         alert ("Still working on this");
         break;
       default:
-        new widgetNode(this.widgetID, type, id);
+        new widgetNode(this.widgetID, data.DBType, id);
     }
   }
 
