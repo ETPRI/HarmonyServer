@@ -310,6 +310,11 @@ class widgetLogin {
   }
 
   updateMetaData(data) {
+    buttons = document.getElementById('buttons');
+
+  	// clear existing options
+    buttons.innerHTML = "";
+
     // data should be an array of objects, each of which contains:
     // a) a metadata object containing the name of the metadata object to update, and maybe
     // b) a settings object whose properties are used to update metadata
@@ -348,11 +353,13 @@ class widgetLogin {
       // Create a widgetTableNodes widget for this node type
       app.widgets[name] = new widgetTableNodes(name, null);
 
-
+      // Create a button for this nodeType
+      const button = document.createElement('input');
+      buttons.append(button);
+      button.outerHTML = `<input type="button" value="${app.metaData.node[name].nodeLabel}" onclick="app.menuNodes('${name}')">`
     } // end for (each metadata node)
 
     // Once metadata are updated, can call app.menuNodesInit to update dropdown list
-    app.menuNodesInit();
   }
 
   // Logs the user out: resets login information to null, resets the info paragraph to say "not logged in",

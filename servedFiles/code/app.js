@@ -201,33 +201,6 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 	}
 }
 
-// Runs when the page first loads. Gets the dropdown with ID "menuNodes", which starts off with just a placeholder value,
-// and adds an option for every type of node listed in this.metadata.
-menuNodesInit(){
-	const menu = document.getElementById('menuNodes');
-
-	// clear existing options
-	while (menu.firstElementChild) {
-		menu.remove(menu.firstElementChild);
-	}
-
-	const start = document.createElement('option');
-	menu.appendChild(start);
-	start.outerHTML =  '<option value="">-- Nodes --</option>';
-
-
-	const selectionTemplate = '<option value="#name#">#label#</option>';
-	let html = "";  // build dropdown menu selections
-	for (let nodeName in this.metaData.node) { // nodeName is the name of the node, like "people" or "Movie"
-		html = selectionTemplate
-			.replace(/#label#/g, this.metaData.node[nodeName].nodeLabel)
-			.replace(/#name#/g, nodeName);
-		const dropDown = document.createElement('option'); // Creates a new placeholder option...
-		menu.appendChild(dropDown); // adds it to the menu...
-		dropDown.outerHTML = html; // and replaces it with the version made from the selection template.
-	}
-}
-
 // Creates all the debugging features (metaData dropdown, log button, display for DB queries, etc.) in the debug header.
 createDebug() {
 	const header = document.getElementById("debugHeader");
@@ -339,21 +312,13 @@ createDebug() {
 
 // Runs when an item is chosen from the menu dropdown, or the New button is clicked.
 // Creates a table of whatever type of node is selected on the dropdown (nothing happens if the placeholder is selected).
-menuNodes(control) {
-	// Get the value of the current selection in the dropdown list
-	const dropDown = document.getElementById('menuNodes');
-	const value = dropDown.options[dropDown.selectedIndex].value;
-
-	// If the value was blank (the placeholder was selected) do nothing.
-	if (value==="") return;
-
-	// Otherwise, hide the currently-shown table widget (if any) and show the selected one.
+menuNodes(name) {
 	if (this.shownTable) {
 		this.shownTable.hidden = true;
 		this.shownTable = null;
 	}
 
-	let newTable = document.getElementById(value);
+	let newTable = document.getElementById(name);
 	if (newTable) {
 		newTable.hidden = false;
 		this.shownTable = newTable;
