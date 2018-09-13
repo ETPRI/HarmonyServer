@@ -315,6 +315,7 @@ createDragDrop(widgetRel) {
     // If the source is another table of relations, we are definitely adding a new entry.
     else if (data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
              data.sourceType == "widgetRelations" && data.sourceTag == "TR" ||
+             data.sourceType == "widgetNode" && data.sourceTag == "B" ||
              data.sourceType == "dragDrop" && data.sourceTag == "TR" && data.sourceID != this.id) {
 
       if (idr != "template") { // Verify that the destination is not in the template row...

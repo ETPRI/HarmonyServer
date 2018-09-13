@@ -302,8 +302,10 @@ class widgetSVG {
       if (dataText) {
         data = JSON.parse(dataText);
       }
-      // If the object being dragged is not a node
-      if (!data || data.sourceType != "widgetTableNodes" || data.sourceTag != "TD") {
+      // If the object being dragged is not a node (it has no data, or didn't come from either a TD in a table or a button in a form)
+      if (!data ||
+          !(data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
+            data.sourceType == "widgetNode" && data.sourceTag == "B") ) {
         return;
       }
     }
