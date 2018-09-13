@@ -54,7 +54,14 @@ class widgetCalendar {
     const parent = document.getElementById('widgets');
     const caller = document.getElementById(this.callerID); // Find the first existing element in the widgets div
     const newWidget = document.createElement('div'); // create placeholder div
-    parent.insertBefore(newWidget, caller); // Insert the new div before the first existing one
+
+    if (caller.parentElement == parent) { // If the caller is, itself, in the widgets div
+      parent.insertBefore(newWidget, caller); // Insert the new div before the caller
+    }
+    else {
+      parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
+    }
+    
     newWidget.outerHTML = html; // replace placeholder with the div that was just written
     this.calendarDOM = document.getElementById(`calendar${this.widgetID}`);
     this.widgetDOM = document.getElementById(`${this.widgetID}`);

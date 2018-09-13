@@ -32,11 +32,13 @@
     <div id="loginDiv"></div>
     <div id="regressionHeader"></div>
     <div id="debugHeader"></div>
-    <div id="workSpace">
+    <div id="tableHeader">
       <select id="menuNodes" onchange="app.menuNodes(this); this.selectedIndex = 0">
         <option value="">-- Nodes --</option>
       </select>
       <input  type="button" value="New" onclick="app.menuNodes(this)">
+    </div>
+    <div id="workSpace">
       <div id="widgets" class=""> </div>
       <div id="log" hidden="true"></div>
       <hr>

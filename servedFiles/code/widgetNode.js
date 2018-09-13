@@ -50,10 +50,19 @@ buildWidget() { // public - build table header
   /*
   Create new element, append to the widgets div in front of existing widgets
   */
+
+
   const parent = document.getElementById('widgets');
   const caller = document.getElementById(this.callerID);
   const newWidget = document.createElement('div'); // create placeholder div
-  parent.insertBefore(newWidget, caller); // Insert the new div before the widget that opened it
+
+  if (caller.parentElement == parent) { // If the caller is, itself, in the widgets div
+    parent.insertBefore(newWidget, caller); // Insert the new div before the caller
+  }
+  else {
+    parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
+  }
+
   newWidget.outerHTML = html; // replace placeholder with the div that was just written
 
   // By this point, the new widget div has been created by buildHeader() and added to the page by the above line

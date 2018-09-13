@@ -12,6 +12,7 @@ constructor() {
 	this.idCounter = 0;  // init id counter - used get getElementById, is the id of the widget
 
 	this.activeWidget = null; // widget being dragged
+	this.shownTable = null; // visible table widget
 }
 
 // Calls all the functions which need to run at the start of a session.
@@ -28,10 +29,14 @@ buildApp() {
 	this.widgets.regressionHeader = this.regression;
 	this.widgets.loginDiv = this.login;
 
-	// Make the workspace visible only when a user is logged in, and remove all widgets when the user logs out.
+	// Make the workspace and table header visible only when a user is logged in, and remove all widgets when the user logs out.
 	this.workSpace = document.getElementById("workSpace");
 	this.workSpace.setAttribute("hidden", true);
 	this.login.viewLoggedIn.push(this.workSpace);
+	this.tableHeader = document.getElementById("tableHeader");
+	this.tableHeader.setAttribute("hidden", true);
+	this.login.viewLoggedIn.push(this.tableHeader);
+
 	const obj = {};
 	obj.object = this;
 	obj.method = 'clearWidgets';
@@ -339,10 +344,20 @@ menuNodes(control) {
 	const dropDown = document.getElementById('menuNodes');
 	const value = dropDown.options[dropDown.selectedIndex].value;
 
-	// If the value was blank (the placeholder was selected) do nothing;
-	// otherwise create a new widgetTableNodes object and store it in this.widgets.
+	// If the value was blank (the placeholder was selected) do nothing.
 	if (value==="") return;
-	this.widgets[this.idCounter] = new widgetTableNodes(value, control.id);
+
+	// Otherwise, hide the currently-shown table widget (if any) and show the selected one.
+	if (this.shownTable) {
+		this.shownTable.hidden = true;
+		this.shownTable = null;
+	}
+
+	let newTable = document.getElementById(value);
+	if (newTable) {
+		newTable.hidden = false;
+		this.shownTable = newTable;
+	}
 }
 
 // displays meta-data on nodes, keysNodes, relations, keysRelations, and all nodes that have been trashed.
@@ -445,28 +460,37 @@ widgetCollapse(domElement) {
 // and removes it and all widgets contained in it from this.widgets array.
 // Relies on widgets which contain other widgets maintaining a list of contained widgets.
 widgetClose(widgetElement) {
-	// Get the ID of the widget to be closed
+	// Get the ID and DOM element of the widget to be closed
 	const id = this.domFunctions.widgetGetId(widgetElement);
-
-	// delete javascript instance of widgetTable
-	let children = [];
-	if (this.widgets[id] && this.widgets[id].containedWidgets) { // Get the IDs of all widgets contained within this one.
-		children = children.concat(this.widgets[id].containedWidgets)
-	}
-	delete this.widgets[id]; // Delete the original widget.
-
-	while (children.length >0) {
-		const child = children.pop(); // Grab a child widget...
-		const widget = this.widgets[child];
-		if (widget.containedWidgets) { // Get the IDs of all widgets contained within it...
-			children = children.concat(widget.containedWidgets);
-		}
-		delete this.widgets[child]; 	// and delete it.
-	}
-
-	// delete html2 from page
 	const widget = document.getElementById(id);
-	widget.parentElement.removeChild(widget);
+
+	// If the widget to "close" is a table widget, just hide it.
+	if (widget.classList.contains('tableWidget')) {
+		widget.hidden = true;
+		this.shownTable = null;
+		this.activeWidget = null;
+	}
+
+	else { // otherwise, actually delete it
+		// delete javascript instance of widgetTable
+		let children = [];
+		if (this.widgets[id] && this.widgets[id].containedWidgets) { // Get the IDs of all widgets contained within this one.
+			children = children.concat(this.widgets[id].containedWidgets)
+		}
+		delete this.widgets[id]; // Delete the original widget.
+
+		while (children.length >0) {
+			const child = children.pop(); // Grab a child widget...
+			const widget = this.widgets[child];
+			if (widget.containedWidgets) { // Get the IDs of all widgets contained within it...
+				children = children.concat(widget.containedWidgets);
+			}
+			delete this.widgets[child]; 	// and delete it.
+		}
+
+		// delete html2 from page
+		widget.parentElement.removeChild(widget);
+	}
 
 	// log
 	const obj = {};
