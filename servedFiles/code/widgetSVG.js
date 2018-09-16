@@ -1,7 +1,7 @@
 class widgetSVG {
-  constructor (callerID, id, name) { // create variables, query for data if needed, then call buildWidget()
+  constructor (callerID, GUID, name) { // create variables, query for data if needed, then call buildWidget()
     this.widgetID = app.idCounter;
-    this.mapID = id;
+    this.mapGUID = GUID;
     this.SVG_DOM = null;
     this.widgetDOM = null;
     this.name = name;
@@ -26,9 +26,9 @@ class widgetSVG {
     this.notesText = null;
     this.notesLabel = null;
 
-    if (this.mapID) {
+    if (this.mapGUID) {
       const obj = {};
-      obj.required = {"name":"mindmap", "type":"mindmap", "id":this.mapID};
+      obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.mapID}};
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
@@ -130,6 +130,7 @@ class widgetSVG {
       alert ("Error: Mind map not found");
     }
     else { // If a result was returned - which should always happen
+      this.mapID = data[0].mindmap.id;
       if (data[0].mindmap.properties.M_roots) {
         this.d3Functions.roots = JSON.parse(data[0].mindmap.properties.M_roots);
 
@@ -186,7 +187,7 @@ class widgetSVG {
         this.name = data[0].mindmap.properties.name;
         const nameText = app.domFunctions.getChildByIdr(this.widgetDOM, 'name');
         nameText.textContent = this.name;
-        const detailsName = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeLabel');
+        const detailsName = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeLabel', true);
         detailsName.textContent = `${this.mapID}: ${this.name}`;
       }
 
@@ -209,7 +210,7 @@ class widgetSVG {
               const nodeType = node.labels[0];
               const labelObj = this.d3Functions.objects[labelID].JSobj;
               labelObj.name = node.properties.name;
-              labelObj.nodeID = node.id;
+              labelObj.nodeID = node.properties.M_GUID;
               labelObj.type = nodeType;
 
               labelObj.details = [];
@@ -420,17 +421,17 @@ class widgetSVG {
   newChild() {
     if (this.selectedNodes.size == 1) {
       for (let node of this.selectedNodes) {
-        const nodeID = node.getAttribute("idr").slice(5); // the IDR will be like groupxxx
-        const nodeObj = this.d3Functions.objects[nodeID].JSobj; // Get the object representing this node
+        const labelID = node.getAttribute("idr").slice(5); // the IDR will be like groupxxx, and the xxx will be the ID assigned by the SVG to this label
+        const nodeObj = this.d3Functions.objects[labelID].JSobj; // Get the object representing this node
 
         if (nodeObj._children && nodeObj._children.length > 0) { // If the object has children, but they are hidden, show them.
-          const button = this.d3Functions.objects[nodeID].DOMelements.toggle;
+          const button = this.d3Functions.objects[labelID].DOMelements.toggle;
           this.toggleChildren(button);
           // The children, if any, should now be visible, and the object should have a children array.
         }
 
         const child = this.d3Functions.newObj(); // Create a new blank label object...
-        child.parent = nodeID;
+        child.parent = labelID;
         nodeObj.children.push(child); // make it a new child of the selected node...
       }
       this.d3Functions.update(); // and redraw the graphic.
@@ -443,10 +444,10 @@ class widgetSVG {
   newSibling() {
     if (this.selectedNodes.size == 1 && this.notesText.hidden == true) {
       for (let node of this.selectedNodes) {
-        const nodeID = node.getAttribute("idr").slice(5); // the IDR will be like groupxxx
-        const nodeObj = this.d3Functions.objects[nodeID].JSobj; // Get the object representing this node
+        const labelID = node.getAttribute("idr").slice(5); // the IDR will be like groupxxx, and the xxx will be the ID assigned by the SVG to this label
+        const nodeObj = this.d3Functions.objects[labelID].JSobj; // Get the object representing this node
         const parentID = nodeObj.parent;
-        if (parentID != "null") { // IF the selected node has a parent, it can have siblings
+        if (parentID != "null") { // If the selected node has a parent, it can have siblings
         const parent = this.d3Functions.objects[parentID].JSobj;
           const child = this.d3Functions.newObj();
 
@@ -824,7 +825,7 @@ class widgetSVG {
           if (saved && saved.inDB) {
             const obj = {};
             obj.from = {"id":this.mapID};
-            obj.to = {"id":saved.nodeID};
+            obj.to = {"properties":{"M_GUID":saved.nodeID}};
             obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
 
             const xhttp = new XMLHttpRequest();
@@ -852,7 +853,7 @@ class widgetSVG {
               labels.push(label); // Prepare to process the label a second time WITHOUT the relation, to check for a new relation...
               const obj = {};
               obj.from = {"id":this.mapID};
-              obj.to = {"id":saved.nodeID};
+              obj.to = {"properties":{"M_GUID":saved.nodeID}};
               obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
 
               const xhttp = new XMLHttpRequest();
@@ -877,7 +878,7 @@ class widgetSVG {
             if (label.nodeID != null) { // If there is a node associated with this label
               const obj = {};
               obj.from = {"id":this.mapID};
-              obj.to = {"id":label.nodeID};
+              obj.to = {"properties":{"M_GUID":label.nodeID}};
               obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "merge":true};
 
               const xhttp = new XMLHttpRequest();
@@ -1138,15 +1139,15 @@ class widgetSVG {
   // If it has any other type of node attached, opens a widgetNode table showing that node's details.
   showNode(button, evnt) {
     const data = button.parentElement.parentElement.__data__.data;
-    const id = data.nodeID;
+    const GUID = data.nodeID;
     const type = data.type;
 
     switch(type) {
       case 'mindmap':
-        new widgetSVG(this.widgetID, id);
+        new widgetSVG(this.widgetID, GUID);
         break;
       case 'calendar':
-        new widgetCalendar(this.widgetID, id);
+        new widgetCalendar(this.widgetID, GUID);
         break;
       case 'link':
         window.open(data.details[0].value); // For now, assume the uri is the first (and only) detail
@@ -1155,7 +1156,7 @@ class widgetSVG {
         alert ("Still working on this");
         break;
       default:
-        new widgetNode(this.widgetID, data.DBType, id);
+        new widgetNode(this.widgetID, data.DBType, GUID);
     }
   }
 

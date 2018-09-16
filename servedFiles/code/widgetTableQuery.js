@@ -172,7 +172,7 @@ this.queryObjects.keysRelation = {
 this.queryObjects.myTrash = {
    nameTable: "myTrash"
    ,fields: {
-       "id":     {label: "ID",   att: `onclick="app.widget('edit',this)"`}
+       "GUID":     {label: "GUID",   att: `onclick="app.widget('edit',this)"`}
      ,"name":   {label:"Name"}
    	 ,"labels": {label: "Labels"}
    	 ,"reason":  {label: "Reason"}
@@ -181,7 +181,7 @@ this.queryObjects.myTrash = {
 this.queryObjects.allTrash = {
    nameTable: "allTrash"
    ,fields: {
-       "id":     {label: "ID",   att: `onclick="app.widget('showReasons',this)"`}
+       "GUID":     {label: "GUID",   att: `onclick="app.widget('showReasons',this)"`}
      ,"name":   {label:"Name"}
    	 ,"count": {label: "Times trashed"}
     }}
@@ -200,10 +200,10 @@ edit(element){
 }
 
 showReasons(element) {
-  const id = element.innerHTML;
+  const GUID = element.innerHTML;
   const obj = {};
   obj.from = {"name":"user"};
-  obj.to = {"name":"node", "id":id};
+  obj.to = {"name":"node", "properties":{"M_GUID":GUID}};
   obj.rel = {"type":"Trash"};
 
   const xhttp = new XMLHttpRequest();

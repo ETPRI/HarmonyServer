@@ -36,6 +36,9 @@ buildApp() {
 	this.tableHeader = document.getElementById("tableHeader");
 	this.tableHeader.setAttribute("hidden", true);
 	this.login.viewLoggedIn.push(this.tableHeader);
+	this.adminButtons = document.getElementById("adminButtons");
+	this.adminButtons.setAttribute("hidden", true);
+	this.login.viewAdmin.push(this.adminButtons);
 
 	const obj = {};
 	obj.object = this;
@@ -98,18 +101,38 @@ addMetaData(data) {
 		}
 	}
 
-	else { // if data were found, it will be an array of metadata nodes
-		let metaData = {};
+	else {
+		// if data were found, it will be an array of metadata nodes. For every metadata node that was found,
+		// update this.metaData.node to reflect it. Then for every item in this.metaData.node for which
+		// a metadata node was NOT found, create one.
 		for (let i = 0; i < data.length; i++) {
 			const node = data[i].node.properties;
-			metaData[node.name] = {};
-			metaData[node.name].nodeLabel = JSON.parse(node.nodeLabel);
-			metaData[node.name].orderBy = JSON.parse(node.orderBy);
-			metaData[node.name].fieldsDisplayed = JSON.parse(node.fieldsDisplayed);
-			metaData[node.name].formFieldsDisplayed = JSON.parse(node.formFieldsDisplayed);
-			metaData[node.name].fields = JSON.parse(node.fields);
+			this.metaData.node[node.name] = {};
+			this.metaData.node[node.name].nodeLabel = JSON.parse(node.nodeLabel);
+			this.metaData.node[node.name].orderBy = JSON.parse(node.orderBy);
+			this.metaData.node[node.name].fieldsDisplayed = JSON.parse(node.fieldsDisplayed);
+			this.metaData.node[node.name].formFieldsDisplayed = JSON.parse(node.formFieldsDisplayed);
+			this.metaData.node[node.name].fields = JSON.parse(node.fields);
 		}
-		this.metaData.node = metaData;
+
+		let type;
+		for (type in this.metaData.node) { // for every entry in this.metaData.node...
+			let DBNode = data.find(x => x.node.properties.name === type); // look for a matching DB metadata node.
+			if (!DBNode) { // If there is no such node, create one.
+				const obj = {"type":"M_MetaData", "properties":{"name":type}};
+				obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
+				obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
+				obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
+				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
+				obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
+
+				const xhttp = new XMLHttpRequest();
+
+				xhttp.open("POST","");
+				const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+				xhttp.send(JSON.stringify(queryObject));         // send request to server
+			}
+		}
 	}
 }
 
@@ -322,6 +345,8 @@ menuNodes(name) {
 	if (newTable) {
 		newTable.hidden = false;
 		this.shownTable = newTable;
+		let newTableJS = this.widgets[name];
+		newTableJS.search();
 	}
 }
 

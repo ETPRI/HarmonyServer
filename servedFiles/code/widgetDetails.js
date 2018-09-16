@@ -16,12 +16,13 @@ input: label
 
 
 class widgetDetails {
-constructor(label, container, id, name, callerID) { // Label: the type of node described. ID: the ID of the node. Container: Where to put it
+constructor(label, container, GUID, name, callerID) { // Label: the type of node described. ID: the ID of the node. Container: Where to put it
     // DOM pointers to data that will change, just make place holders
     this.widgetDOM   = container;
     this.tableDOM    = {};
 
     this.name                 = name;
+    this.id                   = null; // will be filled in later
     this.callerID             = callerID;
     this.queryObject          = app.metaData.getNode(label);
     this.queryObjectName      = label;
@@ -31,16 +32,15 @@ constructor(label, container, id, name, callerID) { // Label: the type of node d
     this.formFieldsDisplayed  = this.queryObject.formFieldsDisplayed;
     this.orderBy              = this.queryObject.orderBy;
     this.newFields            = 0;
-    this.id                   = id;
 
     this.idWidget = app.idCounter;
     app.widgets[app.idCounter++] = this; // Add to app.widgets
     this.containedWidgets = [];
 
     // If we're editing, then the ID for the node was passed in.
-    if (id) {
+    if (GUID) {
       const obj = {};
-      obj.required = {"name":"n", "id":id};
+      obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
       obj.optional = {"id":app.login.userID, "return":false};
       obj.rel = {"name":"r", "type":"Trash", "direction":"left"};// (n)<-[rel]-(a)
 
@@ -64,7 +64,8 @@ constructor(label, container, id, name, callerID) { // Label: the type of node d
   }
 
 finishConstructor(data) {
-  if (data) { // If data were passed in, add them to the table
+  if (data) { // If data were passed in, add them to the table, and set this.id
+    this.id = data[0].n.id;
     this.dataNode = data[0].n;
 
     const obj = {};
@@ -97,12 +98,12 @@ finishConstructor(data) {
 }
 
 buildWidget() { // public - build table header
-  let id=null;  // assume add mode
+  // let id=null;  // assume add mode
   let name = "New Node";
 
   if (this.dataNode) {
     // we are edit mode
-    id = this.id;
+    // id = this.id;
     name = this.dataNode.properties.name;
   }
 
@@ -334,7 +335,7 @@ addRow(fieldName, fieldCount) {
   if (this.dataNode) {
     const d=this.dataNode.properties;
     value = d[fieldName];
-    if (value) { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
+    if (typeof value === "string") { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
       value = value.replace(/"/g, "&quot;");
     }
     else {

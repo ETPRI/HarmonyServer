@@ -42,7 +42,8 @@ initNodeData() { // move to DB in the future
   ///////////////////////////////////// ETPRI
   this.node.people = {
      nodeLabel: "People"
-    ,orderBy: ["name", "nameLast", "nameFirst", "email", "state", "comment"]
+    ,orderBy: [{"name":"name"}, {"name":"nameLast"}, {"name":"nameFirst"},
+               {"name":"email"}, {"name":"state"}, {"name":"comment"}]
     ,fieldsDisplayed: ["name","nameLast", "nameFirst", "email"]
     ,formFieldsDisplayed: ["name", "nameLast", "nameFirst", "email", "state", "comment"]
     ,fields: {
@@ -57,7 +58,7 @@ initNodeData() { // move to DB in the future
 
   this.node.organization = {
      nodeLabel: "organization"
-    ,orderBy: ["name", "web", "comment"]
+    ,orderBy: [{"name":"name"}, {"name":"web"}, {"name":"comment"}]
     ,fieldsDisplayed: ["name", "web"]
     ,formFieldsDisplayed: ["name", "web"]
     ,fields: {"name":       {label: "Name" }
@@ -67,7 +68,7 @@ initNodeData() { // move to DB in the future
 
   this.node.topic = {
      nodeLabel: "topic"
-    ,orderBy: ["name", "comment"]
+    ,orderBy: [{"name":"name"}, {"name":"comment"}]
     ,fieldsDisplayed: ["name", "comment"]
     ,formFieldsDisplayed: ["name", "comment"]
     ,fields: {"name":       {label: "Name" }
@@ -77,7 +78,7 @@ initNodeData() { // move to DB in the future
 
   this.node.address = {
     nodeLabel: "address"
-    ,orderBy: ["name", "state", "postalCode", "city", "street1", "street2"]
+    ,orderBy: [{"name":"name"}, {"name":"state"}, {"name":"postalCode"}, {"name":"city"}, {"name":"street1"}, {"name":"street2"}]
     ,fieldsDisplayed: ["name", "street1", "street2", "city", "state", "postalCode"]
     ,formFieldsDisplayed: ["name", "street1", "street2", "city", "state", "postalCode", "country", "comment"]
     ,fields: {"name":       {label: "Name"}
@@ -92,7 +93,7 @@ initNodeData() { // move to DB in the future
 
   this.node.mindmap = {
     nodeLabel: "mindmap"
-    ,orderBy: ["name", "comment"] // ,lastEdited, created, lastEditor, creator
+    ,orderBy: [{"name":"name"}, {"name":"comment"}] // ,lastEdited, created, lastEditor, creator
     ,fieldsDisplayed: ["name", "comment"] // , "creator", "created", "lastEditor", "lastEdited"
     ,formFieldsDisplayed: ["name", "comment"] // , "creator", "created", "lastEditor", "lastEdited"
     ,fields: {
@@ -106,7 +107,7 @@ initNodeData() { // move to DB in the future
 
     this.node.calendar = {
       nodeLabel: "calendar"
-      ,orderBy: ["name", "description"]
+      ,orderBy: [{"name":"name"}, {"name":"description"}]
       ,fieldsDisplayed: ["name", "description"]
       ,formFieldsDisplayed: ["name", "description"]
       ,fields: {
@@ -116,31 +117,59 @@ initNodeData() { // move to DB in the future
       }
     }
 
- // I was using these for testing (obviously) but I think I'll comment them out for now.
- // Will delete them when I'm sure we aren't testing anymore.
-  // this.node.Test = {
-  //   nodeLabel: "Test"
-  //   ,orderBy: "n.name, n.field1, n.field2, n.field3"
-  //   ,fieldsDisplayed: ["field1", "field2", "field3"]
-  //   ,fields: {
-  //     "name":     {label: "Name"}
-  //     ,"field1":  {label: "First"}
-  //     ,"field2":  {label: "Second"}
-  //     ,"field3":  {label: "Third"}
-  //   }
-  // }
-  //
-  // this.node.Test2 = {
-  //   nodeLabel: "Test2"
-  //   ,orderBy: "n.name, n.field1, n.field2, n.field3"
-  //   ,fieldsDisplayed: ["field1", "field2", "field3"]
-  //   ,fields: {
-  //     "name":     {label: "Name"}
-  //     ,"field1":  {label: "First"}
-  //     ,"field2":  {label: "Second"}
-  //     ,"field3":  {label: "Third"}
-  //   }
-  // }
+    this.node.M_View = {
+      nodeLabel: "M_View"
+      ,orderBy: [{"name":"direction"}, {"name":"order"}]
+      ,fieldsDisplayed: ["direction", "order"]
+      ,formFieldsDisplayed: ["direction", "order"]
+      ,fields: {
+        "direction": {label:"direction"}
+        ,"order": {label:"order"}
+      }
+    }
+
+    this.node.M_LoginTable = {
+      nodeLabel: "M_Login Table"
+      ,orderBy: [{"name":"name"}]
+      ,fieldsDisplayed: ["name"]
+      ,formFieldsDisplayed: ["name"]
+      ,fields: {
+        "name": {label:"name"}
+      }
+    }
+
+    this.node.M_ChangeLog = {
+      nodeLabel: "M_ChangeLog"
+      ,orderBy: [{"name":"number", "direction": "D"}] // Descending. Shouldn't need anything else - numbers should be unique
+      ,fieldsDisplayed: ["number", "action", "label", "attribute", "value"]
+      ,formFieldsDisplayed: ["number", "action", "label", "attribute", "value", "from_GUID", "to_GUID", "item_GUID", "user_GUID"]
+      ,fields: {
+        "number": {label:"number"}
+        ,"action": {label:"action"}
+        ,"label": {label:"label"}
+        ,"attribute": {label:"attribute"}
+        ,"value": {label:"value"}
+        ,"from_GUID": {label: "from_GUID"}
+        ,"to_GUID": {label: "to_GUID"}
+        ,"item_GUID": {label: "item_GUID"}
+        ,"user_GUID": {label: "user_GUID"}
+      }
+    }
+
+    this.node.M_MetaData = {
+      nodeLabel:"M_MetaData"
+      ,orderBy:[{"name":"name"}]
+      ,fieldsDisplayed: ["name", "nodeLabel", "fields"]
+      ,formFieldsDisplayed: ["name", "nodeLabel", "fields", "fieldsDisplayed", "formFieldsDisplayed"]
+      ,fields: {
+        "name": {label: "DB name"}
+        ,"nodeLabel": {label: "Display name"}
+        ,"fields": {label: "All fields"}
+        ,"fieldsDisplayed": {label: "Table fields"}
+        ,"formFieldsDisplayed": {label: "Form fields"}
+        ,"orderBy": {label: "Order by"}
+      }
+    }
 
 } ////// end method
 

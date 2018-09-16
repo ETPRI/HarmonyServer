@@ -273,30 +273,31 @@ class widgetLogin {
       const loginButton = document.getElementById("loginButton");
       loginButton.setAttribute("value", "Log Out");
       loginButton.setAttribute("onclick", "app.widget('logout', this)");
+
+      // Get the metadata nodes, and search for any links between them and this user
+      const metadataObj = {};
+      metadataObj.required = {"type":"M_MetaData", "name":"metadata"};
+      metadataObj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
+      metadataObj.optional = {"id":this.userID, "return":false};
+
+      const xhttp = new XMLHttpRequest();
+      const login = this;
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          login.updateMetaData(data);
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": metadataObj, "GUID": "setup"};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
+
   	 // end elseif (can log in)
     } else {
   		alert ("Multiple such nodes found");
   	}
-
-    // Get the metadata nodes, and search for any links between them and this user
-    const metadataObj = {};
-    metadataObj.required = {"type":"M_MetaData", "name":"metadata"};
-    metadataObj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
-    metadataObj.optional = {"id":this.userID, "return":false};
-
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        login.updateMetaData(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": metadataObj, "GUID": "setup"};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // log
     const obj = {};
@@ -311,9 +312,11 @@ class widgetLogin {
 
   updateMetaData(data) {
     buttons = document.getElementById('buttons');
+    adminButtons = document.getElementById('adminButtons');
 
   	// clear existing options
     buttons.innerHTML = "";
+    adminButtons.innerHTML = "";
 
     // data should be an array of objects, each of which contains:
     // a) a metadata object containing the name of the metadata object to update, and maybe
@@ -355,7 +358,13 @@ class widgetLogin {
 
       // Create a button for this nodeType
       const button = document.createElement('input');
-      buttons.append(button);
+      if (name.slice(0,2) === "M_") { // If this button represents a metadata node type, only admins should see it
+        adminButtons.append(button);
+      }
+      else {
+        buttons.append(button);
+      }
+      
       button.outerHTML = `<input type="button" value="${app.metaData.node[name].nodeLabel}" onclick="app.menuNodes('${name}')">`
     } // end for (each metadata node)
 

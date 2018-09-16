@@ -114,7 +114,7 @@ drag(button, evnt) {
   data.name = name;
   data.type = this.nodeLabel;
   data.DBType = this.queryObjectName;
-  data.nodeID = this.id;
+  data.nodeID = this.dataNode.properties.M_GUID;
 
   data.details = [];
   for (let i = 0; i< this.formFieldsDisplayed.length; i++) { // For every displayed field...

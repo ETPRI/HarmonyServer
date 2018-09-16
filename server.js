@@ -808,6 +808,11 @@ CRUD.changeNode = function(obj, response) {
     strings.ret = `return ${strings.ret}`;
   }
 
+  let orderBy = "";
+  if (dataObj.order) {
+    orderBy = buildOrderString(dataObj.order, "node");
+  }
+
   if (dataObj.node.merge === true) {
     const session = driver.session();
     var result = [];
@@ -826,7 +831,7 @@ CRUD.changeNode = function(obj, response) {
         },
         onCompleted: function () {
           if (result.length > 0) { // if the node was found, make any changes and return it
-            const query2 = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret}`
+            const query2 = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
             sendQuery(query2, response);
             session.close();
           }
@@ -856,7 +861,7 @@ CRUD.changeNode = function(obj, response) {
   } // end if (merging)
 
   else {
-    const query = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret}`;
+    const query = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
     sendQuery(query, response);
   }
 }
@@ -1013,6 +1018,11 @@ CRUD.changeRelation = function(obj, response) {
     strings.ret = `return ${strings.ret}`;
   }
 
+  let orderBy = "";
+  if (dataObj.order) {
+    orderBy = buildOrderString(dataObj.order);
+  }
+
   // Simulate merging without using the MERGE keyword
   if (dataObj.rel.merge === true) {
     const session = driver.session();
@@ -1051,7 +1061,7 @@ CRUD.changeRelation = function(obj, response) {
   } // end if (merging)
 
   else {
-    const query = `match (${from}), (${to}) ${strings.nodesWhere} match (from)-[${rel}]->(to) ${strings.relWhere} ${changes} ${changeLogs} ${strings.ret}`;
+    const query = `match (${from}), (${to}) ${strings.nodesWhere} match (from)-[${rel}]->(to) ${strings.relWhere} ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
     sendQuery(query, response);
   }
 }
@@ -1108,11 +1118,18 @@ CRUD.findOptionalRelation = function(obj, response) {
     arrow = `<-[${rel}]-`;
   }
 
-  strings.ret = `return ${strings.ret}`;
+  let orderBy = "";
+  if (dataObj.order) {
+    orderBy = buildOrderString(dataObj.order);
+  }
+
+  if (strings.ret.length > 0) {
+    strings.ret = `return ${strings.ret}`;
+  }
 
   const query = `match (${required}) ${strings.reqWhere}
                  optional match (required)${arrow}(${optional}) ${strings.optWhere}
-                 ${changes} ${changeLogs} ${strings.ret}`;
+                 ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
   sendQuery(query, response);
 }
 
@@ -1186,8 +1203,13 @@ CRUD.changeTwoRelPattern = function(obj, response) {
     strings.ret = `return ${strings.ret}`;
   }
 
+  let orderBy = "";
+  if (dataObj.order) {
+    orderBy = buildOrderString(dataObj.order);
+  }
+
   const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where}
-                 ${changes} ${changeLogs} ${strings.ret}`;
+                 ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
   sendQuery(query, response);
 }
 
@@ -1198,7 +1220,7 @@ CRUD.tableNodeSearch = function(obj, response) {
   // Example search string:
   // match (n:type) where n.numField < value and n.stringField =~(?i)value
   // optional match (n)-[:Permissions]->(perm:M_LoginTable) return n, perm.name as permissions
-  // order by first, second, third limit 9
+  // order by first, second desc, third limit 9
 
   // Notes: use *. for wildcard in string search. Only search for permissions if type = people.
   // Regexes apparently have to be in a where clause, not in curly braces, so for simplicity, put all criteria in where clause.
@@ -1299,16 +1321,10 @@ CRUD.tableNodeSearch = function(obj, response) {
     query += `-[:Permissions]->(t:M_LoginTable)`; // require a permissions link
   }
 
-  let orderBy = "";
-  for (let i = 0; i < dataObj.orderBy.length; i++) {
-    orderBy += `n.${dataObj.orderBy[i]}, `;
-  }
-
-  // Remove the last ', '
-  orderBy = orderBy.slice(0, -2);
+  let orderBy = buildOrderString(dataObj.orderBy, "n");
 
   query += `, (a) ${where} ${permCheck} ${ownerCheck}
-                 ${ret} order by ${orderBy} limit ${dataObj.limit}`;
+                 ${ret} ${orderBy} limit ${dataObj.limit}`;
   sendQuery(query, response);
 }
 
@@ -1321,8 +1337,8 @@ CRUD.getMetaData = function(obj, response) {
     ,keysNode: "MATCH (p) unwind keys(p) as key RETURN  distinct key, labels(p) as label,  count(key) as count  order by key"
     ,relations: "MATCH (a)-[r]->(b) return distinct labels(a), type(r), labels(b), count(r) as count  order by type(r)"
     ,keysRelation: "match ()-[r]->() unwind keys(r) as key return distinct key, type(r), count(key) as count"
-    ,myTrash: `match (user)-[rel:Trash]->(node) where user.M_GUID = '${GUID}' return id(node) as id, node.name as name, labels(node) as labels, rel.reason as reason, node`
-    ,allTrash: `match ()-[rel:Trash]->(node) return ID(node) as id, node.name as name, count(rel) as count`
+    ,myTrash: `match (user)-[rel:Trash]->(node) where user.M_GUID = '${GUID}' return node.name as name, node.M_GUID as GUID, labels(node) as labels, rel.reason as reason, node`
+    ,allTrash: `match ()-[rel:Trash]->(node) return node.M_GUID as GUID, node.name as name, count(rel) as count`
   }
 
   sendQuery(metadataQueries[queryName], response);
@@ -1332,7 +1348,7 @@ CRUD.getMetaData = function(obj, response) {
 function buildSearchString(obj, strings, whereString, defaultName, changeLogData) {
   let string = defaultName;
 
-  if (!(obj.return && obj.return === false)) { // This should usually be undefined if it's not false, but users might also set it to true
+  if (obj.return !== false) { // This should usually be undefined if it's not false, but users might also set it to true
     if (strings.ret == "") {
       strings.ret = `${defaultName}`;
     }
@@ -1399,6 +1415,24 @@ function buildChangesString(changeArray, changeLogData) {
     else changes += `,${item}.${changeArray[i].property} = ${value}`;
   }
   return changes;
+}
+
+// orderArray: Array of objects containing item (except for changeNode), name and direction ("A" or "D", but "A" is default and doesn't need to be specified)
+function buildOrderString(orderArray, defaultName) {
+  let order = "order by ";
+  let item = defaultName; // name to use if no item is specified
+  for (let i = 0; i < orderArray.length; i++) {
+    let o = orderArray[i];
+    if (o.item) {
+      item = o.item;
+    }
+    let dir = "";
+    if (o.direction == "D") {
+      dir = " desc";
+    }
+    order += `${item}.${o.name}${dir}, `;
+  }
+  return order.slice(0, order.length-2); // Remove the last ", " and return
 }
 
 function sendQuery(query, response) {

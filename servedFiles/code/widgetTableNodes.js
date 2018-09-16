@@ -258,7 +258,7 @@ class widgetTableNodes {
       // Create a cell for ID and append it
       cell = document.createElement('td');
       row.appendChild(cell);
-      cell.outerHTML = `<td hidden>${r[i].n.id}</td>`;
+      cell.outerHTML = `<td hidden>${r[i].n.properties.M_GUID}</td>`;
 
       // For each display field, create a cell and append it
       for (let j=0; j<this.fieldsDisplayed.length; j++) {

@@ -91,9 +91,17 @@ class widgetView {
     const refresh = document.createElement('input');
     refresh.setAttribute("type", "button");
     refresh.setAttribute("idr", "refresh");
-    refresh.setAttribute("value", "refresh");
+    refresh.setAttribute("value", "Refresh");
     refresh.setAttribute("onclick", "app.widget('refresh', this)");
     tableCell.appendChild(refresh);
+
+    const summary = document.createElement('input');
+    summary.setAttribute("type", "button");
+    summary.setAttribute("idr", "summary");
+    summary.setAttribute("value", "Summary");
+    summary.setAttribute("onclick", "app.widget('summary', this)");
+    tableCell.appendChild(summary);
+
 
     if (this.relationType === "start") { // Should see this order:  end relations, end view, node, start view, start relations
       row.appendChild(tableCell);
@@ -518,5 +526,32 @@ class widgetView {
     app.stripIDs(obj.data);
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
+  }
+
+  summary() {
+    // Hide any relation that's already active
+    if (this.activeDOM) {
+      this.activeDOM.setAttribute("hidden", "true");
+    }
+    // Remove formatting from the old active row and change the active toggle button back to +
+    if (this.activeToggle) {
+      const activeRow = this.activeToggle.parentElement.parentElement; // activeToggle is in a cell which is in a row
+      activeRow.classList.remove("activeView");
+      this.activeToggle.setAttribute("value", "+");
+    }
+
+    // See whether the view already exists
+    if ('summary' in this.relations) {
+      this.relations.summary.removeAttribute("hidden"); // If so, just make it visible and active.
+      this.activeDOM = this.relations.summary;
+    }
+    else { // If not, create it in a new div and append it to relCell.
+      const relDOM = document.createElement('div');
+      this.relCell.appendChild(relDOM);
+      this.containedWidgets.push(app.idCounter);
+      new widgetRelations(relDOM, this.nodeID, 'summary', this.relationType); // Creates a new widgetRelations object in relDOM
+      this.relations.summary = relDOM;
+      this.activeDOM = relDOM;
+    }
   }
 }

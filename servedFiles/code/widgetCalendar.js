@@ -1,7 +1,7 @@
 class widgetCalendar {
-  constructor(callerID, id, name) {
+  constructor(callerID, GUID, name) {
     this.name = name;
-    this.calendarID = id;
+    this.calendarGUID = GUID;
     this.widgetID = app.idCounter;
     app.widgets[app.idCounter] = this;
     this.containedWidgets = [];
@@ -47,7 +47,7 @@ class widgetCalendar {
       <td id="calendar${this.widgetID}"></td>
       <td id = "detailsPane" class="hidden">
         <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
-        <b idr="nodeLabel">#${this.calendarID}: ${this.name}</b>
+        <b idr="nodeLabel">#${this.calendarGUID}: ${this.name}</b>
       </td>
     </tr></table></div></div>`;
 
@@ -61,7 +61,7 @@ class widgetCalendar {
     else {
       parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
     }
-    
+
     newWidget.outerHTML = html; // replace placeholder with the div that was just written
     this.calendarDOM = document.getElementById(`calendar${this.widgetID}`);
     this.widgetDOM = document.getElementById(`${this.widgetID}`);
@@ -77,7 +77,7 @@ class widgetCalendar {
 
     this.detailsPane = document.getElementById('detailsPane');
     this.containedWidgets.push(app.idCounter);
-    this.details = new widgetDetails('calendar', this.detailsPane, this.calendarID);
+    this.details = new widgetDetails('calendar', this.detailsPane, this.calendarGUID);
 
     this.buildDay(this.day);
   }
@@ -379,19 +379,4 @@ class widgetCalendar {
       button.value = "Show Details";
     }
   }
-
-  // showDetails(button) {
-  //   const row = app.domFunctions.getChildByIdr(this.widgetDOM, 'calendarRow');
-  //   const detailsCell = row.insertCell(-1);
-  //   new widgetDetails('calendar', detailsCell, this.calendarID);
-  //   button.value = "Hide Details";
-  //   button.setAttribute("onclick", "app.widget('hideDetails', this)");
-  // }
-  //
-  // hideDetails(button) {
-  //   const row = app.domFunctions.getChildByIdr(this.widgetDOM, 'calendarRow');
-  //   row.deleteCell(-1);
-  //   button.value = "Show Details";
-  //   button.setAttribute("onclick", "app.widget('showDetails', this)");
-  // }
 }
