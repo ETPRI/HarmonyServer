@@ -42,12 +42,17 @@ class dataBrowser {
     if (dataText) {
       data = JSON.parse(dataText);
     }
-    // If the object being dragged is not a node
-    if (!data || data.sourceType != "widgetTableNodes" || data.sourceTag != "TD") {
+    // If the object being dragged is not a node (from a widgetTableNodes, widgetRelations, widgetNode or dragDrop)
+    if (!data || !(
+        data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
+        data.sourceType == "widgetRelations" && data.sourceTag == "TR" ||
+        data.sourceType == "widgetNode" && data.sourceTag == "B" ||
+        data.sourceType == "dragDrop" && data.sourceTag == "TR"
+      )) {
       return;
     }
 
-    // If we get this far, we should have data about a node, including its ID.
+    // If we get this far, we should have data about a node, including its GUID.
 
     // check whether the data already exist
     if (this.nodeData[data.nodeID]) {
@@ -57,7 +62,7 @@ class dataBrowser {
     else {
       // query the DB for all info about this node and its relations, starting with the incoming relations
       const obj = {};
-      obj.required = {"name":"n", "id":data.nodeID};
+      obj.required = {"name":"n", "properties":{"M_GUID":data.nodeID}};
       obj.optional = {"name":"in"};
       obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
@@ -77,9 +82,9 @@ class dataBrowser {
     }
   }
 
-  findOuts(data, ID, cell) { // query the DB about outgoing relations, and pass along the incoming ones that were already found
+  findOuts(data, GUID, cell) { // query the DB about outgoing relations, and pass along the incoming ones that were already found
     const obj = {};
-    obj.required = {"name":"n", "id":ID};
+    obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
     obj.optional = {"name":"out"};
     obj.rel = {"name":"outRel"};
 
@@ -125,7 +130,7 @@ class dataBrowser {
 
   loadNode(data, cell) {
     // store data for later use
-    this.nodeData[data.n.id] = data;
+    this.nodeData[data.n.properties.M_GUID] = data;
 
     // Make sure cell is blank
     while (cell.firstElementChild) {
@@ -185,7 +190,7 @@ class dataBrowser {
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       arrowCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      arrowCell.setAttribute("idr", `arrow${ins[i].id}`);
+      arrowCell.setAttribute("idr", `arrow${ins[i].properties.M_GUID}`);
 
       const nameCell = document.createElement("td");
       nameCell.setAttribute("class", "dataBrowserCell");
@@ -202,7 +207,7 @@ class dataBrowser {
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       nameCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      nameCell.setAttribute("idr", `name_${ins[i].id}`);
+      nameCell.setAttribute("idr", `name_${ins[i].properties.M_GUID}`);
     }
 
     for (let i = 0; i < outs.length; i++) { // for every outgoing relation
@@ -224,7 +229,7 @@ class dataBrowser {
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       nameCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      nameCell.setAttribute("idr", `name_${outs[i].id}`);
+      nameCell.setAttribute("idr", `name_${outs[i].properties.M_GUID}`);
 
       const arrowCell = document.createElement("td");
       arrowCell.setAttribute("class", "dataBrowserCell");
@@ -237,7 +242,7 @@ class dataBrowser {
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
       arrowCell.setAttribute("onclick", "app.widget('toggleNode', this)");
-      arrowCell.setAttribute("idr", `arrow${outs[i].id}`);
+      arrowCell.setAttribute("idr", `arrow${outs[i].properties.M_GUID}`);
     }
 
     cell.setAttribute("class", "dataBrowser");
@@ -331,21 +336,21 @@ class dataBrowser {
       // mark this cell's row as active, and ensure that clicking it again will close it
       cell.parentElement.setAttribute("class", "dataBrowserOpen");
 
-      const ID = cell.getAttribute("idr").slice(5); // The idr will be either arrowxxx or name_xxx
+      const GUID = cell.getAttribute("idr").slice(5); // The idr will be either arrowxxx or name_xxx, where xxx is the GUID
 
       // Create new cell for new node details
       const newCell = document.createElement("td");
       mainRow.appendChild(newCell);
 
       // check whether the data already exist
-      if (this.nodeData[ID]) {
-        this.loadNode(this.nodeData[ID], newCell);
+      if (this.nodeData[GUID]) {
+        this.loadNode(this.nodeData[GUID], newCell);
       }
 
       else {
         // query the DB for all info about this node and its relations, starting with incoming relations
         const obj = {};
-        obj.required = {"name":"n", "id":ID};
+        obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
         obj.optional = {"name":"in"};
         obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
@@ -355,7 +360,7 @@ class dataBrowser {
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
             const newData = JSON.parse(this.responseText);
-            dataBrowser.findOuts(newData, ID, newCell);
+            dataBrowser.findOuts(newData, GUID, newCell);
           }
         };
 
