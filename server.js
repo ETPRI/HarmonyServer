@@ -10,8 +10,9 @@ var http = require('http');
 var fs   = require('fs');
 var path = require('path');
 var url  = require('url');
-var uuidv1 = require('uuid/v1')
-const config  = require('./config');
+var uuidv1 = require('uuid/v1');
+var integrityClass = require('./integrity');
+const config = require('./config');
 
 
 http.createServer(function (request, response) {
@@ -111,30 +112,24 @@ http.createServer(function (request, response) {
 
 console.log(`Server running at http://127.0.0.1:${config.port}`);
 
-// test();
-
-// test code goes here--------------------------
-function test() {
-  const obj = {a:"1", b:1};
-  fs.writeFile('test.txt', JSON.stringify(obj), (err) => {
-    if (err) throw err;
-    else {
-      fs.readFile('test.txt', (err, data) => {
-        if (err) throw err;
-        else {
-          let newData = JSON.parse(data);
-        }
-      });
-    }
-  });
-}
-
-// neo4j  --------------------------------------
+// start running neo4j code
 const neo4j  = require('neo4j-driver').v1;
 
 // Create a driver instance, for the user neo4j with password neo4j.
 // It should be enough to have a single driver per database per application.
 const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo3i"));
+
+test();
+var integrity = new integrityClass(driver, uuidv1);
+integrity.update = true;
+integrity.all();
+
+// test/one-time code goes here---------------------------------------------
+
+function test() {
+}
+
+// neo4j  --------------------------------------
 startNeo4j();
 //const driver = new neo4j.driver("bolt://localhost:7687", neo4j.auth.driver("neo4j", "paleo3i"));
 //const driver = neo4j.v1.driver("bolt://localhost", neo4j.v1.auth.basic("neo4j", "paleo3i"));
@@ -146,7 +141,7 @@ function startNeo4j() {
   const session = driver.session();
   var nodes = [];
   var fields = [];
-  query = "MATCH (n:M_MetaData) return n.name, n.fields";
+  let query = "MATCH (n:M_MetaData) return n.name, n.fields";
   session
     .run(query)
     .subscribe({
@@ -781,7 +776,7 @@ CRUD.deleteNode = function(obj, response) {
   const node = buildSearchString(dataObj, strings, "where", "node");
 
   const query = `match (${node}) with node, node.M_GUID as id detach delete node
-                 create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}'})`;
+                 create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${uuidv1()}'})`;
   sendQuery(query, response);
 }
 
@@ -961,7 +956,7 @@ CRUD.deleteRelation = function(obj, response) {
   }
 
   const query = `match (${from})-[${rel}]->(${to}) ${strings.where} with to, from, rel, rel.M_GUID as id
-                 delete rel create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}'})
+                 delete rel create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${uuidv1()}'})
                  ${strings.ret}`;
   sendQuery(query, response);
 }
@@ -1573,7 +1568,6 @@ function stringEscape(text) {
   // }
   return string;
 }
-
 
 //
 // // this is sequential code, add asyc back, not sure the best way
