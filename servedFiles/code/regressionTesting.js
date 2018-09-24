@@ -204,7 +204,7 @@ class regressionTesting {
   		}
   		// reset
   		this.recordText = [];
-  		this.recordedStep = 1;
+  		this.recordedStep = 1; // Not sure what's going on here - this variable is never used in this class
   	}
     else { // If the page was not recording
   		button.value = "Stop Recording"

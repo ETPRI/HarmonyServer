@@ -112,31 +112,6 @@ class mindmapKeypress {
         }
       }
 
-      //   // Remove the onmouseout from everything in the group, to avoid triggering it when the group disappears
-      //   const prefixes = ["node", "toggle", "note", "detail"];
-      //   for (let i = 0; i < prefixes.length; i++) {
-      //     const idr = prefixes[i] + nodeID;
-      //     const element = this.d3Functions.objects[nodeID].DOMelements[prefixes[i]];
-      //     element.removeAttribute("onmouseout");
-      //   }
-      //   const nodeObj = this.d3Functions.objects[nodeID].JSobj; // Get the object representing this node
-      //   const parentID = nodeObj.parent;
-      //   if (parentID != "null") { // If the object has a parent, remove it from its parent's children array
-      //     const parentObj = this.d3Functions.objects[parentID].JSobj;
-      //     const parentIndex = parentObj.children.indexOf(nodeObj);
-      //     if(parentIndex != -1) {
-      //       parentObj.children.splice(parentIndex, 1);
-      //     }
-      //   }
-      //   else { // If the object is a root, remove it from the roots array
-      //     const rootIndex = this.d3Functions.roots.indexOf(nodeObj);
-      //     if(rootIndex != -1) {
-      //       this.d3Functions.roots.splice(rootIndex, 1);
-      //     }
-      //   }
-      //   // Remove the object from d3Functions's objects array
-      //   this.d3Functions.objects[nodeID] = null;
-      // } // end for (every selected node)
       this.parent.selectedNodes.clear();
       this.d3Functions.update();
     } // end if (there are selected nodes)

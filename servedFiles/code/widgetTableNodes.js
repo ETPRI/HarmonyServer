@@ -61,6 +61,16 @@ class widgetTableNodes {
     obj.where = this.buildWhere();
     obj.orderBy = this.queryObject.orderBy;
     obj.limit = app.domFunctions.getChildByIdr(this.widget, "limit").value;
+    obj.links = [];
+
+    const row = document.getElementById('dropNodes');
+    const cells = row.children;
+
+    for (let cell of cells) {
+      if (cell.getAttribute('GUID')) {
+        obj.links.push(cell.getAttribute('GUID'));
+      }
+    }
 
     if (obj.type == 'mindmap') {
       obj.owner = this.buildOwner();
@@ -137,16 +147,20 @@ class widgetTableNodes {
     limit <input value ="9" idr = "limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
     </div>
 
-    <table class="widgetBody">
-      <thead idr = "headerRow">
-      <tr><th></th><th hidden></th>#headerSearch#</tr>
-      <tr><th>#</th><th hidden>ID</th>#header#</tr>
-      </thead>
-      <tbody idr = "data"> </tbody>
-    </table>
-    <!-- popup goes here -->
+    <div class="widgetBody">
+      <table>
+        <thead idr = "headerRow">
+        <tr><th></th><th hidden></th>#headerSearch#</tr>
+        <tr><th>#</th><th hidden>ID</th>#header#</tr>
+        </thead>
+        <tbody idr = "data"> </tbody>
+      </table>
+      </div>
+      <!-- popup goes here -->
     </div>
     `
+
+    const html2 = html.replace('ondrop="app.drop(this, event)" ondragover="app.allowDrop(this, event)"', ""); // Disable ondrop - can't rearrange search tables anymore
 
     const strSearch = `
     <select idr = "dropdown#x#", onclick = "app.regression.logSearchChange(this)">
@@ -196,7 +210,7 @@ class widgetTableNodes {
           </th>`;
     }
 
-    const html4 = html.replace('#headerSearch#',s)
+    const html3 = html2.replace('#headerSearch#',s)
 
     // build field name part of header
     let f="";
@@ -213,7 +227,7 @@ class widgetTableNodes {
     if (this.queryObjectName == 'people') {
       f += '<th colspan = "3">Permissions</th>'
     }
-    const html5 = html4.replace('#header#',f);
+    const html4 = html3.replace('#header#',f);
 
     /*
     Create new element and append to tableHeader widget
@@ -221,7 +235,7 @@ class widgetTableNodes {
     const parent = document.getElementById('tableHeader');
     let newWidget = document.createElement('div'); // create placeholder div
     parent.append(newWidget); // Insert the new div before the first existing one
-    newWidget.outerHTML = html5; // replace placeholder with the div that was just written
+    newWidget.outerHTML = html4; // replace placeholder with the div that was just written
 
     // make the new widget hidden, and give it a descriptive ID and special class
     newWidget = document.getElementById(this.idWidget);
@@ -412,19 +426,6 @@ class widgetTableNodes {
     obj.action = "dragstart";
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
-  }
-
-// I'm not sure this is ever used.
-  getatt(fieldName) {
-    let ret = this.fields[fieldName].att
-    if (!ret) {
-      ret="";
-    }
-  }
-
-  // I'm almost certain this isn't.
-  relationAdd(element) {
-    alert(element.previousElementSibling.textContent)
   }
 
   edit(element){

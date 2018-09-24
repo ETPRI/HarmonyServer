@@ -7,7 +7,7 @@ class domFunctions {
   // "deep" value that determines whether to keep going.
   getChildByIdr(element, idr, deep) {
     if (!(element && element.children)) {
-      alert (`Searching for idr ${idr}`);
+      app.error(`Searching for idr ${idr}, but the parent element does not exist or has no children`);
     }
     if (element.children) {
       const children = Array.from(element.children); // Get the element's children
@@ -17,7 +17,7 @@ class domFunctions {
           return child; // If the idr matches, return the element...
         }
         // If the child is not a widget itself (or a deep search is being done), and it has children...
-        else if ((!child.classList.contains("widget") || deep) && child.children.length > 0) { 
+        else if ((!child.classList.contains("widget") || deep) && child.children.length > 0) {
           children.push(...child.children); // add its children to the children array
         }
       }

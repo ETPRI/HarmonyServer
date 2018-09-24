@@ -365,15 +365,14 @@ class widgetView {
       // Create new row
       const row = document.createElement('tr');
       row.setAttribute("idr", `item${dragDropObj.itemCount}`); // Assign an idr
-      row.setAttribute("ondrop", "app.widget('drop', this, event)"); // Assign drag and drop methods
+      row.setAttribute("ondrop", "app.widget('dropData', this, event)"); // Assign drag and drop methods
       row.setAttribute("ondragover", "app.widget('allowDrop', this, event)");
       row.setAttribute("draggable", "true");
       row.setAttribute("ondragstart", "app.widget('drag', this, event)");
 
       const html = `<td></td>
-                    <td></td>
-                    <td ondragover="app.widget('allowDrop', this, event)" ondrop="app.widget('dropData', this, event)" idr="content${dragDropObj.contentCount++}">${data.nodeID}</td>
-                    <td ondragover="app.widget('allowDrop', this, event)" ondrop="app.widget('dropData', this, event)" idr="content${dragDropObj.contentCount++}">${data.name}</td>
+                    <td hidden></td><td hidden>${data.nodeID}</td>
+                    <td idr="content${dragDropObj.contentCount++}">${data.name}</td>
                     <td>${data.type}</td>
                     <td ondblclick="app.widget('edit', this, event)" idr="content${dragDropObj.contentCount++}">${comment}</td>
                     <td><input type="button" idr="delete${dragDropObj.itemCount++}" value="Delete" onclick="app.widget('delete', this)"></td>`

@@ -35,6 +35,16 @@
     <div id="tableHeader">
       <div id="buttons"></div>
       <div id="adminButtons"></div>
+      <table>
+        <tbody>
+          <tr id="dropNodes" class = "dropNodes">
+            <td>Required Links:</td>
+            <td id="dropNode0"
+            ondragover = "event.preventDefault()"
+            ondrop = "app.dropLink(this, event)"></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <div id="workSpace">
       <div id="widgets" class=""> </div>

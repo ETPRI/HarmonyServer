@@ -20,6 +20,9 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
     // DOM pointers to data that will change, just make place holders
     this.widgetDOM   = container;
     this.tableDOM    = {};
+    this.tBodyDOM    = null;
+    this.fieldPopup  = null;
+    this.trashRow    = null;
 
     this.name                 = name;
     this.id                   = null; // will be filled in later
@@ -32,6 +35,8 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
     this.formFieldsDisplayed  = this.queryObject.formFieldsDisplayed;
     this.orderBy              = this.queryObject.orderBy;
     this.newFields            = 0;
+    this.hiddenFields         = 0;
+    this.dataNode             = null;
 
     this.idWidget = app.idCounter;
     app.widgets[app.idCounter++] = this; // Add to app.widgets
@@ -103,7 +108,6 @@ buildWidget() { // public - build table header
 
   if (this.dataNode) {
     // we are edit mode
-    // id = this.id;
     name = this.dataNode.properties.name;
   }
 
@@ -448,7 +452,7 @@ trashNode() {
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      details.trashUntrash(data);
+      details.save(data);
     }
   };
 
@@ -477,7 +481,7 @@ updateReason() {
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      details.trashUntrash(data);
+      details.save(data);
     }
   };
 
@@ -502,17 +506,13 @@ untrashNode() {
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      details.trashUntrash(data);
+      details.save(data);
     }
   };
 
   xhttp.open("POST","");
   const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
-}
-
-trashUntrash(data) {
-  this.save(data);
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -805,7 +805,7 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
   }
 
   if (data===[]) {
-    if (trashUntrash) { // If the node was trashed or untrashed, but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
+    if (trashUntrash) { // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
       const obj = {};
       obj.id = this.idWidget;
       obj.idr = "addSaveButton";

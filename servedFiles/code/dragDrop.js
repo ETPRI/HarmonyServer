@@ -8,6 +8,7 @@ class dragDrop {
   constructor(containerIDR, buttonIDR, row, content) {
 
     this.activeNode = null; // node which is being dragged
+    this.showHide = null;
     this.domFunctions 	= new domFunctions();
 
     // add to app.widgets
@@ -47,11 +48,9 @@ class dragDrop {
       this.insertContainer.setAttribute("ondragstart", "app.widget('drag', this, event)");
     }
 
+    this.itemCount = 0;
     if (row) {
       this.itemCount = row; // Number of finished rows which have been added
-    }
-    else {
-      this.itemCount = 0;
     }
 
     this.inputCount = 0; // number of input fields in the input element
@@ -59,23 +58,10 @@ class dragDrop {
     this.createInputs(this.insertContainer);
     this.insertContainer.setAttribute("idr", "insertContainer");
 
+    this.contentCount = 0;
     if (content) { // existing is an optional value recording the number of rows that are already in the table.
       this.contentCount = content;
     }
-    else {
-      this.contentCount = 0;
-    }
-
-
-
-    // I liked this, but I always had trouble getting the focus to go where I wanted it,
-    // and when it also started to be difficult to FIND the first input, I decided to comment it out for now.
-
-    // Make this.input the first input field
-    // this.input = this.insertContainer;
-    // while(this.input.hasChildNodes()) {
-    //   this.input = this.input.firstElementChild;
-    // }
   }
 
   createInputs(element) { // To support nested tags
@@ -204,7 +190,6 @@ class dragDrop {
       // Insert the new element before the input
       this.container.insertBefore(newEl, this.insertContainer);
     }
-    // this.activeNode = newEl; // remember item that we are editing
 
     // set all the draggable functions
     if (!newEl.hasAttribute("ondrop")) { // If there's already an ondrop event set up, don't replace it
@@ -218,10 +203,6 @@ class dragDrop {
       newEl.setAttribute("ondragstart", "app.widget('drag', this, event)");
     }
 
-    // newEl.setAttribute("ondrop"        ,"app.widget('drop', this, event)"     );
-    // newEl.setAttribute("ondragover"    ,"app.widget('allowDrop', this, event)");
-    // newEl.setAttribute("ondragstart"   ,"app.widget('drag', this, event)"     );
-    // newEl.draggable  = true;
     newEl.setAttribute("idr", `item${this.itemCount}`);
     newEl.setAttribute("class", "newData");
 
@@ -230,7 +211,6 @@ class dragDrop {
     this.createDelete(newEl);
 
     return newEl;
-    // this.input.focus();
   }
 
   createDelete(line) {
@@ -282,7 +262,7 @@ class dragDrop {
     let closeButton;
     let hasClose = false;
 
-    // This is a kludge! Fix if possible
+    // NOTE: This is a kludge! Fix if possible
     if (this.activeNode.children.length > 0) { // since only leaves are editable, this.activeNode has no children other than possibly a close button.
       closeButton = this.activeNode.firstElementChild;
       this.activeNode.removeChild(closeButton); // Temporarily remove the close button so it won't get caught up in textContent.
@@ -317,7 +297,7 @@ class dragDrop {
     app.regression.record(obj);
   }
 
-  save(evnt){ // Save changes to a node
+  save(){ // Save changes to a node
     const el = this.domFunctions.getChildByIdr(this.domElement, "edit");
     el.hidden=true; 		 // hide input element
     const text = document.createTextNode(el.value);
@@ -338,8 +318,6 @@ class dragDrop {
     this.log(JSON.stringify(obj));
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
-
-    // this.input.focus(); // return focus to input
   }
 
   log(text) { // Add a message to the eventLog
@@ -358,7 +336,6 @@ class dragDrop {
     }
     else {
       button.value = "Hide input";
-      // this.input.focus();
     }
 
     // log
@@ -389,7 +366,5 @@ class dragDrop {
   }
 
   test() { // This is where I put code I'm testing and want to be able to fire at will. There's a test button on 1-drag.html to fire it.
-    const evnt = new Event("dragstart");
-    this.insertContainer.dispatchEvent(evnt);
   }
 }

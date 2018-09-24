@@ -11,8 +11,20 @@ constructor() {
 	this.widgets   = {}; // store widgets as they are created, remove when closed
 	this.idCounter = 0;  // init id counter - used get getElementById, is the id of the widget
 
-	this.activeWidget = null; // widget being dragged
-	this.shownTable = null; // visible table widget
+	this.activeWidget 	= null; // widget being dragged
+	this.shownTable 		= null; // visible table widget
+
+	this.metaData  			= null;
+	this.domFunctions 	= null;
+	this.login 					= null;
+	this.regression 		= null;
+	this.checkEmpty 		= null;
+
+	this.workSpace			= null;
+	this.tableHeader		= null;
+	this.adminButtons		= null;
+
+	this.dropNodes			= 1;
 }
 
 // Calls all the functions which need to run at the start of a session.
@@ -49,12 +61,6 @@ buildApp() {
 
 	// Check the brower capabilities and, if applicable, report that it definitely won't work or that it's not tested
 	this.supportsES6();
-
-	// Create preset calendar options
-	this.presetCalendars();
-
-	// Create temp admin account if a real one doesn't yet exist; delete it if a real one does exist
-	this.login.checkAdminTable();
 
 	// Check for metadata and add it if needed
 	this.checkMetaData();
@@ -228,101 +234,29 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 createDebug() {
 	const header = document.getElementById("debugHeader");
 	if (header) {
-		header.setAttribute("hidden", "true");
-		const p = document.createElement('p');
-		const text = document.createTextNode('	|-> debugging');
-		p.appendChild(text);
-		header.appendChild(p);
-
-		const select = document.createElement('select');
-		select.setAttribute('id', 'metaData');
-		select.setAttribute('onchange', 'app.menuDBstats(this); this.selectedIndex = 0');
-		header.appendChild(select);
-
-		const opt1 = document.createElement('option');
-		opt1.setAttribute('value', "");
-		const opt1text = document.createTextNode('MetaData');
-		opt1.appendChild(opt1text);
-		select.appendChild(opt1);
-
-		const opt2 = document.createElement('option');
-		opt2.setAttribute('value', "nodes");
-		const opt2text = document.createTextNode('Nodes');
-		opt2.appendChild(opt2text);
-		select.appendChild(opt2);
-
-		const opt3 = document.createElement('option');
-		opt3.setAttribute('value', "keysNode");
-		const opt3text = document.createTextNode('Node Keys');
-		opt3.appendChild(opt3text);
-		select.appendChild(opt3);
-
-		const opt4 = document.createElement('option');
-		opt4.setAttribute('value', "relations");
-		const opt4text = document.createTextNode('Relations');
-		opt4.appendChild(opt4text);
-		select.appendChild(opt4);
-
-		const opt5 = document.createElement('option');
-		opt5.setAttribute('value', "keysRelation");
-		const opt5text = document.createTextNode('Relation Keys');
-		opt5.appendChild(opt5text);
-		select.appendChild(opt5);
-
-		const opt6 = document.createElement('option');
-		opt6.setAttribute('value', "dataBrowser");
-		const opt6text = document.createTextNode('Data Browser');
-		opt6.appendChild(opt6text);
-		select.appendChild(opt6);
-
-		const opt7 = document.createElement('option');
-		opt7.setAttribute('value', "allTrash");
-		const opt7text = document.createTextNode('All Trashed Nodes');
-		opt7.appendChild(opt7text);
-		select.appendChild(opt7);
-
-		const logButton = document.createElement('input');
-		logButton.setAttribute('type', 'button');
-		logButton.setAttribute('id', 'LogButton');
-		logButton.setAttribute('value', 'Start Logging');
-		logButton.setAttribute('onclick', 'app.regression.logToggle(this)');
-		header.appendChild(logButton);
-
-		const clearButton = document.createElement('input');
-		clearButton.setAttribute('type', 'button');
-		clearButton.setAttribute('id', "Clear");
-		clearButton.setAttribute('value', "Clear ALL");
-		clearButton.setAttribute('onclick', 'app.regression.clearAll(app)');
-		header.appendChild(clearButton);
-
-		const checkEmpty = document.createElement('input');
-		checkEmpty.setAttribute('type', 'button');
-		checkEmpty.setAttribute('id', 'checkEmpty');
-		checkEmpty.setAttribute('value', "Check whether database is empty");
-		checkEmpty.setAttribute('onclick', 'app.checkEmpty.checkEmpty(this)');
-		header.appendChild(checkEmpty);
-
-		const debugText = document.createTextNode("Most recent DB query: ");
-		header.appendChild(debugText);
-
-		const debugTextbox = document.createElement('input');
-		debugTextbox.setAttribute('type', 'text');
-		debugTextbox.setAttribute('size', '80');
-		header.appendChild(debugTextbox);
-
-		const linkPar = document.createElement('p');
-		const link = document.createElement('a');
-		link.setAttribute('href', 'http://localhost:7474/browser/');
-		link.setAttribute('target', '_blank');
-		const linkText = document.createTextNode('Neo4j Browser');
-		link.appendChild(linkText);
-		linkPar.appendChild(link);
-		const descText = document.createTextNode(' To use this site, Neo4j Desktop must be running with a database started.');
-		linkPar.appendChild(descText);
-		header.appendChild(linkPar);
-
-		const line = document.createElement('hr');
-		header.appendChild(line);
+		header.outerHTML = `
+			<div id="debugHeader" hidden="true">
+				<p>	|-&gt; debugging</p>
+				<select id="metaData" onchange="app.menuDBstats(this); this.selectedIndex = 0">
+					<option value="">MetaData</option>
+					<option value="nodes">Nodes</option>
+					<option value="keysNode">Node Keys</option>
+					<option value="relations">Relations</option>
+					<option value="keysRelation">Relation Keys</option>
+					<option value="dataBrowser">Data Browser</option>
+					<option value="allTrash">All Trashed Nodes</option>
+				</select>
+				<input type="button" id="LogButton" value="Start Logging" onclick="app.regression.logToggle(this)">
+				<input type="button" id="Clear" value="Clear ALL" onclick="app.regression.clearAll(app)">
+				<input type="button" id="checkEmpty" value="Check whether database is empty" onclick="app.checkEmpty.checkEmpty(this)">
+				Most recent DB query: <input type="text" size="80">
+				<p>
+					<a href="http://localhost:7474/browser/" target="_blank">Neo4j Browser</a>
+					To use this site, Neo4j Desktop must be running with a database started.
+				</p>
+				<hr>
+			</div>
+		`
 
 		const obj = {};
 		obj.object = this;
@@ -333,8 +267,7 @@ createDebug() {
 	}
 }
 
-// Runs when an item is chosen from the menu dropdown, or the New button is clicked.
-// Creates a table of whatever type of node is selected on the dropdown (nothing happens if the placeholder is selected).
+// Runs when a search button is clicked. Shows the table associated with that search button.
 menuNodes(name) {
 	if (this.shownTable) {
 		this.shownTable.hidden = true;
@@ -367,19 +300,6 @@ menuDBstats(dropDown){
 	}
 }
 
-// Runs when the page loads. Ensures all preset calendars exist in the database.
-presetCalendars() {
-	// At the moment the only preset calendar is a dummy calendar that doesn't show events. This will change.
-	const obj = {};
-	obj.node = {"type":"calendar", "properties":{"name":"dummy", "description":"dummy calendar"}, "merge":true, "return":false};
-
-	const xhttp = new XMLHttpRequest();
-
-	xhttp.open("POST","");
-	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-	xhttp.send(JSON.stringify(queryObject));         // send request to server
-}
-
 // refresh widget with new database call. domElement is the search button that triggered the search.
 widgetSearch(domElement) {
 	// Get the ID of the widget that the search button was part of...
@@ -401,8 +321,8 @@ widgetHeader(tag){
 		tag = "div";
 	}
 	return(`
-	<${tag} id="${this.idCounter++}" class="widget" ondrop="app.drop(this, event)"
-				ondragover="app.allowDrop(this, event)" onmousedown="app.setActiveWidget(this)">
+	<${tag} id="${this.idCounter++}" class="widget" ondrop="app.drop(this, event)" ondragover="app.allowDrop(this, event)"
+	onmousedown="app.setActiveWidget(this)">
 	<hr>
 	<div idr="header" class="widgetHeader" draggable="true" ondragstart="app.drag(this, event)">
 	<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
@@ -458,7 +378,6 @@ widgetClose(widgetElement) {
 	if (widget.classList.contains('tableWidget')) {
 		widget.hidden = true;
 		this.shownTable = null;
-		this.activeWidget = null;
 	}
 
 	else { // otherwise, actually delete it
@@ -477,6 +396,8 @@ widgetClose(widgetElement) {
 			}
 			delete this.widgets[child]; 	// and delete it.
 		}
+
+		this.activeWidget = null;
 
 		// delete html2 from page
 		widget.parentElement.removeChild(widget);
@@ -506,6 +427,9 @@ stripIDs (data) { // Assume that the data is the result of a query. Each row may
 		for (let fieldName in data[i]) { // for every item in that row, which may BE a whole node or relation
 			if ((data[i][fieldName] instanceof Object) && ('identity' in data[i][fieldName])) { // If that item is an object with an identity, delete it
 				delete data[i][fieldName].identity;
+			}
+			if ((data[i][fieldName] instanceof Object) && ('id' in data[i][fieldName])) { // If that item is an object with an id (new alias for identity), delete it
+				delete data[i][fieldName].id;
 			}
 			if ((data[i][fieldName] instanceof Object) && ('start' in data[i][fieldName])) { // If that item has a "start", which is another node's identity, delete it
 				delete data[i][fieldName].start;
@@ -564,7 +488,7 @@ drop(widget, evnt) {
 			target = target.parentNode;
 		}
 
-		if (this.activeWidget) { // If activeNode (the DOM element being dragged) exists
+		if (this.activeWidget) { // If activeWidget (the DOM element being dragged) exists
 			if (this.activeWidget.offsetTop < target.offsetTop) {  // drag down
 				target.parentNode.insertBefore(this.activeWidget, target.nextSibling); // Insert after target
 			}
@@ -573,7 +497,7 @@ drop(widget, evnt) {
 			}
 		}
 
-		this.activeNode = null; // Nothing is actively being dragged anymore - the thing that was being dragged was dropped.
+		this.activeWidget = null; // Nothing is actively being dragged anymore - the thing that was being dragged was dropped.
 
 		const obj = {};
 		obj.id = this.domFunctions.widgetGetId(evnt.target);
@@ -589,6 +513,41 @@ setActiveWidget(widget) {
 	}
 	this.activeWidget = widget;
 	widget.classList.add("activeWidget");
+}
+
+dropLink(input, evnt) {
+	const dataText = evnt.dataTransfer.getData("text/plain");
+	const data = JSON.parse(dataText);
+
+	// verify that the data represent a node
+	if (!data || !(
+			data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
+			data.sourceType == "widgetRelations" && data.sourceTag == "TR" ||
+			data.sourceType == "widgetNode" && data.sourceTag == "B" ||
+			data.sourceType == "dragDrop" && data.sourceTag == "TR"
+		)) {
+		return;
+	}
+
+	// If the cell was the blank one, create a new blank cell at the end of the tr.
+	if (input.innerHTML === "") {
+		const row = input.parentElement;
+		const cell = document.createElement("td");
+		row.appendChild(cell);
+		cell.outerHTML = `<td id="dropNode${this.dropNodes++}"
+											ondragover = "event.preventDefault()"
+											ondrop = "app.dropLink(this, event)"></td>`;
+	}
+
+	// If the data represent a node, then we should have, among other things, name, type (the label) and nodeID (the GUID).
+	input.innerHTML = `<input type="button" value="X" onclick="app.deleteLink(this)">${data.name}`;
+	input.setAttribute('GUID', data.nodeID);
+}
+
+deleteLink(input) {
+	let cell = input.parentElement;
+	let row = cell.parentElement;
+	row.removeChild(cell);
 }
 
 // Check for support of JS version 6

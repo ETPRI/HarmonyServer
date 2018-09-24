@@ -185,7 +185,7 @@ class dataBrowser {
       arrowCell.appendChild(arrowText);
       row.appendChild(arrowCell);
 
-      const inDescription = this.createArrowPopup(inRels[i]);
+      const inDescription = this.buildPopup(inRels[i]);
       arrowCell.appendChild(inDescription);
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
@@ -202,7 +202,7 @@ class dataBrowser {
       nameCell.appendChild(nameText);
       row.appendChild(nameCell);
 
-      const nodeDesc = this.createNodePopup(ins[i]);
+      const nodeDesc = this.buildPopup(ins[i]);
       nameCell.appendChild(nodeDesc);
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
@@ -224,7 +224,7 @@ class dataBrowser {
       nameCell.appendChild(nameText);
       row.appendChild(nameCell);
 
-      const nodeDesc = this.createNodePopup(outs[i]);
+      const nodeDesc = this.buildPopup(outs[i]);
       nameCell.appendChild(nodeDesc);
       nameCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       nameCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
@@ -237,7 +237,7 @@ class dataBrowser {
       arrowCell.appendChild(arrowText);
       row.appendChild(arrowCell);
 
-      const outDescription = this.createArrowPopup(outRels[i]);
+      const outDescription = this.buildPopup(outRels[i]);
       arrowCell.appendChild(outDescription);
       arrowCell.setAttribute("onmouseover", "app.widget('showPopup', this)");
       arrowCell.setAttribute("onmouseout", "app.widget('hidePopup', this)");
@@ -248,64 +248,19 @@ class dataBrowser {
     cell.setAttribute("class", "dataBrowser");
   }
 
-  createNodePopup(node) {
+  buildPopup(data) {
     const description = document.createElement("div");
     description.setAttribute("class", "dataBrowserDescription");
     const relDescTable = document.createElement("table");
+
+    let type = data.type;
+    if (!type) type = data.labels[0];
+
+    relDescTable.innerHTML = `<tr><th>Type</th><td>${type}</td></tr>`;
     description.appendChild(relDescTable);
-    const typeRow = document.createElement("tr");
-    relDescTable.appendChild(typeRow);
-    const typeLabelCell = document.createElement("th");
-    typeRow.appendChild(typeLabelCell);
-    const typeLabel = document.createTextNode("Type");
-    typeLabelCell.appendChild(typeLabel);
-    const typeCell = document.createElement("td");
-    typeRow.appendChild(typeCell);
-    const type = document.createTextNode(node.labels[0]);
-    typeCell.appendChild(type);
 
-    for (let fieldName in node.properties) {
-      const fieldRow = document.createElement("tr");
-      relDescTable.appendChild(fieldRow);
-      const fieldLabelCell = document.createElement("th");
-      fieldRow.appendChild(fieldLabelCell);
-      const fieldLabel = document.createTextNode(fieldName);
-      fieldLabelCell.appendChild(fieldLabel);
-      const fieldValueCell = document.createElement("tr");
-      fieldRow.appendChild(fieldValueCell);
-      const fieldValue = document.createTextNode(node.properties[fieldName]);
-      fieldValueCell.appendChild(fieldValue);
-    }
-    return description;
-  }
-
-  createArrowPopup(rel) {
-    const description = document.createElement("div");
-    description.setAttribute("class", "dataBrowserDescription");
-    const relDescTable = document.createElement("table");
-    description.appendChild(relDescTable);
-    const typeRow = document.createElement("tr");
-    relDescTable.appendChild(typeRow);
-    const typeLabelCell = document.createElement("th");
-    typeRow.appendChild(typeLabelCell);
-    const typeLabel = document.createTextNode("Type");
-    typeLabelCell.appendChild(typeLabel);
-    const typeCell = document.createElement("td");
-    typeRow.appendChild(typeCell);
-    const type = document.createTextNode(rel.type);
-    typeCell.appendChild(type);
-
-    for (let fieldName in rel.properties) {
-      const fieldRow = document.createElement("tr");
-      relDescTable.appendChild(fieldRow);
-      const fieldLabelCell = document.createElement("th");
-      fieldRow.appendChild(fieldLabelCell);
-      const fieldLabel = document.createTextNode(fieldName);
-      fieldLabelCell.appendChild(fieldLabel);
-      const fieldValueCell = document.createElement("tr");
-      fieldRow.appendChild(fieldValueCell);
-      const fieldValue = document.createTextNode(rel.properties[fieldName]);
-      fieldValueCell.appendChild(fieldValue);
+    for (let fieldName in data.properties) {
+      relDescTable.innerHTML += `<tr><th>${fieldName}</th><td>${data.properties[fieldName]}</td></tr>`;
     }
     return description;
   }

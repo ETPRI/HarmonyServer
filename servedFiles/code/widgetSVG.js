@@ -2,12 +2,20 @@ class widgetSVG {
   constructor (callerID, GUID, name) { // create variables, query for data if needed, then call buildWidget()
     this.widgetID = app.idCounter;
     this.mapGUID = GUID;
+    this.mapID = null;
     this.SVG_DOM = null;
     this.widgetDOM = null;
     this.name = name;
     app.widgets[app.idCounter] = this;
     this.containedWidgets = [];
     this.callerID = callerID;
+    this.owner = null;
+
+    this.d3Functions  = null;
+    this.clicks       = null;
+    this.keys         = null;
+    this.detailsPane  = null;
+    this.details      = null;
 
     this.nodeLabel = app.metaData.getNode('mindmap').nodeLabel;
 
@@ -28,7 +36,7 @@ class widgetSVG {
 
     if (this.mapGUID) {
       const obj = {};
-      obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.mapID}};
+      obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.mapGUID}};
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
@@ -112,7 +120,7 @@ class widgetSVG {
 
     this.detailsPane = document.getElementById('detailsPane');
     this.containedWidgets.push(app.idCounter);
-    this.details = new widgetDetails('mindmap', this.detailsPane, this.mapID);
+    this.details = new widgetDetails('mindmap', this.detailsPane, this.mapGUID);
 
     if (data) {
       this.loadComplete(data);
@@ -597,15 +605,6 @@ class widgetSVG {
     SVG.removeAttribute("onmouseup");
 
     const select = this.selectBox.getBoundingClientRect();
-
-    // if (this.selectedNodes.size > 0) { // Clear existing selected nodes
-    //   for (let node of this.selectedNodes) {
-    //     const id = node.getAttribute("idr").slice(5); // groupxxx
-    //     this.hideEverything(id);
-    //     node.classList.remove("selected");
-    //   }
-    //   this.selectedNodes.clear();
-    // }
 
     // Select nodes
     // For every label...

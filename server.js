@@ -120,6 +120,7 @@ const neo4j  = require('neo4j-driver').v1;
 const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo3i"));
 
 test();
+
 var integrity = new integrityClass(driver, uuidv1);
 integrity.update = true;
 integrity.all();
@@ -130,108 +131,8 @@ function test() {
 }
 
 // neo4j  --------------------------------------
-startNeo4j();
 //const driver = new neo4j.driver("bolt://localhost:7687", neo4j.auth.driver("neo4j", "paleo3i"));
 //const driver = neo4j.v1.driver("bolt://localhost", neo4j.v1.auth.basic("neo4j", "paleo3i"));
-
-let changeCount = 0;
-
-function startNeo4j() {
-  console.log("Checking metadata...");
-  const session = driver.session();
-  var nodes = [];
-  var fields = [];
-  let query = "MATCH (n:M_MetaData) return n.name, n.fields";
-  session
-    .run(query)
-    .subscribe({
-      onNext: function (record) {
-        nodes.push(record._fields[0]);
-        fields.push(record._fields[1]);
-      },
-      onCompleted: function () {
-        console.log(`${nodes.length} node types found.`);
-        for (let i = 0; i < nodes.length; i++) {
-          getKeys(nodes[i], JSON.parse(fields[i]));
-        }
-        session.close();
-      },
-      onError: function (error) {
-        console.log(error);
-      }
-  });
-}
-
-function getKeys(node, fields) {
-  const session = driver.session();
-  var keys = [];
-  let query = `MATCH (p:${node}) unwind keys(p) as key RETURN distinct key`;
-  session
-    .run(query)
-    .subscribe({
-      onNext: function (record) {
-        keys.push(record._fields[0]);
-      },
-      // at this point, we have a keys array which includes all keys found for this node type,
-      // and a fields object which should contain a key for every field. If it doesn't, then that key needs to be added.
-      // So go through all the keys from the DB and add any that are missing to fields.
-      onCompleted: function () {
-        let mismatch = false;
-        for (let i = 0; i < keys.length; i++) {
-          if (!(keys[i] in fields) && keys[i].slice(0,2) !== 'M_') { // If this key is missing from the fields object, and isn't metadata
-            fields[keys[i]] = {label: keys[i]}; // assume its name is also its label
-            console.log (`Mismatch! Node type ${node} was missing key ${keys[i]}; adding now.`);
-            mismatch = true;
-          }
-        }
-        if (mismatch) {
-          updateFields(node, fields);
-        }
-        else {
-          console.log (`Node type ${node} has no mismatches.`);
-        }
-        session.close();
-      },
-      onError: function (error) {
-        console.log(error);
-      }
-  });
-}
-
-function updateFields(node, fields) {
-  const session = driver.session();
-  let query = `MATCH (m:M_MetaData {name:"${node}"}) set m.fields = "${stringEscape(JSON.stringify(fields))}"`;
-  session
-    .run(query)
-    .subscribe({
-      onCompleted: function () {
-        getChangeCount();
-        session.close();
-      },
-      onError: function (error) {
-        console.log(error);
-      }
-  });
-}
-
-function getChangeCount() {
-  const session = driver.session();
-  let query = `match (n:M_ChangeLog) return coalesce(max(n.number), 0) as max`;
-  session
-    .run(query)
-    .subscribe({
-      onNext: function (record) {
-        changeCount = record._fields[0];
-      },
-      onCompleted: function () {
-        session.close();
-      },
-      onError: function (error) {
-        console.log(error);
-      }
-  });
-
-}
 
 function runNeo4j(query, response) {
     console.log('runNeo4j - %s',query);
@@ -747,7 +648,6 @@ let CRUD = {};
 
 CRUD.createNode = function(obj, response) {
   let dataObj = obj.query;
-  let number = ++changeCount;
   const uuid = uuidv1();
 
   const strings = {ret:"", where:""}; // where won't be used here, but I'm including it for consistency
@@ -759,7 +659,7 @@ CRUD.createNode = function(obj, response) {
   }
 
   const changeUUID = uuidv1();
-  let changeLogs = `(change0:M_ChangeLog {number:${number}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
+  let changeLogs = `(change0:M_ChangeLog {number:${++integrity.changeCount}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
                      action:'create', label:'${dataObj.type}', M_GUID:'${changeUUID}'}), ${changeLogData.changeLogs}`;
   changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
@@ -776,7 +676,7 @@ CRUD.deleteNode = function(obj, response) {
   const node = buildSearchString(dataObj, strings, "where", "node");
 
   const query = `match (${node}) with node, node.M_GUID as id detach delete node
-                 create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${uuidv1()}'})`;
+                 create (c:M_ChangeLog {number:${++integrity.changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${uuidv1()}'})`;
   sendQuery(query, response);
 }
 
@@ -863,7 +763,6 @@ CRUD.changeNode = function(obj, response) {
 
 CRUD.createRelation = function(obj, response) {
   let dataObj = obj.query;
-  let number = ++changeCount;
   const strings = {ret:"", where:""};
 
   // Build the string representing the "from" node - what goes in the first set of parentheses
@@ -899,7 +798,7 @@ CRUD.createRelation = function(obj, response) {
 
   // finish the string to generate changeLogs
   const changeUUID = uuidv1();
-  let changeLogs = `(change0:M_ChangeLog {number:${number}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
+  let changeLogs = `(change0:M_ChangeLog {number:${++integrity.changeCount}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
                      to_GUID:to.M_GUID, from_GUID:from.M_GUID, label:'${dataObj.rel.type}',
                      action:'create', M_GUID:'${changeUUID}'}), ${changeLogData.changeLogs}`;
   changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
@@ -956,7 +855,7 @@ CRUD.deleteRelation = function(obj, response) {
   }
 
   const query = `match (${from})-[${rel}]->(${to}) ${strings.where} with to, from, rel, rel.M_GUID as id
-                 delete rel create (c:M_ChangeLog {number:${++changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${uuidv1()}'})
+                 delete rel create (c:M_ChangeLog {number:${++integrity.changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${uuidv1()}'})
                  ${strings.ret}`;
   sendQuery(query, response);
 }
@@ -1293,32 +1192,44 @@ CRUD.tableNodeSearch = function(obj, response) {
   // Remove the last " and " from the where clause
   where = where.slice(0, -5);
 
+  let withClause = `with ${dataObj.name}`;
+  let ret = `return distinct ${dataObj.name}`;
+
   let permCheck = "";
-  let ret = `return ${dataObj.name}`;
   if (dataObj.type == "people") {
     permCheck = `optional match (${dataObj.name})-[:Permissions]->(perm:M_LoginTable)`;
     ret += `, perm.name as permissions`;
+    withClause += `, perm`;
   }
 
   let ownerCheck = "";
   if (dataObj.type == "mindmap") {
     ownerCheck = `optional match (${dataObj.name})-[:Owner]->(owner:people)`;
     ret += `, owner.name as owner`;
+    withClause += `, owner`;
   }
 
-  let query = `match (${dataObj.name}:${dataObj.type})`;
+  let match = `match (${dataObj.name}:${dataObj.type})`;
 
+  // These next two won't work together - if I ever hit a situation where a person can have an owner, I'll have to rewrite.
   if (dataObj.owner) {
-    query += `-[:Owner]->(o:people)`;
+    match += `-[:Owner]->(o:people)`;
   }
 
   if (dataObj.permissions && dataObj.permissions != "all") {
-    query += `-[:Permissions]->(t:M_LoginTable)`; // require a permissions link
+    match += `-[:Permissions]->(t:M_LoginTable)`; // require a permissions link
+  }
+
+  let linkCheck = "";
+  for (let i = 0; i < dataObj.links.length; i++) {
+    match += `, (link${i} {M_GUID:'${dataObj.links[i]}'})`;
+    linkCheck += `match (${dataObj.name})-[:directLink]-(link${i}) `;
+    withClause += `, link${i}`;
   }
 
   let orderBy = buildOrderString(dataObj.orderBy, "n");
 
-  query += `, (a) ${where} ${permCheck} ${ownerCheck}
+  query = `${match}, (a) ${where} ${permCheck} ${ownerCheck} ${withClause} ${linkCheck}
                  ${ret} ${orderBy} limit ${dataObj.limit}`;
   sendQuery(query, response);
 }
@@ -1363,7 +1274,7 @@ function buildSearchString(obj, strings, whereString, defaultName, changeLogData
     for (let prop in obj.properties) { // go through all of them...
       // add to the changeLog string if necessary...
       if (changeLogData) {
-        changeLogData.changeLogs += `(change${changeCount++}:M_ChangeLog {number:${changeCount},
+        changeLogData.changeLogs += `(change${integrity.changeCount++}:M_ChangeLog {number:${integrity.changeCount},
                                      item_GUID:'${changeLogData.itemGUID}', user_GUID:'${changeLogData.userGUID}',
                                      action:'change', attribute:'${prop}', value:'${obj.properties[prop]}', M_GUID:'${uuidv1()}'}), `;
       }
@@ -1400,7 +1311,7 @@ function buildChangesString(changeArray, changeLogData) {
     }
 
     // add to the changeLog string
-    changeLogData.changeLogs += `(change${changeCount++}:M_ChangeLog {number:${changeCount},
+    changeLogData.changeLogs += `(change${integrity.changeCount++}:M_ChangeLog {number:${integrity.changeCount},
                                  item_GUID:${item}.M_GUID, user_GUID:'${changeLogData.userGUID}', M_GUID:'${uuidv1()}',
                                  action:'change', attribute:'${changeArray[i].property}', value:'${value}'}), `;
 
@@ -1432,7 +1343,7 @@ function buildOrderString(orderArray, defaultName) {
 
 function sendQuery(query, response) {
   const session = driver.session();
-  var result = [];
+  let result = [];
 
   session
     .run(query)

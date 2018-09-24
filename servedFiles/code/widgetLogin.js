@@ -80,116 +80,6 @@ class widgetLogin {
     }
   }
 
-  // Runs when the page loads. Ensures that the Admin and User nodes exist (all admins are connected to the Admin node,
-  // and all users are connected to the User node, so they must exist). Searches for users who are admins
-  // and sends the results to this.checkAdminUser().
-  checkAdminTable() { // start by merging the User table...
-    const obj = {};
-    obj.node = {"type":"M_LoginTable", "properties":{"name":"User"}, "merge":true, "return":false};
-
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        login.mergeAdmin(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
-  }
-
-  mergeAdmin() { // then merge the Admin table...
-    const obj = {};
-    obj.node = {"type":"M_LoginTable", "properties":{"name":"Admin"}, "merge":true, "return":false};
-
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        login.checkAdmin(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
-  }
-
-  checkAdmin() { // Now we know that the admin table exists. Search for any person with a link to it.
-    const obj = {};
-    obj.from = {"name":"user", "type":"people"};
-    obj.to = {"type":"M_LoginTable", "properties":{"name":"Admin"}, "return":false};
-    obj.rel = {"type":"Permissions", "return":false};
-
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        login.checkAdminUser(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
-  }
-
-  // If there are no real admins, create a temporary admin account with username and password of "admin".
-  // If there ARE real admins, delete the temporary admin account if it exists.
-  checkAdminUser(data) {
-    if (data.length == 0) { // if no users are admins, create a temporary admin node if it doesn't exist...
-      const obj = {};
-      obj.node = {"name":"tempAdmin", "type":"tempAdmin", "properties":{"name":"Temporary Admin Account"}, "merge":true};
-
-      const xhttp = new XMLHttpRequest();
-      const login = this;
-
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          const data = JSON.parse(this.responseText);
-          login.linkTempAdmin(data); //... and call another function to link it to the admin table.
-        }
-      };
-
-      xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
-    }
-    else { // if at least one user is an admin, delete the temporary admin node if it exists
-      const obj = {};
-      obj.type = "tempAdmin";
-      obj.return = false;
-
-      const xhttp = new XMLHttpRequest();
-
-      xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj, "GUID": "setup"};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
-    }
-  }
-
-  linkTempAdmin(data) { // Link the temporary admin account to the Admin table, if it wasn't already linked.
-    const id = data[0].tempAdmin.id;
-    const obj = {};
-    obj.from = {"id":id, "return":false};
-    obj.to = {"type":"M_LoginTable", "properties":{"name":"Admin"}, "return":false};
-    obj.rel = {"type":"Permissions", "properties":{"username":"admin", "password":"admin"}, "merge":true, "return":false};
-
-    const xhttp = new XMLHttpRequest();
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
-  }
-
   // Checks to make sure the user entered both a name and password, then searches for a user with that name and password.
   // Does NOT currently encrypt the password - need to fix before going public. Sends results to this.loginComplete().
   login() {
@@ -364,7 +254,7 @@ class widgetLogin {
       else {
         buttons.append(button);
       }
-      
+
       button.outerHTML = `<input type="button" value="${app.metaData.node[name].nodeLabel}" onclick="app.menuNodes('${name}')">`
     } // end for (each metadata node)
 

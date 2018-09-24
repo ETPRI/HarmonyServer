@@ -10,6 +10,7 @@ class widgetRelations {
 constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
   // data to be displayed
   this.containerDOM = containerDOM;
+  this.dragDrop     = null;
   this.nodeID       = nodeID;
   this.nodeGUID     = null;
   this.viewID       = viewID;
@@ -311,14 +312,14 @@ addLine(relation, html, orderedNodes, placeholderComment) {
 createDragDrop(widgetRel) {
   widgetRel.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetRelation contains"
   // Create the new dragDrop table
-	const dragDrop = new dragDropTable("template", "container", widgetRel.containerDOM, widgetRel.idrRow, widgetRel.idrContent);
+	widgetRel.dragDrop = new dragDropTable("template", "container", widgetRel.containerDOM, widgetRel.idrRow, widgetRel.idrContent);
   // Make the edit textbox call the new "changeComment" method instead of dragDrop's "save" method
-  dragDrop.editDOM.setAttribute("onblur", " app.widget('changeComment', this); app.widget('save', this)");
+  widgetRel.dragDrop.editDOM.setAttribute("onblur", " app.widget('changeComment', this); app.widget('save', this)");
   // Make a copy of this.existingRelations and attaches it to the dragDrop table
-  dragDrop.existingRelations = JSON.parse(JSON.stringify(widgetRel.existingRelations));
+  widgetRel.dragDrop.existingRelations = JSON.parse(JSON.stringify(widgetRel.existingRelations));
 
   // create the new changeComment function, which just updates the class of a row when its comment is edited
-  dragDrop.changeComment = function(input) { // input should be the edit object, which is still attached to the row being edited
+  widgetRel.dragDrop.changeComment = function(input) { // input should be the edit object, which is still attached to the row being edited
     const commentCell = input.parentElement; // Get the cell that was just edited
     const row = commentCell.parentElement;
     const idr = row.getAttribute('idr').slice(4); // the idr is like "itemxxx"
@@ -340,7 +341,7 @@ createDragDrop(widgetRel) {
   // it copies the row. If it's a cell from a widgetTableNodes and it was dragged to the input row, it makes a new row.
   // If the source is a cell from a widgetTableNodes, and the row it was dragged to isn't the input row,
   // it updates that row to refer to the node that was dragged.
-  dragDrop.dropData = function(input, evnt) {
+  widgetRel.dragDrop.dropData = function(input, evnt) {
     // Get the idr of the row that was dragged to
     let row = input;
     let idr = row.getAttribute("idr");
@@ -426,7 +427,7 @@ createDragDrop(widgetRel) {
   } // end dragDrop.dropData function
 
   // Create the new drag function, which sets the active node and stores data about the row being dragged.
-  dragDrop.drag = function(input, evnt){ // Expand drag function to store data as well as mark an active node
+  widgetRel.dragDrop.drag = function(input, evnt){ // Expand drag function to store data as well as mark an active node
     this.activeNode = evnt.target;
 
     // Extract the needed data from the row being dragged
@@ -477,6 +478,12 @@ saveSync(button) {
 
   // If this is the user's view, save all changed data, then refresh. If it's anyone else's, just refresh.
   if (app.login.userID && app.login.userID == this.viewID) {
+
+    // If there is any unsaved text in the dragDrop table's insert row...
+    if (Array.from(this.dragDrop.insertContainer.getElementsByTagName("INPUT")).filter(x => x.value != "").length > 0) {
+      this.dragDrop.insert(); // add a row for it before saving
+    }
+
     const widgetID = app.domFunctions.widgetGetId(button);
     const relWidget = document.getElementById(widgetID); // Returns the relations widget
     const tableWidget = relWidget.getElementsByClassName("widget")[0]; // The only subwidget inside the relations widget should be the table

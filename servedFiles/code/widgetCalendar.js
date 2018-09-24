@@ -9,6 +9,8 @@ class widgetCalendar {
     this.widgetDOM = null;
     this.callerID = callerID;
     this.selectedButton = null;
+    this.detailsPane = null;
+    this.details = null;
 
     this.nodeLabel = app.metaData.getNode('calendar').nodeLabel;
 

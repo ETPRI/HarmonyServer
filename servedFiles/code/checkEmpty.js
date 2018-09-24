@@ -3,7 +3,7 @@ class checkEmpty {
   constructor() {}
 
   // Runs a query to see all nodes in the database, then passes the results to verifyEmpty.
-  checkEmpty(button) {
+  checkEmpty() {
     const obj = {};
     obj.node = {};
 

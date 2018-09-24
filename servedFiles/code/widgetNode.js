@@ -1,6 +1,8 @@
 class widgetNode extends widgetDetails {
 constructor(callerID, queryObjectName, id, name) {
   super (queryObjectName, null, id, name, callerID);
+  this.startDOM = null;
+  this.endDOM = null;
 }
 
 finishConstructor(data) {
@@ -33,6 +35,11 @@ buildWidget() { // public - build table header
     name = this.dataNode.properties.name;
   }
 
+  let addSave = `<input idr = "addSaveButton" type="button" onclick="app.widget('saveAdd',this)">`;
+  if (this.queryObjectName.slice(0,2) === 'M_') { // if this is a metadata node
+    addSave = "";
+  }
+
   app.idCounter--; // decrement ID counter so that the widget header will end up with the right ID
   const html = app.widgetHeader() + `<b idr= "nodeTypeLabel" contentEditable="true"
                                         onfocus="this.parentNode.draggable = false;"
@@ -40,7 +47,7 @@ buildWidget() { // public - build table header
                                         <b idr="nodeLabel">#${id}: ${name}</b></div><table class="widgetBody"><tbody><tr>
   <td idr="end"></td>
   <td idr="main">
-    <input idr = "addSaveButton" type="button" onclick="app.widget('saveAdd',this)">
+    ${addSave}
     <b idr = "dragButton" draggable=true ondragstart="app.widget('drag', this, event)">Drag To View</b>
     <table idr = "nodeTable"><tbody idr = "nodeTBody"></tbody></table>
   </td>

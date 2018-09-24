@@ -14,6 +14,7 @@ constructor (nameQueryObject, id) {
   this.queryObjectName = nameQueryObject;  // key to select queryObj
   this.queryObjects    = {};  this.queryObjectsInit();            // currently 4 querys
   this.queryObj        = this.queryObjects[nameQueryObject];  // select one query
+  this.queryData       = null;
   this.fields          = this.queryObj.fields;
   this.tableName = nameQueryObject;
   this.dropdownId = id;
@@ -86,7 +87,7 @@ buildHeader() {
   </div>
   `
 
-//  const html2 = app.idReplace(html,1);  // replace relative ids with absolute ides
+  //  const html2 = app.idReplace(html,1);  // replace relative ids with absolute ides
   const html3 = html.replace("#header#",
   // create html for header
   (function(fields) {
@@ -113,7 +114,6 @@ buildData() {
   for (let i=0; i<r.length; i++) {
     html += '<tr>'
     for (let fieldName in this.fields) {
-      // html += '<td ' + this.getatt(fieldName) +'>'+ r[i][fieldName] +"</td>" ;
       html += `<td ${this.getatt(fieldName)}idr="${fieldName}${i}">${r[i][fieldName]}</td>`;
     }
     html += "</tr>"
@@ -135,56 +135,55 @@ getatt(fieldName){
 
 // init date from metadata db query
 queryObjectsInit() {
-
-this.queryObjects.nodes = {
-  nameTable: "Nodes"
-  ,fields: {
-  	"L":       {label: "Labels"} // Removed ", att: 'onclick="app.widgetNewClick(this)"'"
-   ,"count":  {label: "Count"  }
-  }}
-
-this.queryObjects.keysNode = {
-   nameTable: "Node Keys"
-  ,fields: {
-  		"key":     {label: "Key"   , comment: "like fields"}
-  	 ,"label":   {label: "Node"  , comment: "Like a table in RDBS"}
-  	 ,"count":   {label: "Count" , comment: ""}
-   }}
-
-this.queryObjects.relations = {
-	nameTable: "Relations"
-	,fields: {
-		"labels(a)":  {label: "Node"        , comment: "Like a table in RDBS"}
-	 ,"type(r)":    {label: "-Relation->" , comment: "like fields"}
-	 ,"labels(b)":  {label: "Node"        , comment: ""}
-	 ,"count":   {label: "Count"       , comment: ""}
-	}}
-
-this.queryObjects.keysRelation = {
-   nameTable: "Relation Keys"
-  ,fields: {
-  		"key":     {label: "Key"          , comment: "like fields"}
-  	 ,"type(r)": {label: "-Relation->"  , comment: "Like a table in RDBS"}
-  	 ,"count":   {label: "Count"        , comment: ""}
-   }}
-
-
-this.queryObjects.myTrash = {
-   nameTable: "myTrash"
-   ,fields: {
-       "GUID":     {label: "GUID",   att: `onclick="app.widget('edit',this)"`}
-     ,"name":   {label:"Name"}
-   	 ,"labels": {label: "Labels"}
-   	 ,"reason":  {label: "Reason"}
+  this.queryObjects.nodes = {
+    nameTable: "Nodes"
+    ,fields: {
+    	"L":       {label: "Labels"} // Removed ", att: 'onclick="app.widgetNewClick(this)"'"
+     ,"count":  {label: "Count"  }
     }}
 
-this.queryObjects.allTrash = {
-   nameTable: "allTrash"
-   ,fields: {
-       "GUID":     {label: "GUID",   att: `onclick="app.widget('showReasons',this)"`}
-     ,"name":   {label:"Name"}
-   	 ,"count": {label: "Times trashed"}
-    }}
+  this.queryObjects.keysNode = {
+     nameTable: "Node Keys"
+    ,fields: {
+    		"key":     {label: "Key"   , comment: "like fields"}
+    	 ,"label":   {label: "Node"  , comment: "Like a table in RDBS"}
+    	 ,"count":   {label: "Count" , comment: ""}
+     }}
+
+  this.queryObjects.relations = {
+  	nameTable: "Relations"
+  	,fields: {
+  		"labels(a)":  {label: "Node"        , comment: "Like a table in RDBS"}
+  	 ,"type(r)":    {label: "-Relation->" , comment: "like fields"}
+  	 ,"labels(b)":  {label: "Node"        , comment: ""}
+  	 ,"count":   {label: "Count"       , comment: ""}
+  	}}
+
+  this.queryObjects.keysRelation = {
+     nameTable: "Relation Keys"
+    ,fields: {
+    		"key":     {label: "Key"          , comment: "like fields"}
+    	 ,"type(r)": {label: "-Relation->"  , comment: "Like a table in RDBS"}
+    	 ,"count":   {label: "Count"        , comment: ""}
+     }}
+
+
+  this.queryObjects.myTrash = {
+     nameTable: "myTrash"
+     ,fields: {
+         "GUID":     {label: "GUID",   att: `onclick="app.widget('edit',this)"`}
+       ,"name":   {label:"Name"}
+     	 ,"labels": {label: "Labels"}
+     	 ,"reason":  {label: "Reason"}
+      }}
+
+  this.queryObjects.allTrash = {
+     nameTable: "allTrash"
+     ,fields: {
+         "GUID":     {label: "GUID",   att: `onclick="app.widget('showReasons',this)"`}
+       ,"name":   {label:"Name"}
+     	 ,"count": {label: "Times trashed"}
+      }}
 } /// end method
 
 edit(element){

@@ -154,7 +154,7 @@ class d3Functions {
     else return false;
   }
 
-  update(data) { // Creates a group for each item in the array of roots, then calls buildTree to make a tree for each group.
+  update() { // Creates a group for each item in the array of roots, then calls buildTree to make a tree for each group.
     const groups = d3.select(`#svg${this.widgetID}`).selectAll("g.tree")
       .data(this.roots, function(d) {return d.id;});
 
@@ -253,8 +253,8 @@ class d3Functions {
   // Only called by update, which passes in the appropriate values for each tree.
   // NOTE: I don't know why yet, but it seems that when building a group for each tree, data is stored in d.
   // When building a node for each leaf WITHIN a tree (in buildTree), data is stored in d.data.
-  buildTree(datum, index, group) {
-    const buildPopup = function(datum, index, group) {
+  buildTree(datum) {
+    const buildPopup = function(datum) {
       const texts = d3.select(this).select(".detailPopupVisible").selectAll(".detailText")
         .data(datum.data.details, function(d) {return d.field});
 
