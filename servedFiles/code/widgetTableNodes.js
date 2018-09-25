@@ -35,10 +35,12 @@ class widgetTableNodes {
   search() { // public - call when data changes
     const xhttp = new XMLHttpRequest();
     const nodes = this;
+    const update = app.startProgress(`Searching for ${this.queryObject.nodeLabel}`);
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
         nodes.buildData(data);
       }
     };
@@ -506,10 +508,12 @@ class widgetTableNodes {
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
+    const update = app.startProgress("Checking permissions");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
         nodes.checkPermission(data, ID, button, toAdd);
       }
     };
@@ -526,9 +530,11 @@ class widgetTableNodes {
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
+      const update = app.startProgress("Deleting old permissions");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
+          app.stopProgress(update);
           nodes.givePermission(button, toAdd, ID, data[0].rel.properties.username, data[0].rel.properties.password);
         }
       };
@@ -576,10 +582,12 @@ class widgetTableNodes {
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
+      const update = app.startProgress("Setting permissions");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
+          app.stopProgress(update);
           nodes.search(data);
         }
       };
@@ -601,11 +609,12 @@ class widgetTableNodes {
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
+    const update = app.startProgress("Removing permissions");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText); // I'm not sure what kind of response I was expecting - nothing is returned!
-        nodes.search(data);
+        app.stopProgress(update);
+        nodes.search();
       }
     };
 

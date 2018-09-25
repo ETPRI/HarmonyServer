@@ -581,6 +581,56 @@ error(message) {
 	alert(`An error has occurred. Details: ${message}\nStack:${stack}`);
 }
 
+startProgress(text) {
+	const avail = document.getElementById("available");
+	avail.hidden = true;
+	const ongoing = document.getElementById("ongoing");
+	ongoing.hidden = false;
+
+	const row = document.createElement("LI");
+	const status = document.createTextNode(text);
+	const cancel = document.createElement("INPUT");
+	cancel.setAttribute("type", "button");
+	cancel.setAttribute("value", "Cancel");
+	cancel.disabled = true;
+	const timer = document.createElement("SPAN");
+	timer.innerHTML = ":  0 ms";
+	row.appendChild(status);
+	row.appendChild(timer);
+	row.appendChild(cancel);
+	ongoing.appendChild(row);
+
+	const startTime = performance.now();
+	const update = setInterval(function () {
+		const currTime = performance.now();
+		const elapsedTime = currTime - startTime;
+		timer.innerHTML = `:  ${Math.round(elapsedTime)} ms`;
+		if (elapsedTime > 1000) {
+			cancel.disabled = false;
+		}}, 10);
+
+	return {"update":update, "row":row}; // Info stopProgress will need later
+}
+
+stopProgress(obj) {
+	clearInterval(obj.update);
+	let list = document.getElementById("ongoing"); // list should be the parent of row
+	if(obj && obj.row && obj.row.parentElement == list) {
+		list.removeChild(obj.row);
+	}
+	else {
+		alert ("Problem here");
+	}
+	if (list.children.length == 0) { // If there are no more items in the list of ongoing calls
+		const box = list.parentElement;
+		box.outerHTML =
+		`<div class="statusBar">
+  		<p id="available">Available</p>
+  		<ul style="list-style-type:none" id="ongoing" hidden=""></ul>
+		</div>`;
+	}
+}
+
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.
 // Can be called directly by app.html, or by clicking a single button. Currently empty.
 test() {}

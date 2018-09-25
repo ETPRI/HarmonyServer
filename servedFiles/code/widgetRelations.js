@@ -46,10 +46,12 @@ refresh() {
 
     const xhttp = new XMLHttpRequest();
     const relationObj = this;
+    const update = app.startProgress("Finding links")
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
         relationObj.rComplete(data);
       }
     };
@@ -70,10 +72,12 @@ refresh() {
 
     const xhttp = new XMLHttpRequest();
     const relation = this;
+    const update = app.startProgress("Finding view");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
         relation.findLinks(data);
       }
     };
@@ -103,10 +107,12 @@ findLinks(data) { // data should include the view found by the previous function
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
+  const update = app.startProgress("Finding links");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       relation.rComplete(data);
     }
   };
@@ -557,10 +563,12 @@ processNext(data, rows, prevFunction) {
 
     const xhttp = new XMLHttpRequest();
   	const relations = this;
+    const update = app.startProgress("Updating view");
 
   	xhttp.onreadystatechange = function() {
   		if (this.readyState == 4 && this.status == 200) {
   			const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
   			relations.findLinks(data);
   		}
   	};
@@ -589,10 +597,12 @@ deleteNode(row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
+  const update = app.startProgress("Deleting link");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       relation.processNext(null, rows);
     }
   };
@@ -675,10 +685,12 @@ modifyNode (row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
+  const update = app.startProgress("Updating link");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       relation.processNext(data, rows, "modify");
     }
   };
@@ -689,10 +701,9 @@ modifyNode (row, rows) {
 }
 
 // Adds a new relation to the node being viewed. If a destination node was specified for the relation,
-// adds a relation between the user's view of the node and the destination node, then adds a relation
-// between the user's view of the destination node and this one (so that no matter which node you look
-// at, you see the relation). If no other node was specified, a placeholder relation is added to the
-// original node. NOTE: The section on placeholders needs work.
+// adds a relation between the user's view of the node and the destination node.
+// If no other node was specified, a placeholder relation is added to the original node.
+// NOTE: The section on placeholders needs work.
 addNode(row, rows) {
   // Start the query by searching for this user's view of this node.
   const obj = {};
@@ -704,10 +715,12 @@ addNode(row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
+  const update = app.startProgress("Searching for view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       if (data.length > 0) {
         relationObj.createLink(data[0].middle.id, row, rows);
       }
@@ -806,11 +819,13 @@ createLink(ID, row, rows) {
 
     const xhttp = new XMLHttpRequest();
     const relationObj = this;
+    const update = app.startProgress("Adding link");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
         relationObj.processNext(data, rows, "add");
+        app.stopProgress(update);
       }
     };
 
@@ -830,10 +845,12 @@ createView(row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
+  const update = app.startProgress("Creating view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       relationObj.createOwner(data[0].node.id, row, rows);
     }
   };
@@ -852,10 +869,12 @@ createOwner(ID, row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
+  const update = app.startProgress("Setting up view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       relationObj.createSubject(ID, row, rows);
     }
   };
@@ -873,10 +892,12 @@ createSubject(ID, row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
+  const update = app.startProgress("Setting up view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       relationObj.createLink(ID, row, rows);
     }
   };

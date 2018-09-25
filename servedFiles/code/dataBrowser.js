@@ -68,10 +68,12 @@ class dataBrowser {
 
       const xhttp = new XMLHttpRequest();
       const dataBrowser = this;
+      const update = app.startProgress("Searching for node")
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const newData = JSON.parse(this.responseText);
+          app.stopProgress(update);
           dataBrowser.findOuts(newData, data.nodeID, cell);
         }
       };
@@ -90,10 +92,12 @@ class dataBrowser {
 
     const xhttp = new XMLHttpRequest();
     const dataBrowser = this;
+    const update = app.startProgress("Searching for relations")
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const newData = JSON.parse(this.responseText);
+        app.stopProgress(update);
         dataBrowser.processData(newData, data, cell);
       }
     };
@@ -311,10 +315,12 @@ class dataBrowser {
 
         const xhttp = new XMLHttpRequest();
         const dataBrowser = this;
+        const update = app.startProgress("Searching for node")
 
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
             const newData = JSON.parse(this.responseText);
+            app.stopProgress(update);
             dataBrowser.findOuts(newData, GUID, newCell);
           }
         };

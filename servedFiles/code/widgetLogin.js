@@ -97,10 +97,12 @@ class widgetLogin {
 
       const xhttp = new XMLHttpRequest();
       const login = this;
+      const progressObj = app.startProgress("Logging In");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
+          app.stopProgress(progressObj);
           login.loginComplete(data);
         }
       };
@@ -172,10 +174,12 @@ class widgetLogin {
 
       const xhttp = new XMLHttpRequest();
       const login = this;
+      const update = app.startProgress("Restoring settings");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
+          app.stopProgress(update);
           login.updateMetaData(data);
         }
       };
@@ -201,8 +205,8 @@ class widgetLogin {
   }
 
   updateMetaData(data) {
-    buttons = document.getElementById('buttons');
-    adminButtons = document.getElementById('adminButtons');
+    let buttons = document.getElementById('buttons');
+    let adminButtons = document.getElementById('adminButtons');
 
   	// clear existing options
     buttons.innerHTML = "";

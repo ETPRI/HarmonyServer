@@ -328,8 +328,15 @@ class regressionTesting {
   		// Remove nodes and relationships
       const obj = {};
       obj.return = false;
+      const update = app.startProgress("Clearing database");
 
       const xhttp = new XMLHttpRequest();
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          app.stopProgress(update);
+        }
+      };
 
       xhttp.open("POST","");
       const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj, "GUID": app.login.userGUID};

@@ -40,10 +40,12 @@ class widgetSVG {
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
+      const update = app.startProgress("Opening mindmap");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
+          app.stopProgress(update);
           SVG.buildWidget(data);
         }
       };
@@ -671,10 +673,12 @@ class widgetSVG {
 
         const xhttp = new XMLHttpRequest();
         const SVG = this;
+        const update = app.startProgress("Saving mindmap");
 
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
             const data = JSON.parse(this.responseText);
+            app.stopProgress(update);
             SVG.checkNameExists(data, name, newMap);
           }
         };
@@ -700,10 +704,12 @@ class widgetSVG {
 
         const xhttp = new XMLHttpRequest();
         const SVG = this;
+        const update = app.startProgress("Checking name");
 
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
             const data = JSON.parse(this.responseText);
+            app.stopProgress(update);
             SVG.checkNameExists(data, name, newMap);
           }
         };
@@ -727,10 +733,12 @@ class widgetSVG {
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
+      const update = app.startProgress("Creating mindmap");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
+          app.stopProgress(update);
           SVG.setOwner(data); // If this is a new map or a new copy, it belongs to the user who made it
         }
       };
@@ -762,10 +770,12 @@ class widgetSVG {
 
     const xhttp = new XMLHttpRequest();
     const SVG = this;
+    const update = app.startProgress("Setting owner");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
         SVG.startNodes(data);
       }
     };
@@ -829,10 +839,12 @@ class widgetSVG {
 
             const xhttp = new XMLHttpRequest();
             const SVG = this;
+            const update = app.startProgress("Removing node")
 
             xhttp.onreadystatechange = function() {
               if (this.readyState == 4 && this.status == 200) {
                 const data = JSON.parse(this.responseText);
+                app.stopProgress(update);
                 SVG.processNodes(data, labels);
               }
             };
@@ -857,10 +869,12 @@ class widgetSVG {
 
               const xhttp = new XMLHttpRequest();
               const SVG = this;
+              const update = app.startProgress("Updating node info");
 
               xhttp.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
                   const data = JSON.parse(this.responseText);
+                  app.stopProgress(update);
                   SVG.processNodes(data, labels);
                 }
               };
@@ -874,7 +888,7 @@ class widgetSVG {
             }
           }
           else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
-            if (label.nodeID != null) { // If there is a node associated with this label
+            if (label.nodeID != null) { // If there is a node associated with this label, merge in a relation to it
               const obj = {};
               obj.from = {"id":this.mapID};
               obj.to = {"properties":{"M_GUID":label.nodeID}};
@@ -882,10 +896,12 @@ class widgetSVG {
 
               const xhttp = new XMLHttpRequest();
               const SVG = this;
+              const update = app.startProgress("Linking node");
 
               xhttp.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
                   const data = JSON.parse(this.responseText);
+                  app.stopProgress(update);
                   SVG.processNodes(data, labels);
                 }
               };
@@ -991,10 +1007,12 @@ class widgetSVG {
 
     const xhttp = new XMLHttpRequest();
   	const d3 = this.d3Functions;
+    const update = app.startProgress("Saving mindmap data");
 
   	xhttp.onreadystatechange = function() {
   		if (this.readyState == 4 && this.status == 200) {
   			const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
   			d3.update(data);
   		}
   	};

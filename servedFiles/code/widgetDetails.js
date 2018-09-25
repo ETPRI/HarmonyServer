@@ -51,10 +51,12 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
 
       const xhttp = new XMLHttpRequest();
       const details = this;
+      const update = app.startProgress("Searching for node");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
+          app.stopProgress(update);
           details.finishConstructor(data);
         }
       };
@@ -217,6 +219,13 @@ popupOK(button) {
                  {"item":"rel", "property":"formFieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
   const xhttp = new XMLHttpRequest();
+  const update = app.startProgress("Updating metadata");
+
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      app.stopProgress(update);
+    }
+  };
 
   xhttp.open("POST","");
   const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
@@ -351,7 +360,10 @@ addRow(fieldName, fieldCount) {
   row.appendChild(dataField);
   const input = document.createElement('input');
   dataField.appendChild(input);
-  input.outerHTML = `<input type = "text" db = ${fieldName} idr = "input${fieldCount}" onChange = "app.widget('changed',this)" value = "${value}">`
+  input.outerHTML = `<input type = "text" db = ${fieldName} idr = "input${fieldCount}"
+                      onChange = "app.widget('changed',this)" value = "${value}"
+                      onfocus = "this.parentNode.parentNode.draggable = false;"
+                      onblur = "this.parentNode.parentNode.draggable = true;">`;
 
   return row;
 }
@@ -448,10 +460,12 @@ trashNode() {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
+  const update = app.startProgress("Trashing node");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       details.save(data);
     }
   };
@@ -477,10 +491,12 @@ updateReason() {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
+  const update = app.startProgress("Updating reason");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       details.save(data);
     }
   };
@@ -502,10 +518,12 @@ untrashNode() {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
+  const update = app.startProgress("Restoring node");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       details.save(data);
     }
   };
@@ -593,10 +611,12 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
 
   const xhttp = new XMLHttpRequest();
   const details = this;
+  const update = app.startProgress("Creating node");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       details.addComplete(data);
     }
   };
@@ -624,10 +644,12 @@ updateMetaData(newFields) {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
+  const update = app.startProgress("Updating metadata");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       details.updateFields(data, newFields);
     }
   };
@@ -648,6 +670,13 @@ updateFields(data, newFields) { // should contain only the metadata node, under 
     obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}];
 
     const xhttp = new XMLHttpRequest();
+    const update = app.startProgress("Updating metadata");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        app.stopProgress(update);
+      }
+    };
 
     xhttp.open("POST","");
     const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
@@ -823,10 +852,12 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
 
     const xhttp = new XMLHttpRequest();
     const details = this;
+    const update = app.startProgress("Saving node");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
+        app.stopProgress(update);
         details.saveData(data);
       }
     };

@@ -22,10 +22,12 @@ constructor (nameQueryObject, id) {
 
   const xhttp = new XMLHttpRequest();
   const table = this;
+  const update = app.startProgress("Searching for metadata");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update);
       table.queryComplete(data);
     }
   };
@@ -207,10 +209,12 @@ showReasons(element) {
 
   const xhttp = new XMLHttpRequest();
   const table = this;
+  const update = app.startProgress("Searching for details");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
+      app.stopProgress(update)
       table.buildReasons(data);
     }
   };

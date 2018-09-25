@@ -19,11 +19,13 @@ module.exports = class integrity {
   getChangeCount() {
     const session = this.driver.session();
     let query = `match (n:M_ChangeLog) return coalesce(max(n.number), 0) as max`;
+    const integrity = this;
+
     session
       .run(query)
       .subscribe({
         onNext: function (record) {
-          this.changeCount = record._fields[0];
+          integrity.changeCount = record._fields[0];
         },
         onCompleted: function () {
           session.close();
@@ -253,7 +255,7 @@ module.exports = class integrity {
     }
 
     let deleting = "";
-    if (integrity.update) {
+    if (this.update) {
       deleting = "; deleting...";
     }
 
