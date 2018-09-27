@@ -37,12 +37,12 @@ class widgetView {
 
     const xhttp = new XMLHttpRequest();
     const view = this;
-    const update = app.startProgress("Searching for views");
+    const update = app.startProgress(this.containerDOM, "Searching for views");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(view.containerDOM, update);
         view.buildViews(data);
       }
     };
@@ -284,12 +284,12 @@ class widgetView {
 
     const xhttp = new XMLHttpRequest();
     const view = this;
-    const update = app.startProgress("Searching for views");
+    const update = app.startProgress(this.containerDOM, "Searching for views");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(view.containerDOM, update);
         view.buildViews(data);
       }
     };
@@ -414,12 +414,12 @@ class widgetView {
 
     const xhttp = new XMLHttpRequest();
     const view = this;
-    const update = app.startProgress("Adding your view");
+    const update = app.startProgress(this.containerDOM, "Adding your view");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(view.containerDOM, update);
         view.linkViewUser(data);
       }
     };
@@ -447,12 +447,12 @@ class widgetView {
 
     const xhttp = new XMLHttpRequest();
     const view = this;
-    const update = app.startProgress("Linking your view");
+    const update = app.startProgress(this.containerDOM, "Linking your view");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(view.containerDOM, update);
         view.linkViewNode(data, viewID);
       }
     };
@@ -470,12 +470,12 @@ class widgetView {
 
     const xhttp = new XMLHttpRequest();
     const view = this;
-    const update = app.startProgress("Linking your view");
+    const update = app.startProgress(this.containerDOM, "Linking your view");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(view.containerDOM, update);
         view.addComplete(data);
       }
     };

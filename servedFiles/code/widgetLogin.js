@@ -1,7 +1,6 @@
 // This class handles everything to do with logging in and out of the website.
 class widgetLogin {
   constructor() {
-
     // DOM elements to be filled in later
     this.info = null; // Will show whether the user is logged in, and if so, their name and role
     this.nameInput = null;
@@ -9,6 +8,9 @@ class widgetLogin {
     this.loginButton = null; // Button to click to log in
 
     // data to fill in when the user logs in - their ID, name and permissions level
+    this.sessionGUID = null;
+    this.browserGUID = null;
+    this.requestCount = 0;
     this.userID = null;
     this.userGUID = null;
     this.userName = null;
@@ -76,13 +78,65 @@ class widgetLogin {
   // Called when you hit a key while in the password box. If the key was "Enter", calls the login method.
   loginOnEnter(textBox, evnt) {
     if (textBox == this.passwordInput && evnt.key == "Enter") {
+      this.createSession();
+    }
+  }
+
+  // Creates a session node and then calls mergeBrowser to create a browser node, if necessary.
+  createSession() {
+    // If a session is already ongoing (say, from a failed login attempt), skip straight to recording the request
+    if (this.sessionGUID && this.browserGUID) {
       this.login();
     }
+    else { // Otherwise, create a session and browser node first, then record the request
+      const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
+
+      const xhttp = new XMLHttpRequest();
+      const login = this;
+      const update = app.startProgress(this.loginDiv, "Creating session");
+
+      xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+          const data = JSON.parse(this.responseText);
+          login.sessionGUID = data[0].node.properties.M_GUID;
+          login.requestCount = 0;
+          app.stopProgress(login.loginDiv, update);
+          login.mergeBrowser();
+        }
+      };
+
+      xhttp.open("POST","");
+      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+      xhttp.send(JSON.stringify(queryObject));         // send request to server
+    }
+  }
+
+  // Merges in a browser node and calls login
+  mergeBrowser() {
+    const obj = {};
+    obj.node = {"type":"M_Browser", "properties":{"name":navigator.userAgent}, "merge":true};
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+    const update = app.startProgress(this.loginDiv, "Creating session");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        login.browserGUID = data[0].node.properties.M_GUID;
+        app.stopProgress(login.loginDiv, update);
+        login.login();
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   // Checks to make sure the user entered both a name and password, then searches for a user with that name and password.
   // Does NOT currently encrypt the password - need to fix before going public. Sends results to this.loginComplete().
-  login() {
+  login(requestCount) {
   	const name = this.nameInput.value;
     const password = this.passwordInput.value;
 
@@ -97,12 +151,12 @@ class widgetLogin {
 
       const xhttp = new XMLHttpRequest();
       const login = this;
-      const progressObj = app.startProgress("Logging In");
+      const update = app.startProgress(this.loginDiv, "Logging In");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(progressObj);
+          app.stopProgress(login.loginDiv, update);
           login.loginComplete(data);
         }
       };
@@ -166,26 +220,25 @@ class widgetLogin {
       loginButton.setAttribute("value", "Log Out");
       loginButton.setAttribute("onclick", "app.widget('logout', this)");
 
-      // Get the metadata nodes, and search for any links between them and this user
-      const metadataObj = {};
-      metadataObj.required = {"type":"M_MetaData", "name":"metadata"};
-      metadataObj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
-      metadataObj.optional = {"id":this.userID, "return":false};
+      // Link the user to the session, then call the getMetaData function to search for metadata
+      const obj = {};
+      obj.from = {"properties":{"M_GUID":this.userGUID}};
+      obj.rel = {"type":"User"};
+      obj.to = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
 
       const xhttp = new XMLHttpRequest();
       const login = this;
-      const update = app.startProgress("Restoring settings");
+      const update = app.startProgress(this.loginDiv, "Linking session");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          const data = JSON.parse(this.responseText);
-          app.stopProgress(update);
-          login.updateMetaData(data);
+          app.stopProgress(login.loginDiv, update);
+          login.getMetaData();
         }
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": metadataObj, "GUID": "setup"};
+      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "setup"};
       xhttp.send(JSON.stringify(queryObject));         // send request to server
 
   	 // end elseif (can log in)
@@ -194,14 +247,38 @@ class widgetLogin {
   	}
 
     // log
+    const obj2 = {};
+    obj2.id = "loginDiv";
+    obj2.idr = "loginButton";
+    obj2.action = "click";
+    obj2.data = JSON.parse(JSON.stringify(data));
+    app.stripIDs(obj2.data);
+    app.regression.log(JSON.stringify(obj2));
+    app.regression.record(obj2);
+  }
+
+  getMetaData() {
+    // Get the metadata nodes, and search for any links between them and this user
     const obj = {};
-    obj.id = "loginDiv";
-    obj.idr = "loginButton";
-    obj.action = "click";
-    obj.data = JSON.parse(JSON.stringify(data));
-    app.stripIDs(obj.data);
-    app.regression.log(JSON.stringify(obj));
-    app.regression.record(obj);
+    obj.required = {"type":"M_MetaData", "name":"metadata"};
+    obj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
+    obj.optional = {"id":this.userID, "return":false};
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+    const update = app.startProgress(this.loginDiv, "Restoring settings");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        app.stopProgress(login.loginDiv, update);
+        login.updateMetaData(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": "setup"};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   updateMetaData(data) {
@@ -302,12 +379,26 @@ class widgetLogin {
      this.nameInput.value = "";
      this.passwordInput.value = "";
 
-     // Log
      const obj = {};
-     obj.id = "loginDiv";
-     obj.idr = "loginButton";
-     obj.action = "click";
-     app.regression.log(JSON.stringify(obj));
-     app.regression.record(obj);
+     obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
+     obj.changes = [{"item":"node", "property":"endTime", "value":Date.now()},];
+
+     const xhttp = new XMLHttpRequest();
+
+     xhttp.open("POST","");
+     const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "upkeep"};
+     xhttp.send(JSON.stringify(queryObject));         // send request to server
+
+     this.sessionGUID = null;
+     this.browserGUID = null;
+     this.requestCount = 0;
+
+     // Log
+     const obj2 = {};
+     obj2.id = "loginDiv";
+     obj2.idr = "loginButton";
+     obj2.action = "click";
+     app.regression.log(JSON.stringify(obj2));
+     app.regression.record(obj2);
   }
 }

@@ -19,15 +19,16 @@ constructor (nameQueryObject, id) {
   this.tableName = nameQueryObject;
   this.dropdownId = id;
   this.widgetID = app.idCounter;
+  this.widgetDOM = null;
 
   const xhttp = new XMLHttpRequest();
   const table = this;
-  const update = app.startProgress("Searching for metadata");
+  const update = app.startProgress(this.widgetDOM, "Searching for metadata");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(table.widgetDOM, update);
       table.queryComplete(data);
     }
   };
@@ -48,6 +49,7 @@ queryComplete(data) {
   const newWidget = document.createElement('div'); // create placeholder div
   parent.insertBefore(newWidget, child); // Insert the new div before the first existing one
   newWidget.outerHTML = this.html; // replace placeholder with the div that was just written
+  this.widgetDOM = document.getElementById(this.widgetID);
 
   if (app.activeWidget) {
     app.activeWidget.classList.remove("activeWidget");
@@ -209,12 +211,12 @@ showReasons(element) {
 
   const xhttp = new XMLHttpRequest();
   const table = this;
-  const update = app.startProgress("Searching for details");
+  const update = app.startProgress(this.widgetDOM, "Searching for details");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update)
+      app.stopProgress(table.widgetDOM, update)
       table.buildReasons(data);
     }
   };

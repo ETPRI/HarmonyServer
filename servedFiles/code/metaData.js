@@ -171,6 +171,26 @@ initNodeData() { // move to DB in the future
       }
     }
 
+    this.node.M_Session = {
+      nodeLabel:"M_Session"
+      ,orderBy:[{"name":"startTime"}, {"name":"endTime"}]
+      ,fieldsDisplayed: ["startTime", "endTime"]
+      ,formFieldsDisplayed: ["startTime", "endTime"]
+      ,fields: {
+        "startTime": {label: "Start time"}
+        ,"endTime": {label: "End time"}
+      }
+    }
+
+    this.node.M_Browser = {
+      nodeLabel:"M_Browser"
+      ,orderBy:[{"name":"name"}]
+      ,fieldsDisplayed: ["name"]
+      ,formFieldsDisplayed: ["name"]
+      ,fields: {
+        "name": {label:"name"}
+      }
+    }
 } ////// end method
 
 } ////////////////////////////////////////////////////// end class

@@ -1,11 +1,7 @@
-<div class="statusBar">
-  <p id="available">Available</p>
-  <ul style="list-style-type:none" id="ongoing" hidden></ul>
-</div>
 <p id="userInfo">Not Logged In</p>
 <p>Username: <input id="userName" onblur="app.regression.logText(this)">
   Password: <input type="password" id="password" onblur="app.regression.logText(this)" onkeydown="app.widget('loginOnEnter', this, event)"></p>
-  <input id="loginButton" type="button" value="Log In" onclick="app.widget('login', this)">
+  <input id="loginButton" type="button" value="Log In" onclick="app.widget('createSession', this)">
   <input id="debugButton" type="button" value="Show Debug Menu" onclick="app.showDebug(this)" hidden="true">
   <input id="regressionButton" type="button" value="Show Regression Menu" onclick="app.showRegression(this)" hidden="true">
   <hr style="clear:right">

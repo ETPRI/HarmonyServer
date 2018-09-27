@@ -328,13 +328,13 @@ class regressionTesting {
   		// Remove nodes and relationships
       const obj = {};
       obj.return = false;
-      const update = app.startProgress("Clearing database");
+      const update = app.startProgress(null, "Clearing database");
 
       const xhttp = new XMLHttpRequest();
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          app.stopProgress(update);
+          app.stopProgress(null, update);
         }
       };
 

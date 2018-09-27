@@ -59,9 +59,6 @@ buildApp() {
 	this.login.doOnLogout.push(obj);
 	document.addEventListener("keydown", this.keyPressed.bind(this));
 
-	// Check the brower capabilities and, if applicable, report that it definitely won't work or that it's not tested
-	this.supportsES6();
-
 	// Check for metadata and add it if needed
 	this.checkMetaData();
 
@@ -550,26 +547,6 @@ deleteLink(input) {
 	row.removeChild(cell);
 }
 
-// Check for support of JS version 6
-supportsES6() {
-  try {
-    new Function("(a = 0) => a");
-		const workingBrowsers = [
-			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36"
-			,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1 Safari/605.1.15"
-			,"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/11.1.2 Safari/605.1.15"
-		]
-		if (workingBrowsers.indexOf(navigator.userAgent) == -1) {
-			alert (`While this browser may support JS v6, it has not been tested with this website, and may not work.`);
-		}
-    return true;
-  }
-  catch (err) {
-		alert (`This browser doesn't support JS v6, and you will likely have some problems running this website. Try using an up-to-date version of Safari or Chrome.`);
-    return false;
-  }
-}
-
 error(message) {
 	const err = new Error();
 	const line = err.line;
@@ -581,17 +558,40 @@ error(message) {
 	alert(`An error has occurred. Details: ${message}\nStack:${stack}`);
 }
 
-startProgress(text) {
+// DOMelement is usually the whole widget, but it will also work if it's an element from within the widget.
+// Use it to work up to the top-level widget, then give it a class of "requestRunning".
+startProgress(DOMelement, text) {
+	let widget = DOMelement;
+
+	// How can I get up to the top-level widget?
+	let topWidget = null;
+
+	while (DOMelement) {
+		if (DOMelement.classList.contains("widget")) {
+			topWidget = DOMelement;
+		}
+		DOMelement = DOMelement.parentElement;
+	}
+
+	// topWidget should now be the top-level widget containing the element, or null if the element doesn't exist or isn't in a widget
+	if (topWidget) {
+		topWidget.classList.add("requestRunning");
+	}
+
 	const avail = document.getElementById("available");
 	avail.hidden = true;
 	const ongoing = document.getElementById("ongoing");
 	ongoing.hidden = false;
 
 	const row = document.createElement("LI");
+	if (topWidget && topWidget.id) {
+		row.setAttribute("widget", topWidget.id);
+	}
 	const status = document.createTextNode(text);
 	const cancel = document.createElement("INPUT");
 	cancel.setAttribute("type", "button");
 	cancel.setAttribute("value", "Cancel");
+	cancel.setAttribute("onclick", 'app.stopProgress(this)');
 	cancel.disabled = true;
 	const timer = document.createElement("SPAN");
 	timer.innerHTML = ":  0 ms";
@@ -608,26 +608,107 @@ startProgress(text) {
 		if (elapsedTime > 1000) {
 			cancel.disabled = false;
 		}}, 10);
+	row.setAttribute("update", update);
 
-	return {"update":update, "row":row}; // Info stopProgress will need later
+	let count = null;
+	if (this.login.sessionGUID && this.login.browserGUID) { // if a session is ongoing, record the request
+	  count = this.login.requestCount++; // Will have to pass this around later, in order to track which request is which
+
+	  const obj = {};
+	  obj.from = {"type":"M_Session", "properties":{"M_GUID":this.login.sessionGUID}};
+	  obj.rel = {"type":"Request", "properties":{"count":count, "description":text, "startTime":Date.now()}};
+	  obj.to = {"type":"M_Browser", "properties":{"M_GUID":this.login.browserGUID}};
+
+	  const xhttp = new XMLHttpRequest();
+
+	  xhttp.open("POST","");
+	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep"};
+	  xhttp.send(JSON.stringify(queryObject));         // send request to server
+	}
+	row.setAttribute("count", count);
+
+	return {"update":update, "row":row, "count":count}; // Info stopProgress will need later
 }
 
-stopProgress(obj) {
-	clearInterval(obj.update);
+stopProgress(DOMelement, obj) {
+	let row = null;
+	let update = null;
+	let topWidget = null;
+	let count = null;
+	let result = "Succeeded";
+
+	// If this was called by a cancel button (and the button was passed in)
+	if (DOMelement && DOMelement.tagName == 'INPUT' && DOMelement.type == "button" && DOMelement.value == "Cancel") {
+		row = DOMelement.parentElement;
+		update = row.getAttribute("update");
+		topWidget = document.getElementById(row.getAttribute("widget"));
+		count = row.getAttribute("count");
+		result = "Cancelled";
+	}
+
+	// If this was called by a request finishing (and a widget element and update object were passed in)
+	else {
+		if (obj) {
+			row = obj.row;
+			update = obj.update;
+			count = obj.count;
+		}
+
+		// Go to the top-level widget
+		while (DOMelement) {
+			if (DOMelement.classList.contains("widget")) {
+				topWidget = DOMelement;
+			}
+			DOMelement = DOMelement.parentElement;
+		}
+	}
+
+	// topWidget should now be either
+	// a) the top-level widget stored in the row (usually the case when cancelling),
+	// b) the top-level widget containing the element which was passed in (usually the case when finishing a request), or
+	// c) null (if the row stored no widget, or if the element passed in didn't exist or wasn't in a widget)
+	if (topWidget) {
+		topWidget.classList.remove("requestRunning");
+	}
+
+	clearInterval(update);
 	let list = document.getElementById("ongoing"); // list should be the parent of row
-	if(obj && obj.row && obj.row.parentElement == list) {
-		list.removeChild(obj.row);
+	if(row && row.parentElement == list) {
+		list.removeChild(row);
 	}
 	else {
-		alert ("Problem here");
+		this.error("The row to be removed is not in the list of ongoing requests");
 	}
+
+	// If a session is running, and the count is non-null (meaning that this request was logged when it began),
+	// then update the record of that request now.
+	if (this.login.sessionGUID && this.login.browserGUID && !(count == null)) {
+		const obj = {};
+		obj.from = {"type":"M_Session", "properties":{"M_GUID":this.login.sessionGUID}};
+		obj.rel = {"type":"Request", "properties":{"count":count}};
+		obj.to = {"type":"M_Browser", "properties":{"M_GUID":this.login.browserGUID}};
+		obj.changes = [
+				{"item":"rel", "property":"endTime", "value":Date.now()},
+				{"item":"rel", "property":"endResult", "value":result}
+		];
+
+		const xhttp = new XMLHttpRequest();
+
+		xhttp.open("POST","");
+		const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "upkeep"};
+		xhttp.send(JSON.stringify(queryObject));         // send request to server
+	}
+
+	const box = list.parentElement;
+
+	// Repaint the box - there's a bug (NOT in my code - a known issue) that makes it disappear when the scrollbars disappear
+	box.parentElement.insertBefore(box, box.nextElementSibling);
+
 	if (list.children.length == 0) { // If there are no more items in the list of ongoing calls
-		const box = list.parentElement;
-		box.outerHTML =
-		`<div class="statusBar">
-  		<p id="available">Available</p>
-  		<ul style="list-style-type:none" id="ongoing" hidden=""></ul>
-		</div>`;
+		const avail = document.getElementById("available");
+		avail.hidden = false;
+		const ongoing = document.getElementById("ongoing");
+		ongoing.hidden = true;
 	}
 }
 

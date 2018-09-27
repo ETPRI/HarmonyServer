@@ -46,12 +46,12 @@ refresh() {
 
     const xhttp = new XMLHttpRequest();
     const relationObj = this;
-    const update = app.startProgress("Finding links")
+    const update = app.startProgress(this.containerDOM, "Finding links")
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(relationObj.containerDOM, update);
         relationObj.rComplete(data);
       }
     };
@@ -72,12 +72,12 @@ refresh() {
 
     const xhttp = new XMLHttpRequest();
     const relation = this;
-    const update = app.startProgress("Finding view");
+    const update = app.startProgress(this.containerDOM, "Finding view");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(relation.containerDOM, update);
         relation.findLinks(data);
       }
     };
@@ -107,12 +107,12 @@ findLinks(data) { // data should include the view found by the previous function
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
-  const update = app.startProgress("Finding links");
+  const update = app.startProgress(this.containerDOM, "Finding links");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(relation.containerDOM, update);
       relation.rComplete(data);
     }
   };
@@ -563,12 +563,12 @@ processNext(data, rows, prevFunction) {
 
     const xhttp = new XMLHttpRequest();
   	const relations = this;
-    const update = app.startProgress("Updating view");
+    const update = app.startProgress(this.containerDOM, "Updating view");
 
   	xhttp.onreadystatechange = function() {
   		if (this.readyState == 4 && this.status == 200) {
   			const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(relations.containerDOM, update);
   			relations.findLinks(data);
   		}
   	};
@@ -597,12 +597,12 @@ deleteNode(row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
-  const update = app.startProgress("Deleting link");
+  const update = app.startProgress(this.containerDOM, "Deleting link");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(relation.containerDOM, update);
       relation.processNext(null, rows);
     }
   };
@@ -685,12 +685,12 @@ modifyNode (row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
-  const update = app.startProgress("Updating link");
+  const update = app.startProgress(this.containerDOM, "Updating link");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(relation.containerDOM, update);
       relation.processNext(data, rows, "modify");
     }
   };
@@ -715,12 +715,12 @@ addNode(row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
-  const update = app.startProgress("Searching for view");
+  const update = app.startProgress(this.containerDOM, "Searching for view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(relationObj.containerDOM, update);
       if (data.length > 0) {
         relationObj.createLink(data[0].middle.id, row, rows);
       }
@@ -819,13 +819,13 @@ createLink(ID, row, rows) {
 
     const xhttp = new XMLHttpRequest();
     const relationObj = this;
-    const update = app.startProgress("Adding link");
+    const update = app.startProgress(this.containerDOM, "Adding link");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
         relationObj.processNext(data, rows, "add");
-        app.stopProgress(update);
+        app.stopProgress(relationObj.containerDOM, update);
       }
     };
 
@@ -845,12 +845,12 @@ createView(row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
-  const update = app.startProgress("Creating view");
+  const update = app.startProgress(this.containerDOM, "Creating view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(relationObj.containerDOM, update);
       relationObj.createOwner(data[0].node.id, row, rows);
     }
   };
@@ -869,12 +869,12 @@ createOwner(ID, row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
-  const update = app.startProgress("Setting up view");
+  const update = app.startProgress(this.containerDOM, "Setting up view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(relationObj.containerDOM, update);
       relationObj.createSubject(ID, row, rows);
     }
   };
@@ -892,12 +892,12 @@ createSubject(ID, row, rows) {
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
-  const update = app.startProgress("Setting up view");
+  const update = app.startProgress(this.containerDOM, "Setting up view");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(relationObj.containerDOM, update);
       relationObj.createLink(ID, row, rows);
     }
   };

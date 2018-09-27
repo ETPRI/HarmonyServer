@@ -9,12 +9,12 @@ class checkEmpty {
 
     const xhttp = new XMLHttpRequest();
     const check = this;
-    const update = app.startProgress("Looking for nodes")
+    const update = app.startProgress(null, "Looking for nodes");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(null, update);
         check.verifyEmpty(data);
       }
     };

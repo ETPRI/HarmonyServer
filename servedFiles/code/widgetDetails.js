@@ -51,12 +51,12 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
 
       const xhttp = new XMLHttpRequest();
       const details = this;
-      const update = app.startProgress("Searching for node");
+      const update = app.startProgress(this.widgetDOM, "Searching for node");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(update);
+          app.stopProgress(details.widgetDOM, update);
           details.finishConstructor(data);
         }
       };
@@ -219,11 +219,12 @@ popupOK(button) {
                  {"item":"rel", "property":"formFieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
   const xhttp = new XMLHttpRequest();
-  const update = app.startProgress("Updating metadata");
+  const update = app.startProgress(this.widgetDOM, "Updating metadata");
+  const details = this;
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
-      app.stopProgress(update);
+      app.stopProgress(details.widgetDOM, update);
     }
   };
 
@@ -460,12 +461,12 @@ trashNode() {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress("Trashing node");
+  const update = app.startProgress(this.widgetDOM, "Trashing node");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(details.widgetDOM, update);
       details.save(data);
     }
   };
@@ -491,12 +492,12 @@ updateReason() {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress("Updating reason");
+  const update = app.startProgress(this.widgetDOM, "Updating reason");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(details.widgetDOM, update);
       details.save(data);
     }
   };
@@ -518,12 +519,12 @@ untrashNode() {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress("Restoring node");
+  const update = app.startProgress(this.widgetDOM, "Restoring node");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(details.widgetDOM, update);
       details.save(data);
     }
   };
@@ -611,12 +612,12 @@ add() { // Builds a query to add a new node, then runs it and passes the result 
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress("Creating node");
+  const update = app.startProgress(this.widgetDOM, "Creating node");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(details.widgetDOM, update);
       details.addComplete(data);
     }
   };
@@ -644,12 +645,12 @@ updateMetaData(newFields) {
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress("Updating metadata");
+  const update = app.startProgress(this.widgetDOM, "Updating metadata");
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(update);
+      app.stopProgress(details.widgetDOM, update);
       details.updateFields(data, newFields);
     }
   };
@@ -670,11 +671,12 @@ updateFields(data, newFields) { // should contain only the metadata node, under 
     obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}];
 
     const xhttp = new XMLHttpRequest();
-    const update = app.startProgress("Updating metadata");
+    const update = app.startProgress(this.widgetDOM, "Updating metadata");
+    const details = this;
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(update);
+        app.stopProgress(details.widgetDOM, update);
       }
     };
 
@@ -852,12 +854,12 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
 
     const xhttp = new XMLHttpRequest();
     const details = this;
-    const update = app.startProgress("Saving node");
+    const update = app.startProgress(this.widgetDOM, "Saving node");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(details.widgetDOM, update);
         details.saveData(data);
       }
     };

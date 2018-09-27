@@ -40,12 +40,12 @@ class widgetSVG {
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
-      const update = app.startProgress("Opening mindmap");
+      const update = app.startProgress(this.widgetDOM, "Opening mindmap");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(update);
+          app.stopProgress(SVG.widgetDOM, update);
           SVG.buildWidget(data);
         }
       };
@@ -673,12 +673,12 @@ class widgetSVG {
 
         const xhttp = new XMLHttpRequest();
         const SVG = this;
-        const update = app.startProgress("Saving mindmap");
+        const update = app.startProgress(this.widgetDOM, "Saving mindmap");
 
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
             const data = JSON.parse(this.responseText);
-            app.stopProgress(update);
+            app.stopProgress(SVG.widgetDOM, update);
             SVG.checkNameExists(data, name, newMap);
           }
         };
@@ -704,12 +704,12 @@ class widgetSVG {
 
         const xhttp = new XMLHttpRequest();
         const SVG = this;
-        const update = app.startProgress("Checking name");
+        const update = app.startProgress(this.widgetDOM, "Checking name");
 
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
             const data = JSON.parse(this.responseText);
-            app.stopProgress(update);
+            app.stopProgress(SVG.widgetDOM, update);
             SVG.checkNameExists(data, name, newMap);
           }
         };
@@ -733,12 +733,12 @@ class widgetSVG {
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
-      const update = app.startProgress("Creating mindmap");
+      const update = app.startProgress(this.widgetDOM, "Creating mindmap");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(update);
+          app.stopProgress(SVG.widgetDOM, update);
           SVG.setOwner(data); // If this is a new map or a new copy, it belongs to the user who made it
         }
       };
@@ -770,12 +770,12 @@ class widgetSVG {
 
     const xhttp = new XMLHttpRequest();
     const SVG = this;
-    const update = app.startProgress("Setting owner");
+    const update = app.startProgress(this.widgetDOM, "Setting owner");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(SVG.widgetDOM, update);
         SVG.startNodes(data);
       }
     };
@@ -839,12 +839,12 @@ class widgetSVG {
 
             const xhttp = new XMLHttpRequest();
             const SVG = this;
-            const update = app.startProgress("Removing node")
+            const update = app.startProgress(this.widgetDOM, "Removing node")
 
             xhttp.onreadystatechange = function() {
               if (this.readyState == 4 && this.status == 200) {
                 const data = JSON.parse(this.responseText);
-                app.stopProgress(update);
+                app.stopProgress(SVG.widgetDOM, update);
                 SVG.processNodes(data, labels);
               }
             };
@@ -869,12 +869,12 @@ class widgetSVG {
 
               const xhttp = new XMLHttpRequest();
               const SVG = this;
-              const update = app.startProgress("Updating node info");
+              const update = app.startProgress(this.widgetDOM, "Updating node info");
 
               xhttp.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
                   const data = JSON.parse(this.responseText);
-                  app.stopProgress(update);
+                  app.stopProgress(SVG.widgetDOM, update);
                   SVG.processNodes(data, labels);
                 }
               };
@@ -896,12 +896,12 @@ class widgetSVG {
 
               const xhttp = new XMLHttpRequest();
               const SVG = this;
-              const update = app.startProgress("Linking node");
+              const update = app.startProgress(this.widgetDOM, "Linking node");
 
               xhttp.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
                   const data = JSON.parse(this.responseText);
-                  app.stopProgress(update);
+                  app.stopProgress(SVG.widgetDOM, update);
                   SVG.processNodes(data, labels);
                 }
               };
@@ -1006,14 +1006,14 @@ class widgetSVG {
                    {"property":"M_count", "value":this.d3Functions.count}];
 
     const xhttp = new XMLHttpRequest();
-  	const d3 = this.d3Functions;
-    const update = app.startProgress("Saving mindmap data");
+    const SVG = this;
+    const update = app.startProgress(this.widgetDOM, "Saving mindmap data");
 
   	xhttp.onreadystatechange = function() {
   		if (this.readyState == 4 && this.status == 200) {
   			const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
-  			d3.update(data);
+        app.stopProgress(SVG.widgetDOM, update);
+  			SVG.d3Functions.update(data);
   		}
   	};
 

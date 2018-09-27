@@ -35,12 +35,12 @@ class widgetTableNodes {
   search() { // public - call when data changes
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress(`Searching for ${this.queryObject.nodeLabel}`);
+    const update = app.startProgress(this.widget, `Searching for ${this.queryObject.nodeLabel}`);
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(nodes.widget, update);
         nodes.buildData(data);
       }
     };
@@ -508,12 +508,12 @@ class widgetTableNodes {
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress("Checking permissions");
+    const update = app.startProgress(this.widget, "Checking permissions");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(update);
+        app.stopProgress(nodes.widget, update);
         nodes.checkPermission(data, ID, button, toAdd);
       }
     };
@@ -530,11 +530,11 @@ class widgetTableNodes {
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
-      const update = app.startProgress("Deleting old permissions");
+      const update = app.startProgress(this.widget, "Deleting old permissions");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          app.stopProgress(update);
+          app.stopProgress(nodes.widget, update);
           nodes.givePermission(button, toAdd, ID, data[0].rel.properties.username, data[0].rel.properties.password);
         }
       };
@@ -582,12 +582,12 @@ class widgetTableNodes {
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
-      const update = app.startProgress("Setting permissions");
+      const update = app.startProgress(this.widget, "Setting permissions");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(update);
+          app.stopProgress(nodes.widget, update);
           nodes.search(data);
         }
       };
@@ -609,11 +609,11 @@ class widgetTableNodes {
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress("Removing permissions");
+    const update = app.startProgress(this.widget, "Removing permissions");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(update);
+        app.stopProgress(nodes.widget, update);
         nodes.search();
       }
     };
