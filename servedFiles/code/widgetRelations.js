@@ -2,19 +2,18 @@
 
 // containerDOM: The DOM element that this widget will be inside.
 // nodeID: The ID of the node being shown
-// viewID: The ID of the person whose view is being shown
+// viewGUID: The GUID of the person whose view is being shown
 // relationType: Whether the relations shown are start, end or peer (not implemented)
 // object and objectMethod: Kludges enabling this class to call methods from another class once it's finished its queries.
 // objectMethod is the method and object is the object that contains it. I may remove these.
 class widgetRelations {
-constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
+constructor(containerDOM, nodeID, viewGUID, relationType, object, objectMethod) {
   // data to be displayed
   this.containerDOM = containerDOM;
   this.dragDrop     = null;
   this.nodeID       = nodeID;
   this.nodeGUID     = null;
-  this.viewID       = viewID;
-  this.viewNodeID   = null; // ID of the view node in the DB
+  this.viewGUID     = viewGUID;
   this.id           = app.idCounter; // ID of the widget being built
   this.relationType = relationType;
   this.existingRelations = {};      // contains objects that are already in the table (from a previous save).
@@ -26,6 +25,7 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
   this.idrRow       = 0;            // Number of existing rows added to the table
   this.order = [];                  // Order of relations set by the current user
   this.placeholders = [];
+  this.viewFound = false;
 
   // Add to app.widgets
   app.widgets[app.idCounter++] = this;
@@ -36,13 +36,23 @@ constructor(containerDOM, nodeID, viewID, relationType, object, objectMethod) {
 
 // Refreshes the widget by running the query to get all nodes in this user's view, then calling this.findLinks().
 refresh() {
-  if (this.viewID == "summary") {
-    // search for all directLinks from this node to another with the appropriate direction
+  if (this.viewGUID == "summary") {
+    // search for all ViewLinks from this node to another, or from another node to this one, according to the relation type
     const obj = {};
-    obj.from = {"id":this.nodeID, "return":false};
-    obj.rel = {"name":"r", "type":"directLink", "properties":{"direction":this.relationType}};
-    obj.to = {"name":"a"};
-    obj.order = [{"item":"rel", "name":"count", "direction":"D"}];
+    obj.rel = {"name":"r", "type":"ViewLink"};
+
+    const thisNode = {"id":this.nodeID, "name":"n"};
+    const other = {"name":"a"};
+
+    if (this.relationType == "start") {
+      obj.from = thisNode;
+      obj.to = other;
+    }
+
+    else if (this.relationType == "end") {
+      obj.from = other;
+      obj.to = thisNode;
+    }
 
     const xhttp = new XMLHttpRequest();
     const relationObj = this;
@@ -52,23 +62,20 @@ refresh() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
         app.stopProgress(relationObj.containerDOM, update);
-        relationObj.rComplete(data);
+        relationObj.processSummary(data);
       }
     };
 
     xhttp.open("POST","");
     const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
-
   }
 
-  else if (this.viewNodeID == null) {
+  else if (this.nodeGUID == null) {
     const obj = {};
-    obj.start = {"id":this.viewID, "return":false};
-    obj.rel1 = {"type":"Owner", "return":false};
-    obj.middle = {"name":"view", "type":"M_View", "properties":{"direction":this.relationType}};
-    obj.rel2 = {"type":"Subject", "return":false};
-    obj.end = {"id":this.nodeID};
+    obj.from = {"properties":{"M_GUID":this.viewGUID}, "return":false};
+    obj.to = {"id":this.nodeID};
+    obj.rel = {"type":"View"};
 
     const xhttp = new XMLHttpRequest();
     const relation = this;
@@ -83,7 +90,7 @@ refresh() {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -92,18 +99,61 @@ refresh() {
   }
 }
 
-findLinks(data) { // data should include the view found by the previous function. Find all nodes that it is linked to.
-  if (data && data[0].end) {
-    this.nodeGUID = data[0].end.properties.M_GUID;
+processSummary(data) {
+  let processedData = [];
+  let countObj = {};
+  if (data.length > 0) {
+    this.nodeGUID = data[0].n.properties.M_GUID;
+    for (let i = 0; i < data.length; i++) {
+      if (data[i].a.properties.M_GUID in countObj) {
+        countObj[data[i].a.properties.M_GUID].r.properties.count++;
+      }
+      else {
+        countObj[data[i].a.properties.M_GUID] = {"a":data[i].a, "r":{"properties":{"count":1, "M_GUID":""}}};
+      }
+    } // end for (every relation found)
+    for (let GUID in countObj) {
+      processedData.push(countObj[GUID]);
+    }
+
+    processedData.sort(function(a, b) {
+      return b.r.properties.count - a.r.properties.count;
+    });
+  } // end if (there were any ViewLinks to summarize)
+  this.rComplete(processedData);
+}
+
+findLinks(data) { // If data were returned, they will include the node's GUID and the "order" and "placeholders" arrays from the view
+  if (data && data[0] && data[0].to) {
+    this.nodeGUID = data[0].to.properties.M_GUID;
+    if (data[0].rel.properties[`${this.relationType}_order`]) {
+      this.order = data[0].rel.properties[`${this.relationType}_order`];
+    }
+    if (data[0].rel.properties[`${this.relationType}_placeholders`]) {
+      this.placeholders = data[0].rel.properties[`${this.relationType}_placeholders`];
+    }
   }
 
-  if (data && this.viewNodeID == null) {
-    this.viewNodeID = data[0].view.id;
-  }
   const obj = {};
-  obj.required = {"name":"view", "id":this.viewNodeID};
-  obj.optional = {"name":"a"};
-  obj.rel = {"name":"r", "type":"Link"};
+  obj.rel = {"name":"r", "type":"ViewLink", "properties":{"userGUID":this.viewGUID}};
+
+  const thisNode = {"id":this.nodeID, "return": false};
+  const other = {"name":"a"};
+
+  if (this.relationType == "start") {
+    obj.from = thisNode;
+    obj.to = other;
+  }
+
+  else if (this.relationType == "end") {
+    obj.from = other;
+    obj.to = thisNode;
+  }
+
+  else {
+    app.error("Relation type is neither 'start' nor 'end'");
+  }
+
 
   const xhttp = new XMLHttpRequest();
   const relation = this;
@@ -118,7 +168,7 @@ findLinks(data) { // data should include the view found by the previous function
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
@@ -131,7 +181,7 @@ rComplete(data) {
 
   // Create a save button if you're looking at your own view, or a sync button if you're looking at someone else's
   let buttonValue = "Sync";
-  if (app.login.userID && app.login.userID == this.viewID) {
+  if (app.login.userGUID && app.login.userGUID == this.viewGUID) {
     buttonValue = "Save";
   }
 
@@ -140,7 +190,7 @@ rComplete(data) {
                                  <table>${this.complete(data)}</table>`;
 
   // Add a dragdrop table if this view belongs to the user who is logged in
-  if (app.login.userID && app.login.userID == this.viewID) {
+  if (app.login.userGUID && app.login.userGUID == this.viewGUID) {
     // I kept getting errors without this. I think it was trying to run before the table finished rendering.
     // It has to have "this" passed in because a function called using setTimeout()
     // apparently doesn't consider its parent object to be "this".
@@ -154,20 +204,14 @@ rComplete(data) {
 // a (the node), and r (the relation to that node).
 complete(nodes) {
   let cells = ["Name", "Type", "Comment"];
-  if (this.viewID == "summary") {
+  if (this.viewGUID == "summary") {
     cells = ["Count", "Name", "Type"];
   }
   const logNodes = JSON.parse(JSON.stringify(nodes)); // Need a copy that WON'T have stuff deleted, in order to log it later
   app.stripIDs(logNodes); // May as well go ahead and remove the IDs now
-  let ordering = []; // Stores the ordered IDs, as stored in the table
-  let placeholders = [];
+  let ordering = this.order; // Stores the ordered IDs, as stored in the table
+  let placeholders = this.placeholders;
   const orderedNodes = []; // Stores ordered DATA, which is reproducible and human-readable, for testing
-  if (nodes[0] && nodes[0].view && nodes[0].view.properties && nodes[0].view.properties.order) { // If at least one node and an ordering were returned...
-    ordering = nodes[0].view.properties.order;
-  }
-  if (nodes[0] && nodes[0].view && nodes[0].view.properties && nodes[0].view.properties.placeholders) { // if at least one node was returned and it has placeholders
-    placeholders = nodes[0].view.properties.placeholders;
-  }
 
   // Start building HTML for the table. Note the ondrop event in the template, which causes all rows to have the same ondrop event.
   let html       = `<thead><tr idr='template' ondrop="app.widget('dropData', this, event)">
@@ -177,9 +221,7 @@ complete(nodes) {
   this.idrContent = 0;
   this.existingRelations = {};
 
-  // Iterate through "ordering", which is the array of node IDs the user stored in the order he/she stored them in.
-  // NOTE: Uses Neo4j IDs. Should look into a better way of storing this information. Maybe I could include an "order number"
-  // in the link to the node.
+  // Iterate through "ordering", which is the array of rel GUIDs the user stored in the order he/she stored them in.
   for (let i = 0; i < ordering.length; i++) {
     // Check whether this should be a placeholder
     if (ordering[i].charAt(0) === "p") {
@@ -214,18 +256,16 @@ complete(nodes) {
     this.objectMethod = null;
   }
 
-  // add unordered data, if any. NOTE: Think about whether this is still needed.
-  // If a user stores relations, don't they also automatically store an ordering which includes all those relations?
+  // add unordered data, if any.
   for (let i = 0; i < nodes.length; i++) {
-    // Some entries will be undefined because they were added as ordered data and deleted. Skip them.
-    // Also, it's possible that only the view was found, not a node - skip this.
-    if (nodes[i] !== undefined && nodes[i].a) {
+    // Some entries may be undefined because they were added as ordered data and deleted. Skip them.
+    if (nodes[i] !== undefined) {
       html = this.addLine(nodes[i], html);
     }
   }
 
   for (let i = 0; i < placeholders.length; i++) {
-    if (placeholders[i] !== undefined) { // Some entries will be undefined because they were added as ordered data and deleted. Skip them.
+    if (placeholders[i] !== undefined) { // Some entries may be undefined because they were added as ordered data and deleted. Skip them.
       html = this.addLine(null, html, null, placeholders[i]);
     }
   }
@@ -251,7 +291,7 @@ addLine(relation, html, orderedNodes, placeholderComment) {
     nodeID = node.properties.M_GUID; // The ID of said node...
     GUID = rel.properties.M_GUID; // the relation ID
 
-    if (this.viewID == "summary") {
+    if (this.viewGUID == "summary") {
       cells[0] = rel.properties.count;
       cells[1] = node.properties.name;
       cells[2] = node.labels[0];
@@ -276,7 +316,7 @@ addLine(relation, html, orderedNodes, placeholderComment) {
   let editHTML = "";
 
   // If this is the logged-in user's view, they get the full functionality - ability to drag, drop and delete.
-  if (app.login.userID && app.login.userID == this.viewID) {
+  if (app.login.userGUID && app.login.userGUID == this.viewGUID) {
     trHTML = `<tr idr="item${this.idrRow}" ondrop="app.widget('dropData', this, event)"
               ondragover="app.widget('allowDrop', this, event)" draggable="true"
               ondragstart="app.widget('drag', this, event)">`
@@ -285,7 +325,6 @@ addLine(relation, html, orderedNodes, placeholderComment) {
 
     // Add this node's data to the list of relations that already exist.
     this.existingRelations[this.idrRow] = {'comment':cells[2], 'nodeID':nodeID, 'name':cells[0], 'type':cells[1]};
-
   }
 
   html += trHTML + `<td>${++this.idrRow}</td> <td hidden>${GUID}</td>
@@ -483,7 +522,7 @@ saveSync(button) {
   app.regression.record(obj);
 
   // If this is the user's view, save all changed data, then refresh. If it's anyone else's, just refresh.
-  if (app.login.userID && app.login.userID == this.viewID) {
+  if (app.login.userGUID && app.login.userGUID == this.viewGUID) {
 
     // If there is any unsaved text in the dragDrop table's insert row...
     if (Array.from(this.dragDrop.insertContainer.getElementsByTagName("INPUT")).filter(x => x.value != "").length > 0) {
@@ -495,6 +534,9 @@ saveSync(button) {
     const tableWidget = relWidget.getElementsByClassName("widget")[0]; // The only subwidget inside the relations widget should be the table
     const container = app.domFunctions.getChildByIdr(tableWidget, "container");
     const rows = Array.from(container.children); // Get an array of all rows in the table
+
+    this.placeholders = [];
+    this.order = []; // Reset this.order and this.placeholders. They will be built back up during save and stored in the DB.
 
     // Call this.processNext() to deal with the first row. Each time processNext runs, it either calls itself on the next row,
     // or calls a function which eventually calls processNext() on the next row, so that eventually all rows are processed.
@@ -555,11 +597,14 @@ processNext(data, rows, prevFunction) {
   else { // when all rows are processed
     this.order.reverse();
 
-    // Update view ordering and refresh
+    // Update view ordering and placeholders and refresh
     const obj = {};
-    obj.node = {"name":"view", "id":this.viewNodeID};
-    obj.changes = [{"property":"order", "value":JSON.stringify(this.order), "string":false},
-                   {"property":"placeholders", "value":JSON.stringify(this.placeholders), "string":false}];
+    obj.from = {"properties":{"M_GUID":app.login.userGUID}};
+    obj.to = {"properties":{"M_GUID":this.nodeGUID}};
+    obj.rel = {"type":"View"};
+    // obj.node = {"name":"view", "id":this.viewNodeID};
+    obj.changes = [{"item":"rel", "property":`${this.relationType}_order`, "value":JSON.stringify(this.order), "string":false},
+                   {"item":"rel", "property":`${this.relationType}_placeholders`, "value":JSON.stringify(this.placeholders), "string":false}];
 
     const xhttp = new XMLHttpRequest();
   	const relations = this;
@@ -574,11 +619,8 @@ processNext(data, rows, prevFunction) {
   	};
 
   	xhttp.open("POST","");
-  	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
+  	const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   	xhttp.send(JSON.stringify(queryObject));         // send request to server
-
-    this.placeholders = [];
-    this.order = []; // Finally, reset this.order and this.placeholders.
   }
 }
 
@@ -611,50 +653,6 @@ deleteNode(row, rows) {
   const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 
-  // meanwhile, check for a directLink relation with the other node (it SHOULD exist).
-  // If its count is 1, delete it; otherwise, decrement the count.
-  const nodeGUIDcell = cells[2];
-  const otherNodeGUID = nodeGUIDcell.textContent;
-
-  let from = this.nodeGUID;
-  let to = otherNodeGUID;
-
-  if (this.relationType === "end") {
-    from = otherNodeGUID;
-    to = this.nodeGUID;
-  }
-  const obj2 = {};
-  obj2.from = {"properties":{"M_GUID":from}, "return":false};
-  obj2.rel = {"type":"directLink", "properties":{"direction":this.relationType}};
-  obj2.to = {"properties":{"M_GUID":to}, "return":false};
-
-  const xhttp2 = new XMLHttpRequest();
-
-  xhttp2.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      const xhttp3 = new XMLHttpRequest(); // new request
-      obj2.rel.return = false; // no matter what, don't need to return anything
-      if (data.length > 0) {
-        if (parseInt(data[0].rel.properties.count) <= 1) { // if the count is 1 (or, somehow, less), delete the relation
-          xhttp3.open("POST","");
-          const queryObject3 = {"server": "CRUD", "function": "deleteRelation", "query": obj2, "GUID": app.login.userGUID};
-          xhttp3.send(JSON.stringify(queryObject3));
-        }
-        else { // if the count is higher than 1, decrement its count
-          obj2.changes = [{"item":"rel", "property":"count", "value":parseInt(data[0].rel.properties.count) - 1}]; // decrement count
-
-          xhttp3.open("POST",""); // update link
-          const queryObject3 = {"server": "CRUD", "function": "changeRelation", "query": obj2, "GUID": app.login.userGUID};
-          xhttp3.send(JSON.stringify(queryObject3));
-        }
-      }
-    }
-  };
-
-  xhttp2.open("POST","");
-  const queryObject2 = {"server": "CRUD", "function": "changeRelation", "query": obj2, "GUID": app.login.userGUID};
-  xhttp2.send(JSON.stringify(queryObject2));         // send request to server
 }
 
 // A workaround for the fact that Neo4j doesn't let you change the nodes a relationship is attached to.
@@ -707,11 +705,9 @@ modifyNode (row, rows) {
 addNode(row, rows) {
   // Start the query by searching for this user's view of this node.
   const obj = {};
-  obj.start = {"properties":{"M_GUID":app.login.userGUID}, "return":false};
-  obj.rel1 = {"type":"Owner", "return":false};
-  obj.middle = {"type":"M_View", "properties":{"direction":this.relationType}};
-  obj.rel2 = {"type":"Subject", "return":false};
-  obj.end = {"properties":{"M_GUID":this.nodeGUID}, "return":false};
+  obj.from = {"properties":{"M_GUID":app.login.userGUID}};
+  obj.to = {"properties":{"M_GUID":this.nodeGUID}};
+  obj.rel = {"type":"View"};
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
@@ -722,7 +718,7 @@ addNode(row, rows) {
       const data = JSON.parse(this.responseText);
       app.stopProgress(relationObj.containerDOM, update);
       if (data.length > 0) {
-        relationObj.createLink(data[0].middle.id, row, rows);
+        relationObj.createLink(row, rows);
       }
       else {
         relationObj.createView(row, rows);
@@ -731,61 +727,14 @@ addNode(row, rows) {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
-
-  // Meanwhile, search for a direct link between the other node and this one.
-  // (If it's found, we'll increment the count. If not, we'll create it.)
-  const cells = row.children;
-  const nodeGUIDcell = cells[2];
-  const otherNodeGUID = nodeGUIDcell.textContent;
-
-  let from = this.nodeGUID;
-  let to = otherNodeGUID;
-
-  if (this.relationType === "end") {
-    from = otherNodeGUID;
-    to = this.nodeGUID;
-  }
-  const obj2 = {};
-  obj2.from = {"properties":{"M_GUID":from}, "return":false};
-  obj2.rel = {"type":"directLink", "properties":{"direction":this.relationType}};
-  obj2.to = {"properties":{"M_GUID":to}, "return":false};
-
-  const xhttp2 = new XMLHttpRequest();
-
-  xhttp2.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      const xhttp3 = new XMLHttpRequest(); // new request
-      obj2.rel.return = false; // no matter what, don't need to return anything
-
-      if (data.length == 0) { // If there isn't an existing direct relation, create one with a count of 1
-        obj2.rel.properties.count = 1; // add count to the object used to search for the link...
-
-        xhttp3.open("POST",""); // create link
-        const queryObject3 = {"server": "CRUD", "function": "createRelation", "query": obj2, "GUID": app.login.userGUID};
-        xhttp3.send(JSON.stringify(queryObject3));
-      }
-      else { // if there is an existing direct relation, increment its count
-        obj2.changes = [{"item":"rel", "property":"count", "value":parseInt(data[0].rel.properties.count) + 1}]; // increment count
-
-        xhttp3.open("POST",""); // update link
-        const queryObject3 = {"server": "CRUD", "function": "changeRelation", "query": obj2, "GUID": app.login.userGUID};
-        xhttp3.send(JSON.stringify(queryObject3));
-      }
-    }
-  };
-
-  xhttp2.open("POST","");
-  const queryObject2 = {"server": "CRUD", "function": "changeRelation", "query": obj2, "GUID": app.login.userGUID};
-  xhttp2.send(JSON.stringify(queryObject2));         // send request to server
 }
 
 // Create the link to the other node (at this point, the view exists and is linked to the owner and subject)
-createLink(ID, row, rows) {
-  let attributes = {};
-  let otherNodeGUID;
+createLink(row, rows) {
+  let attributes = {"userGUID":app.login.userGUID};
+  let otherNodeGUID = null;
 
   // Get the list of attributes of the relation (currently, just a comment, but could change)
   const widgetID = app.domFunctions.widgetGetId(row);
@@ -813,8 +762,8 @@ createLink(ID, row, rows) {
     }
 
     const obj = {};
-    obj.from = {"id":ID};
-    obj.rel = {"type":"Link", "properties":attributes, "name":"link"};
+    obj.from = {"properties":{"M_GUID":this.nodeGUID}};
+    obj.rel = {"type":"ViewLink", "properties":attributes, "name":"link"};
     obj.to = {"properties":{"M_GUID":otherNodeGUID}};
 
     const xhttp = new XMLHttpRequest();
@@ -841,7 +790,12 @@ createLink(ID, row, rows) {
 
 // Create the user's view of the node
 createView(row, rows) {
-  const obj = {"type":"M_View", "properties":{"direction":this.relationType}};
+  const obj = {};
+  obj.from = {"properties":{"M_GUID":app.login.userGUID}};
+  obj.to = {"properties":{"M_GUID":this.nodeGUID}};
+  obj.rel = {"type":"View"};
+
+  // const obj = {"type":"M_View", "properties":{"direction":this.relationType}};
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
@@ -851,60 +805,13 @@ createView(row, rows) {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       app.stopProgress(relationObj.containerDOM, update);
-      relationObj.createOwner(data[0].node.id, row, rows);
+      relationObj.createLink(row, rows);
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
+  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
-}
-
-// Create the Owner and Subject relations for a new View node, then call createLink to add the Link relation.
-createOwner(ID, row, rows) {
-  const ownerObj = {};
-  ownerObj.from = {"properties":{"M_GUID":app.login.userGUID}};
-  ownerObj.rel = {"type":"Owner"};
-  ownerObj.to = {"id":ID};
-
-  const xhttp = new XMLHttpRequest();
-  const relationObj = this;
-  const update = app.startProgress(this.containerDOM, "Setting up view");
-
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      app.stopProgress(relationObj.containerDOM, update);
-      relationObj.createSubject(ID, row, rows);
-    }
-  };
-
-  xhttp.open("POST","");
-  const ownerQueryObject = {"server": "CRUD", "function": "createRelation", "query": ownerObj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(ownerQueryObject));         // send request to server
-}
-
-createSubject(ID, row, rows) {
-  const subjectObj = {};
-  subjectObj.from = {"id":ID};
-  subjectObj.rel = {"type":"Subject"};
-  subjectObj.to = {"properties":{"M_GUID":this.nodeGUID}};
-
-  const xhttp = new XMLHttpRequest();
-  const relationObj = this;
-  const update = app.startProgress(this.containerDOM, "Setting up view");
-
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      app.stopProgress(relationObj.containerDOM, update);
-      relationObj.createLink(ID, row, rows);
-    }
-  };
-
-  xhttp.open("POST","");
-  const subjectQueryObject = {"server": "CRUD", "function": "createRelation", "query": subjectObj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(subjectQueryObject));         // send request to server
 }
 
 // Fires when a row from any relations table - whether it's the fully interactive table for a logged-in user,

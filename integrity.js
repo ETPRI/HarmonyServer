@@ -1,4 +1,10 @@
 module.exports = class integrity {
+  /* NOTE: Integrity tests to add later:
+  Make sure no item has more than one owner
+  Make sure no two items have the same GUID
+  Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class)
+  */
+
   constructor(driver, uuid) {
     this.uuid = uuid;
     this.driver = driver;
@@ -10,7 +16,7 @@ module.exports = class integrity {
   all() {
     this.missingNodeGUIDS();
     this.missingRelGUIDS();
-    this.findLinks();
+    // this.findLinks();
     this.checkMetaDataFields();
     this.verifyCalendars();
     this.verifyLoginTables();
@@ -181,7 +187,7 @@ module.exports = class integrity {
       });
   }
 
-//-----------------------------------------------------------------------------
+/*-----------------------------------------------------------------------------
 
   findLinks() {
     console.log ("Checking for missing/outdated directLink relations...");
@@ -432,7 +438,7 @@ module.exports = class integrity {
      });
   }
 
-//-----------------------------------------------------------------------------
+-----------------------------------------------------------------------------*/
 
   checkMetaDataFields() {
     console.log("Checking metadata...");

@@ -119,7 +119,7 @@ const neo4j  = require('neo4j-driver').v1;
 // It should be enough to have a single driver per database per application.
 const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo3i"));
 
-test();
+// test2();
 
 var integrity = new integrityClass(driver, uuidv1);
 integrity.update = true;
@@ -127,8 +127,158 @@ integrity.all();
 
 // test/one-time code goes here---------------------------------------------
 
-function test() {
-}
+// function test2() {
+//   let query = `match (a)-[r:ViewLink|:View]->(b) return r`;
+//
+//   const session = driver.session();
+//   session
+//     .run(query)
+//     .subscribe({
+//       onNext: function (record) {
+//         const obj={};
+//         for (let i=0; i< record.length; i++) {
+//           obj[record.keys[i]]=record._fields[i];
+//         }
+//         addGUIDs(obj.r);
+//       },
+//       onCompleted: function () {
+//         session.close();
+//       },
+//       onError: function (error) {
+//         console.log(error);
+//       }
+//   });
+// }
+//
+// function addGUIDs(rel) {
+//   let query = `match (a)-[r]->(b) where ID(r) = ${rel.identity.low} set r.M_GUID = "${uuidv1()}"`;
+//   const session = driver.session();
+//   session
+//     .run(query)
+//     .subscribe({
+//       onCompleted: function () {
+//         session.close();
+//       },
+//       onError: function (error) {
+//         console.log(error);
+//       }
+//   });
+// }
+//
+// function test() {
+//   // Start by finding all M_View nodes and their subjects and owners
+//   let query = `match (owner)-[:Owner]->(view:M_View)-[:Subject]->(subject) return owner, view, subject`;
+//
+//   const session = driver.session();
+//   session
+//     .run(query)
+//     .subscribe({
+//       onNext: function (record) {
+//         const obj={};
+//         for (let i=0; i< record.length; i++) {
+//           obj[record.keys[i]]=record._fields[i];
+//         }
+//         processView(obj);
+//       },
+//       onCompleted: function () {
+//         session.close();
+//       },
+//       onError: function (error) {
+//         console.log(error);
+//       }
+//   });
+// }
+//
+// function processView(data) {
+//   // data is a row containing owner, view and subject.
+//   // Merge a view link between the owner and subject, and record the node's order and placeholders arrays.
+//
+//   let query = `match (owner), (viewNode), (subject) where
+//                 ID(owner) = ${data.owner.identity.low} and
+//                 ID(subject) = ${data.subject.identity.low} and
+//                 ID(viewNode) = ${data.view.identity.low}
+//                 merge (owner)-[viewRel:View]->(subject)
+//                 set viewRel.${data.view.properties.direction}_order = viewNode.order,
+//                     viewRel.${data.view.properties.direction}_placeholders = viewNode.placeholders`;
+//
+//   const session = driver.session();
+//   session
+//     .run(query)
+//     .subscribe({
+//       onCompleted: function () {
+//         processLinks(data);
+//         session.close();
+//       },
+//       onError: function (error) {
+//         console.log(error);
+//       }
+//   });
+// }
+//
+// function processLinks(data) {
+//   // data is a row including owner, view and subject.
+//   // Search for links with the view, and pass each one to createViewLink along with the owner and the subject
+//   let query = `match (viewNode)-[link:Link]->(object) where ID(viewNode) = ${data.view.identity.low} return viewNode, link, object`;
+//   const session = driver.session();
+//   session
+//     .run(query)
+//     .subscribe({
+//       onNext: function(record) {
+//         const obj={};
+//         for (let i=0; i< record.length; i++) {
+//           obj[record.keys[i]]=record._fields[i];
+//         }
+//         obj.owner = data.owner;
+//         obj.subject = data.subject; // obj now includes owner, viewNode, link, object and subject.
+//         createViewLink(obj);
+//       },
+//       onCompleted: function () {
+//         session.close();
+//       },
+//       onError: function (error) {
+//         console.log(error);
+//       }
+//   });
+// }
+//
+// function createViewLink(data) {
+//   let startID = null;
+//   let endID = null;
+//   if (data.viewNode.properties.direction == "start") { // link should go from the subject to the object
+//     startID = data.subject.identity.low;
+//     endID = data.object.identity.low;
+//   }
+//   else if (data.viewNode.properties.direction == "end") {
+//     startID = data.object.identity.low;
+//     endID = data.subject.identity.low;
+//   }
+//   else {
+//     console.log("Error: View node is neither start nor end");
+//   }
+//
+//   let comment = "";
+//
+//   if (data.link.properties.comment) {
+//     comment = `, comment: "${data.link.properties.comment}"`;
+//   }
+//
+//   // Create a link which stores the comment (if any) and the user's GUID
+//   let query = `match (start), (end) where ID(start) = ${startID} and ID(end) = ${endID}
+//                merge (start)-[:ViewLink {userGUID: "${data.owner.properties.M_GUID}"${comment}}]->(end)`;
+//
+//   const session = driver.session();
+//   session
+//    .run(query)
+//    .subscribe({
+//      onCompleted: function () {
+//        session.close();
+//      },
+//      onError: function (error) {
+//        console.log(error);
+//      }
+//   });
+//
+// }
 
 // neo4j  --------------------------------------
 //const driver = new neo4j.driver("bolt://localhost:7687", neo4j.auth.driver("neo4j", "paleo3i"));

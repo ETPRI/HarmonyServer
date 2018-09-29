@@ -12,16 +12,6 @@ finishConstructor(data) {
   }
 }
 
-buildStart() {
-  this.containedWidgets.push(app.idCounter);
-  new widgetView(this.startDOM, this.id, "start", this, 'buildEnd');
-}
-
-buildEnd() {
-  this.containedWidgets.push(app.idCounter);
-  new widgetView(this.endDOM, this.id, "end");
-}
-
 buildWidget() { // public - build table header
   let id=null;  // assume add mode
   let name = this.name;
@@ -106,6 +96,18 @@ buildWidget() { // public - build table header
   this.endDOM     = app.domFunctions.getChildByIdr(widget, "end");
   this.startDOM   = app.domFunctions.getChildByIdr(widget, "start");
 }
+
+
+buildStart() {
+  this.containedWidgets.push(app.idCounter);
+  new widgetView(this.startDOM, this.id, "start", this, 'buildEnd');
+}
+
+buildEnd() {
+  this.containedWidgets.push(app.idCounter);
+  new widgetView(this.endDOM, this.id, "end");
+}
+
 
 drag(button, evnt) {
   let name = "";

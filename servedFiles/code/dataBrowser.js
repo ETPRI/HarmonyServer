@@ -18,8 +18,7 @@ class dataBrowser {
     this.outData = null;
     this.rightData = null;
 
-    this.highlightIDRLeft = null;
-    this.highlightIDRRight = null;
+    this.toToggle = null;
 
     this.buildWidget();
   }
@@ -118,12 +117,23 @@ class dataBrowser {
   }
 
   refresh() {
-    this.fillCell(this.mainCell, this.mainData, "Main");
-    this.fillCell(this.leftCell, this.leftData, "Left");
-    this.fillCell(this.rightCell, this.rightData, "Right");
-    this.fillRels(this.inCell, this.mainData.ins, this.mainData.inRels, this.inData, "Incoming");
-    this.fillRels(this.outCell, this.mainData.outs, this.mainData.outRels, this.outData, "Outgoing");
+    if (this.toToggle == "left") {
+      this.fillCell(this.leftCell, this.leftData, "Left");
+      app.domFunctions.getChildByIdr(this.inCell, 'relDetails').innerHTML = this.updateDetails(this.inData);
+    }
 
+    else if (this.toToggle == "right") {
+      this.fillCell(this.rightCell, this.rightData, "Right");
+      app.domFunctions.getChildByIdr(this.outCell, 'relDetails').innerHTML = this.updateDetails(this.outData);
+    }
+
+    else {
+      this.fillCell(this.mainCell, this.mainData, "Main");
+      this.fillCell(this.leftCell, this.leftData, "Left");
+      this.fillCell(this.rightCell, this.rightData, "Right");
+      this.fillRels(this.inCell, this.mainData.ins, this.mainData.inRels, this.inData, "Incoming");
+      this.fillRels(this.outCell, this.mainData.outs, this.mainData.outRels, this.outData, "Outgoing");
+    }
     if (this.highlightIDRLeft !== null) {
       let leftRow = app.domFunctions.getChildByIdr(this.inCell, this.highlightIDRLeft);
       leftRow.setAttribute("class", "dataBrowserOpen");
@@ -133,6 +143,7 @@ class dataBrowser {
       let rightRow = app.domFunctions.getChildByIdr(this.outCell, this.highlightIDRRight);
       rightRow.setAttribute("class", "dataBrowserOpen");
     }
+    this.toToggle = null; // reset variable for next time
   }
 
   fillCell(cell, data, cellName) {
@@ -140,7 +151,12 @@ class dataBrowser {
       cell.innerHTML = `<p class = "dataBrowserHeader">${cellName} Node</p>`;
     }
     else {
-      let html = `<p class = "dataBrowserHeader">${cellName} Node</p><table>`;
+      let name = "";
+      if (data.n.properties.name) {
+        name = `: ${data.n.properties.name}`;
+      }
+      let html = `<p class = "dataBrowserHeader">${cellName} Node</p>
+                  <p class = "dataBrowserHeader">${data.n.labels[0]}${name}</p><table>`;
       for (let fieldName in data.n.properties) {
         html += `<tr><th>${fieldName}</th><td>${data.n.properties[fieldName]}</td></tr>`
       }
@@ -172,15 +188,16 @@ class dataBrowser {
                 <div class="relTable"><table><tbody>`;
 
     for (let i = 0; i < allRels.length; i++) { // for every relation
-      let name = allNodes[i].properties.name; // Display the node's name if it exists, or else its type
-      if (!name) {
-        name = allNodes[i].labels[0];
+      let name = allNodes[i].labels[0]; // type first...
+
+      if (allNodes[i].properties.name) { // then name if applicable
+        name += `: ${allNodes[i].properties.name}`;
       }
 
       const arrowHTML =
       `<td class="dataBrowserCell" idr="arrow${allNodes[i].properties.M_GUID}" onclick="app.widget('toggleNode', this)"
            onmouseover="app.widget('showPopup', this)" onmouseout="app.widget('hidePopup', this)">
-           ${arrow}${this.buildPopup(allRels[i])}
+           ${allRels[i].type}-&gt;${this.buildPopup(allRels[i])}
        </td>`;
        const nameHTML =
        `<td class="dataBrowserCell" idr="name_${allNodes[i].properties.M_GUID}" onclick="app.widget('toggleNode', this)"
@@ -198,22 +215,40 @@ class dataBrowser {
         app.error("Tried to display relation data in a data browser cell other than inCell or outCell");
       }
     }
-    html += '</tbody></table></div>';
 
-    // Now add another div for the details of the selected relation, if it exists
+    // Finish that div and start the one for the details - it should exist even if it's blank
+    html += `</tbody></table></div><div idr = "relDetails">${this.updateDetails(detailRel)}</div>`;
+    // Now fill in div for the details of the selected relation, if it exists
+    // if (detailRel) {
+    //   let type = detailRel.type;
+    //
+    //   html += `<table><tr><th>Type</th><td>${type}</td></tr>`; // start div and table, create first row
+    //
+    //   for (let fieldName in detailRel.properties) {
+    //     html += `<tr><th>${fieldName}</th><td>${detailRel.properties[fieldName]}</td></tr>`;
+    //   }
+    //
+    //   html += `</table>`;
+    // }
+    //
+    // html += `</div>`;
+
+    cell.innerHTML = html;
+  }
+
+  updateDetails(detailRel) {
+    let html = "";
     if (detailRel) {
       let type = detailRel.type;
-
-      html += `<div><table><tr><th>Type</th><td>${type}</td></tr>`; // start div and table, create first row
+      html = `<table><tr><th>Type</th><td>${type}</td></tr>`;
 
       for (let fieldName in detailRel.properties) {
         html += `<tr><th>${fieldName}</th><td>${detailRel.properties[fieldName]}</td></tr>`;
       }
 
-      html += `</table></div>`;
+      html += `</table>`;
     }
-
-    cell.innerHTML = html;
+    return html;
   }
 
   findOuts(data, GUID, dataName) { // query the DB about outgoing relations, and pass along the incoming ones that were already found
@@ -280,15 +315,18 @@ class dataBrowser {
         this.inData = null;
         this.leftData = null;
         this.highlightIDRLeft = null;
+        this.toToggle = "left";
       }
       else if (bigCell.getAttribute("idr") === "outCell") {
         this.outData = null;
         this.rightData = null;
         this.highlightIDRRight = null;
+        this.toToggle = "right";
       }
       else {
         app.error ("Trying to close a dataBrowser cell, but the control's great-great-great-grandparent is not inCell or outCell");
       }
+      cell.parentElement.classList.remove("dataBrowserOpen");
       this.refresh();
     }
 
@@ -304,6 +342,7 @@ class dataBrowser {
       if (bigCell.getAttribute('idr') === "inCell") {
         nodeName = "leftData";
         this.highlightIDRLeft = relIDR;
+        this.toToggle = "left";
 
         // relation data should be stored in the main node - just have to find it
         this.inData = this.mainData.inRels.filter(x => x.properties.M_GUID == relGUID)[0];
@@ -311,6 +350,7 @@ class dataBrowser {
       else if (bigCell.getAttribute('idr') === "outCell") {
         nodeName = "rightData";
         this.highlightIDRRight = relIDR;
+        this.toToggle = "right";
 
         // relation data should be stored in the main node - just have to find it
         this.outData = this.mainData.outRels.filter(x => x.properties.M_GUID == relGUID)[0];

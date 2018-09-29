@@ -29,11 +29,9 @@ class widgetView {
     this.add = null; // The "Add Me" button, which is visible when a user is logged in but doesn't have a view of this node
 
     const obj = {};
-    obj.start = {"name":"user"};
-    obj.rel1 = {"type":"Owner", "return":false};
-    obj.middle = {"type":"M_View", "properties":{"direction":relationType}, "return":false};
-    obj.rel2 = {"type":"Subject", "return":false};
-    obj.end = {"id":nodeID, "return":false};
+    obj.from = {"name":"user"};
+    obj.rel = {"type":"View", "return":false};
+    obj.to = {"id":nodeID, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -48,7 +46,7 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
@@ -158,6 +156,7 @@ class widgetView {
       const ID = document.createTextNode(`${data[i].user.id}`);
       IDcell.appendChild(ID);
       IDcell.setAttribute("idr", `id${i}`);
+      IDcell.setAttribute("GUID", data[i].user.properties.M_GUID);
 
       // their name...
       const nameCell = document.createElement('td');
@@ -226,19 +225,19 @@ class widgetView {
       const row = button.parentElement.parentElement;
       const rowNum = button.getAttribute("idr").substring(13);
       const idCell = app.domFunctions.getChildByIdr(row, `id${rowNum}`);
-      const ID = idCell.textContent;
+      const GUID = idCell.getAttribute("GUID");
 
       // See whether the view already exists
-      if (ID in this.relations) {
-        this.relations[ID].removeAttribute("hidden"); // If so, just make it visible and active.
-        this.activeDOM = this.relations[ID];
+      if (GUID in this.relations) {
+        this.relations[GUID].removeAttribute("hidden"); // If so, just make it visible and active.
+        this.activeDOM = this.relations[GUID];
       }
       else { // If not, create it in a new div and append it to relCell.
         const relDOM = document.createElement('div');
         this.relCell.appendChild(relDOM);
         this.containedWidgets.push(app.idCounter);
-        new widgetRelations(relDOM, this.nodeID, ID, this.relationType); // Creates a new widgetRelations object in relDOM
-        this.relations[ID] = relDOM;
+        new widgetRelations(relDOM, this.nodeID, GUID, this.relationType); // Creates a new widgetRelations object in relDOM
+        this.relations[GUID] = relDOM;
         this.activeDOM = relDOM;
       }
       this.activeToggle = button;
@@ -272,15 +271,13 @@ class widgetView {
 
   // refreshes the widget by removing all existing relations,
   // querying the database again to get up-to-date information on who has a view, and rebuilding the table.
-  refresh(button) {
+  refresh() {
     this.relations = {}; // reset list of existing relation DOM objects
     // Get the IDs and names of all the people with views of this node, and pass them to buildViews.
     const obj = {};
-    obj.start = {"name":"user"};
-    obj.rel1 = {"type":"Owner", "return":false};
-    obj.middle = {"type":"M_View", "properties":{"direction":this.relationType}, "return":false};
-    obj.rel2 = {"type":"Subject", "return":false};
-    obj.end = {"id":this.nodeID, "return":false};
+    obj.from = {"name":"user"};
+    obj.rel = {"type":"View", "return":false};
+    obj.to = {"id":this.nodeID, "return":false};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -295,16 +292,8 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeTwoRelPattern", "query": obj, "GUID": app.login.userGUID};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
-
-    // log click
-    const recordObj = {};
-    recordObj.id = app.domFunctions.widgetGetId(button);
-    recordObj.idr = button.getAttribute("idr");
-    recordObj.action = "click";
-    app.regression.log(JSON.stringify(recordObj));
-    app.regression.record(recordObj);
   }
 
   // Expands or collapses the whole widget.
@@ -358,7 +347,7 @@ class widgetView {
         comment = data.comment;
       }
 
-      const userViewDOM = this.relations[app.login.userID]; // DOM element containing the user's view
+      const userViewDOM = this.relations[app.login.userGUID]; // DOM element containing the user's view
       const dragDropDOM = userViewDOM.lastElementChild; // The dragDrop widget
       const dragDropID = dragDropDOM.getAttribute("id");
       const dragDropObj = app.widgets[dragDropID];  // The javascript object for the dragDrop widget
@@ -410,7 +399,11 @@ class widgetView {
   // Adds a new view to the database linked to the node being viewed and the logged-in user, then calls addComplete
   addUser(button) {
     // Create a view of this node for this user
-    const obj = {"name":"view", "type":"M_View", "properties":{"direction":this.relationType}};
+    const obj = {};
+    obj.from = {"properties":{"M_GUID":app.login.userGUID}};
+    obj.to = {"properties":{"M_GUID":this.nodeGUID}};
+    obj.rel = {"type":"View"};
+    // const obj = {"name":"view", "type":"M_View", "properties":{"direction":this.relationType}};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -420,12 +413,12 @@ class widgetView {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
         app.stopProgress(view.containerDOM, update);
-        view.linkViewUser(data);
+        view.refresh(data);
       }
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
+    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Log click
@@ -435,106 +428,6 @@ class widgetView {
     recordObj.action = "click";
     app.regression.log(JSON.stringify(recordObj));
     app.regression.record(recordObj);
-  }
-
-  linkViewUser(data) { // Take the newly-created node and connect it to the user
-    const viewID = data[0].view.id;
-
-    const obj = {};
-    obj.from = {"id":app.login.userID, "return":false};
-    obj.to = {"id":viewID, "return":false};
-    obj.rel = {"type":"Owner", "return":false};
-
-    const xhttp = new XMLHttpRequest();
-    const view = this;
-    const update = app.startProgress(this.containerDOM, "Linking your view");
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(view.containerDOM, update);
-        view.linkViewNode(data, viewID);
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
-  }
-
-  linkViewNode(data, viewID) { // Connect the new view to the node and move on to addComplete
-    const obj = {};
-    obj.from = {"id":viewID, "return":false};
-    obj.to = {"id":this.nodeID, "return":false};
-    obj.rel = {"type":"Subject", "return":false};
-
-    const xhttp = new XMLHttpRequest();
-    const view = this;
-    const update = app.startProgress(this.containerDOM, "Linking your view");
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(view.containerDOM, update);
-        view.addComplete(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
-  }
-
-  // Updates the page after a new view is added, by adding a row for the new view to the table of views,
-  // formatting it (because it must belong to the logged-in user) and automatically opening it.
-  addComplete(data) {
-    // Add a row to the table for this user
-    const innerRow = document.createElement('tr');
-
-    const IDcell = document.createElement('td');
-    const ID = document.createTextNode(`${app.login.userID}`);
-    IDcell.appendChild(ID);
-    IDcell.setAttribute("idr", `id${this.rows}`);
-
-    const buttonCell = document.createElement('td');
-    const button = document.createElement('input');
-    button.setAttribute("type", "button");
-    button.setAttribute("idr", `showRelations${this.rows++}`);  // Done using this.rows for this row, so increment it to be ready for the next one
-    button.setAttribute("value", "+"); // Let the cell start with a "+" so this.toggleRelation will know it's OPENING something.
-    button.setAttribute("onclick", "app.widget('toggleRelation', this)");
-    buttonCell.appendChild(button);
-
-    const nameCell = document.createElement('td');
-    const name = document.createTextNode(`${app.login.userName}`)
-    nameCell.appendChild(name);
-
-    // Append the cells in the right order (ID in the center, button on the edge)
-    if (this.relationType === 'start') {
-      innerRow.appendChild(IDcell);
-      innerRow.appendChild(nameCell);
-      innerRow.appendChild(buttonCell);
-    }
-    else if (this.relationType === 'end') {
-      innerRow.appendChild(buttonCell);
-      innerRow.appendChild(nameCell);
-      innerRow.appendChild(IDcell);
-    }
-
-    this.viewTable.lastElementChild.appendChild(innerRow); // Append the new row to the tbody of the table of views
-
-    innerRow.classList.add("loggedIn", "activeView");            // format the row (because it must belong to the logged-in user)...
-    nameCell.setAttribute("idr", "loggedInView");                // give the cell with their name an idr, so it can be logged and replayed...
-    nameCell.setAttribute("ondrop", "app.widget('drop', this, event)")  // give the cell with their name an ondrop, so data can be dropped in...
-    nameCell.setAttribute("ondragover", "app.widget('allowDrop', this, event)");  // and an ondragover, so the data can be dropped...
-    this.add.classList.add("hidden");                            // hide the "Add Me" button because the user is already shown...
-    this.toggleRelation(button);                                 // and automatically show their view.
-
-    // Log
-    const obj = {};
-    obj.data = data;
-    app.stripIDs(obj.data);
-    app.regression.log(JSON.stringify(obj));
-    app.regression.record(obj);
   }
 
   summary() {

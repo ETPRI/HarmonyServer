@@ -485,7 +485,7 @@ class widgetTableNodes {
   findPermission(button) {
     // Get ID of the person to check
     const row = button.parentElement.parentElement;
-    const ID = row.children[1].textContent;
+    const GUID = row.children[1].textContent;
 
     // Determine which permission to check for (and delete if found), and which to add
     let toAdd = "";
@@ -502,7 +502,7 @@ class widgetTableNodes {
 
     // If this user has a relation to ANY login table, find it (and later, extract login details and delete it)
     const obj = {};
-    obj.from = {"id":ID, "return":false};
+    obj.from = {"properties":{"M_GUID":GUID}, "return":false};
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions"};
 
@@ -514,7 +514,7 @@ class widgetTableNodes {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
         app.stopProgress(nodes.widget, update);
-        nodes.checkPermission(data, ID, button, toAdd);
+        nodes.checkPermission(data, GUID, button, toAdd);
       }
     };
 
@@ -523,7 +523,7 @@ class widgetTableNodes {
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
-  checkPermission(data, ID, button, toAdd) {
+  checkPermission(data, GUID, button, toAdd) {
     if (data.length > 0 && data[0].rel.properties.username && data[0].rel.properties.password) { // If a relation to delete was found
       const obj = {};
       obj.rel = {"id":data[0].rel.id, "return":false};
@@ -535,7 +535,7 @@ class widgetTableNodes {
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           app.stopProgress(nodes.widget, update);
-          nodes.givePermission(button, toAdd, ID, data[0].rel.properties.username, data[0].rel.properties.password);
+          nodes.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
         }
       };
 
@@ -553,15 +553,15 @@ class widgetTableNodes {
 
       // If they entered data, create a link from them to the Admin table
       if (username && password) {
-        this.givePermission(button, toAdd, ID, username, password);
+        this.givePermission(button, toAdd, GUID, username, password);
       }
     }
   }
 
-  givePermission(button, toAdd, ID, name, password) {
-    if (!(toAdd && ID && name && password)) { // if all information needed was NOT passed in
+  givePermission(button, toAdd, GUID, name, password) {
+    if (!(toAdd && GUID && name && password)) { // if all information needed was NOT passed in
       const row = button.parentElement.parentElement;
-      ID = row.children[1].textContent;
+      GUID = row.children[1].textContent;
 
       name = prompt("Enter the username:", "");
       if (name) {
@@ -574,9 +574,9 @@ class widgetTableNodes {
       }
     } // end if (info was not passed in)
 
-    if (toAdd && ID && name && password) { // if the user has entered data, not cancelled
+    if (toAdd && GUID && name && password) { // if the user has entered data, not cancelled
       const obj = {};
-      obj.from = {"id":ID, "return":false};
+      obj.from = {"properties":{"M_GUID":GUID}, "return":false};
       obj.to = {"type":"M_LoginTable", "properties":{"name":toAdd}, "return":false};
       obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
 
@@ -600,10 +600,10 @@ class widgetTableNodes {
 
   removePermission(button) { // Remove ALL permissions from this user
     const row = button.parentElement.parentElement;
-    const ID = row.children[1].textContent;
+    const GUID = row.children[1].textContent;
 
     const obj = {};
-    obj.from = {"id":ID, "return":false};
+    obj.from = {"properties":{"M_GUID":GUID}, "return":false};
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions", "return":false};
 
