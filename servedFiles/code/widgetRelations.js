@@ -17,7 +17,7 @@ constructor(containerDOM, nodeID, viewGUID, relationType, object, objectMethod) 
   this.id           = app.idCounter; // ID of the widget being built
   this.relationType = relationType;
   this.existingRelations = {};      // contains objects that are already in the table (from a previous save).
-                                    // Each key is the ID of a relation, each value is an object describing the node the relation goes to.
+                                    // Each key is the number of a relation, each value is an object describing the node the relation goes to.
   this.object = object;
   this.objectMethod = objectMethod;
 
@@ -25,7 +25,7 @@ constructor(containerDOM, nodeID, viewGUID, relationType, object, objectMethod) 
   this.idrRow       = 0;            // Number of existing rows added to the table
   this.order = [];                  // Order of relations set by the current user
   this.placeholders = [];
-  this.viewFound = false;
+  // this.viewFound = false;
 
   // Add to app.widgets
   app.widgets[app.idCounter++] = this;
@@ -731,7 +731,7 @@ addNode(row, rows) {
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
-// Create the link to the other node (at this point, the view exists and is linked to the owner and subject)
+// Create the link to the other node (at this point, the view link exists)
 createLink(row, rows) {
   let attributes = {"userGUID":app.login.userGUID};
   let otherNodeGUID = null;

@@ -39,7 +39,7 @@ class widgetLogin {
   buildLoginWidget() {
     // needs to come from ../view/widgetLogin.html
 
-    // code below that deals with visual aspects and is or could be moved to widgetLogin.html sould be removed.
+    // code below that deals with visual aspects and is or could be moved to widgetLogin.html should be removed.
     // to be reviewed and removed if possible
 
     // the loginDiv functions as a widget so app.widget can work with it. Over in app, it's also added to the widgets array.

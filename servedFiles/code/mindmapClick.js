@@ -9,7 +9,7 @@ class mindmapClick {
     this.currentX = null;
     this.currentY = null;
 
-    this.currentParent = null;
+    // this.currentParent = null; // Is this ever used?
     this.parentNode = null;
     this.prevSibling = null;
     this.nextSibling = null;
@@ -106,6 +106,7 @@ class mindmapClick {
         const tree = group.parentElement;
         this.SVG_DOM.appendChild(tree);
         tree.appendChild(group);
+
         this.elemsToMove = [];
         this.selectedRoots = [];
 

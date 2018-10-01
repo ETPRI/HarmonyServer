@@ -5,7 +5,7 @@ class widgetView {
   // object and objectMethod: Kludgy code enabling the widgetView to call a function in another class after running a query.
   // objectMethod is the method to call and object is the object containing it. I may eliminate these.
   constructor(containerDOM, nodeID, relationType, object, objectMethod) {
-    this.relations = {}; // Will store IDs as keys and DOM objects as values
+    this.relations = {}; // Will store GUIDs as keys and DOM objects as values
     this.activeDOM = null; // Will store the DOM object for the relation currently shown
     this.activeToggle = null; // Will store the toggle button for the relation currently shown
 
@@ -396,14 +396,13 @@ class widgetView {
     evnt.preventDefault();
   }
 
-  // Adds a new view to the database linked to the node being viewed and the logged-in user, then calls addComplete
+  // Adds a new view link between the node being viewed and the logged-in user, then calls refresh
   addUser(button) {
     // Create a view of this node for this user
     const obj = {};
     obj.from = {"properties":{"M_GUID":app.login.userGUID}};
-    obj.to = {"properties":{"M_GUID":this.nodeGUID}};
+    obj.to = {"id":this.nodeID};
     obj.rel = {"type":"View"};
-    // const obj = {"name":"view", "type":"M_View", "properties":{"direction":this.relationType}};
 
     const xhttp = new XMLHttpRequest();
     const view = this;

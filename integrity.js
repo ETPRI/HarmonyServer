@@ -5,9 +5,10 @@ module.exports = class integrity {
   Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class)
   */
 
-  constructor(driver, uuid) {
+  constructor(driver, uuid, stringEscape) {
     this.uuid = uuid;
     this.driver = driver;
+    this.stringEscape = stringEscape;
     this.update = false; // Flag determining whether to FIX problems or just ALERT the user to them. Defaults to false (just alert).
     this.changeCount = 0;
     this.getChangeCount();
@@ -20,6 +21,7 @@ module.exports = class integrity {
     this.checkMetaDataFields();
     this.verifyCalendars();
     this.verifyLoginTables();
+    this.uniqueNodeGUIDS();
   }
 
   getChangeCount() {
@@ -519,7 +521,7 @@ module.exports = class integrity {
     const session = this.driver.session();
     const integrity = this;
 
-    let query = `MATCH (m:M_MetaData {name:"${node}"}) set m.fields = "${stringEscape(JSON.stringify(fields))}"
+    let query = `MATCH (m:M_MetaData {name:"${node}"}) set m.fields = "${this.stringEscape(JSON.stringify(fields))}"
                  create (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
                           item_GUID:m.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
                           action:'change', attribute:'fields', value:m.fields})`;
@@ -781,16 +783,90 @@ module.exports = class integrity {
   }
 
   deleteTempAdmin() {
-    let query = `match (a:tempAdmin {name:"Temporary Admin Account"}) detach delete a
+    let query = `match (a:tempAdmin {name:"Temporary Admin Account"}) with a, a.M_GUID as GUID detach delete a
                  create (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
-                  item_GUID:a.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
-                  action:'delete'})`;
+                 item_GUID:GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
+                 action:'delete'})`;
 
     const session = this.driver.session();
 
     session
       .run(query)
       .subscribe({
+        onCompleted: function() {
+          session.close();
+        },
+        onError: function(error) {
+          console.log(error);
+        }
+      });
+  }
+
+//-----------------------------------------------------------------------------
+  uniqueNodeGUIDS() {
+    console.log("Checking for uniqueness of GUIDs...");
+    let query = `match (a), (b) where a<>b and a.M_GUID = b.M_GUID return distinct a.M_GUID`;
+    const session = this.driver.session();
+    const integrity = this;
+
+    session
+      .run(query)
+      .subscribe({
+        onNext: function(record) {
+          let fixText = "";
+          if (this.update) {
+            fixText = "; this cannot be automatically fixed."
+          }
+          console.log(`Warning: GUID ${record._fields[0]} is attached to multiple nodes${fixText}`);
+        },
+        onCompleted: function() {
+          integrity.uniqueRelGUIDS();
+          session.close();
+        },
+        onError: function(error) {
+          console.log(error);
+        }
+      });
+  }
+
+  uniqueRelGUIDS() {
+    let query = `match ()-[a]->(), ()-[b]->() where a<>b and a.M_GUID = b.M_GUID return distinct a.M_GUID`;
+    const session = this.driver.session();
+    const integrity = this;
+
+    session
+      .run(query)
+      .subscribe({
+        onNext: function(record) {
+          let fixText = "";
+          if (this.update) {
+            fixText = "; this cannot be automatically fixed."
+          }
+          console.log(`Warning: GUID ${record._fields[0]} is attached to multiple relations${fixText}`);
+        },
+        onCompleted: function() {
+          integrity.uniqueMixedGUIDS();
+          session.close();
+        },
+        onError: function(error) {
+          console.log(error);
+        }
+      });
+  }
+  uniqueMixedGUIDS() {
+    let query = `match ()-[a]->(), (b) where a.M_GUID = b.M_GUID return distinct a.M_GUID`;
+    const session = this.driver.session();
+
+    session
+      .run(query)
+      .subscribe({
+        onNext: function(record) {
+          let fixText = "";
+          if (this.update) {
+            fixText = "; this cannot be automatically fixed."
+          }
+          console.log(`Warning: GUID ${record._fields[0]} is attached to at least one node AND at least one relation${fixText}`);
+        },
         onCompleted: function() {
           session.close();
         },

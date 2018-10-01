@@ -6,7 +6,7 @@ class regressionTesting {
     this.playing = false; // whether actions are being replayed continuously
     this.stepThrough = false; // whether actions are being stepped through one at a time
     this.fileRunning = false; // whether a file has already been accessed and is currently being played
-    this.playbackObj = {}; // Object storing all actions to replay
+    this.playbackObj = []; // Array storing all actions to replay
     this.instruction = 1; // Number of the next action to be replayed by next() - starts at 1 because 0 is processed by play(). Increments when an action is played, resets when Play button is clicked
     this.recordings = 1;
     this.playFiles = 0;
@@ -14,81 +14,36 @@ class regressionTesting {
     this.regHeader = document.getElementById("regressionHeader");
     this.dragData = {};
 
-    this.playDOM = document.getElementById("replay");
-    this.stepDOM = document.getElementById("stepThrough");
-    this.delayMS = document.getElementById("delayMS");
-    this.delayOn = document.getElementById("delayOn");
-    this.linkDiv = document.getElementById("dlink");
+    this.playDOM = null;
+    this.stepDOM = null;
+    this.delayMS = null;
+    this.delayOn = null;
+    this.linkDiv = null;
   }
 
   buildRegressionHeader() {
     const regHeader = document.getElementById("regressionHeader");
     regHeader.setAttribute("hidden", "true");
     regHeader.setAttribute("class", "widget");
-    const p1 = document.createElement('p');
-  	const text1 = document.createTextNode(`To run the premade scripts, make sure you are working in an empty database,
-  																				 then select ALL scripts and play. Due to the widget numbering system,
-  																				 later scripts will NOT run properly unless they are run immediately after
-  																				 the earlier ones.`);
-  	p1.appendChild(text1);
-  	regHeader.appendChild(p1);
-  	const p2 = document.createElement('p');
-  	const text2 = document.createTextNode(`Number of scripts recorded for this page so far: 0`);
-  	p2.appendChild(text2);
-  	regHeader.appendChild(p2);
 
-    const record = document.createElement("input");
-    record.setAttribute("type", "button");
-    record.setAttribute("id", "Record");
-    record.setAttribute("value", "Record");
-    record.setAttribute("onclick", "app.widget('recordToggle', this)");
-    regHeader.appendChild(record);
+    regHeader.innerHTML = `
+    <p>To run the premade scripts, make sure you are working in an empty database, then select ALL scripts and play.
+       Due to the widget numbering system, later scripts will NOT run properly unless they are run immediately after
+      the earlier ones.</p>
+    <p>Number of scripts recorded for this page so far: 0</p>
+    <input type="button" id="Record" value="Record" onclick="app.widget('recordToggle', this)">
+    Select a playback file: <input type="file" id="playback" multiple="true">
+    <input type="button" id="replay" value="Play Remaining Steps" onclick="app.widget('play', this)">
+    <input type="button" id="stepThrough" value="Play Next Step" onclick="app.widget('play', this)">
+    <input type="checkbox" id="delayOn" checked="true" onclick="app.widget('delayToggle', this)">Use delay when replaying
+    <input type="number" id="delayMS" value="500">Enter delay (in milliseconds)
+    <p id="dlink"></p><hr></div>`;
 
-    regHeader.appendChild(document.createTextNode("Select a playback file: "));
-
-    const playback = document.createElement("input");
-    playback.setAttribute("type", "file");
-    playback.setAttribute("id", "playback");
-    playback.setAttribute("multiple", "true");
-    regHeader.appendChild(playback);
-
-    const replay = document.createElement("input");
-    replay.setAttribute("type", "button");
-    replay.setAttribute("id", "replay");
-    replay.setAttribute("value", "Play Remaining Steps");
-    replay.setAttribute("onclick", "app.widget('play', this)");
-    regHeader.appendChild(replay);
-
-    const step = document.createElement("input");
-    step.setAttribute("type", "button");
-    step.setAttribute("id", "stepThrough");
-    step.setAttribute("value", "Play Next Step");
-    step.setAttribute("onclick", "app.widget('play', this)");
-    regHeader.appendChild(step);
-
-    const delayOn = document.createElement("input");
-    delayOn.setAttribute("type", "checkbox");
-    delayOn.setAttribute("id", "delayOn");
-    delayOn.setAttribute("checked", "true");
-    delayOn.setAttribute("onclick", "app.widget('delayToggle', this)");
-    regHeader.appendChild(delayOn);
-
-    regHeader.appendChild(document.createTextNode("Use delay when replaying"));
-
-    const delayMS = document.createElement("input");
-    delayMS.setAttribute("type", "number");
-    delayMS.setAttribute("id", "delayMS");
-    delayMS.setAttribute("value", 500);
-    regHeader.appendChild(delayMS);
-
-    regHeader.appendChild(document.createTextNode("Enter delay (in milliseconds)"));
-
-    const dlink = document.createElement("p");
-    dlink.setAttribute("id", "dlink");
-    regHeader.appendChild(dlink);
-
-    const line = document.createElement('hr');
-    regHeader.appendChild(line);
+    this.playDOM = document.getElementById("replay");
+    this.stepDOM = document.getElementById("stepThrough");
+    this.delayMS = document.getElementById("delayMS");
+    this.delayOn = document.getElementById("delayOn");
+    this.linkDiv = document.getElementById("dlink");
 
     const obj = {};
     obj.object = app;
@@ -204,10 +159,10 @@ class regressionTesting {
   		}
   		// reset
   		this.recordText = [];
-  		this.recordedStep = 1; // Not sure what's going on here - this variable is never used in this class
+  		// this.recordedStep = 1; // Not sure what's going on here - this variable is never used in this class
   	}
     else { // If the page was not recording
-  		button.value = "Stop Recording"
+  		button.value = "Stop Recording";
   	}
   	this.recording = !this.recording;
   } // end recordToggle method
@@ -244,7 +199,7 @@ class regressionTesting {
         }
 
     		this.instruction = 1;
-    		this.playbackObj = {}; // Reset playback variables
+    		this.playbackObj = []; // Reset playback variables
         const regression = this;
 
     		if (!this.recording) {

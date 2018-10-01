@@ -12,11 +12,11 @@ constructor (nameQueryObject, id) {
   // init instance variables
   this.html            = ""; // will contain html that makes up widget
   this.queryObjectName = nameQueryObject;  // key to select queryObj
-  this.queryObjects    = {};  this.queryObjectsInit();            // currently 4 querys
+  this.queryObjects    = {};
+  this.queryObjectsInit();            // currently 4 querys
   this.queryObj        = this.queryObjects[nameQueryObject];  // select one query
   this.queryData       = null;
   this.fields          = this.queryObj.fields;
-  this.tableName = nameQueryObject;
   this.dropdownId = id;
   this.widgetID = app.idCounter;
   this.widgetDOM = null;
@@ -82,7 +82,7 @@ queryComplete(data) {
 buildHeader() {
   // build header
 
-  const html =app.widgetHeader() +'<b> '+ this.tableName +` </b></div>
+  const html =app.widgetHeader() +'<b> '+ this.queryObjectName +` </b></div>
 
   <table>
     <thead>#header#</thead>
@@ -135,7 +135,6 @@ getatt(fieldName){
 
   return (ret);
 }
-
 
 // init date from metadata db query
 queryObjectsInit() {

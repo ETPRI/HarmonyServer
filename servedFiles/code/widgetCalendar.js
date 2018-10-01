@@ -19,7 +19,7 @@ class widgetCalendar {
     this.labelWidth = "75px";
     this.headerHeight = "50px";
     this.weekWidth = "200px";
-    this.monthHeight = "150px";
+    // this.monthHeight = "150px";
 
     this.days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     this.shortDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -163,11 +163,7 @@ class widgetCalendar {
       calendar.appendChild(timeslot);
     }
 
-    const now = new Date();
-    if (this.day.getFullYear() == now.getFullYear()
-        && this.day.getMonth() == now.getMonth()
-        && this.day.getDate() == now.getDate()) {  // If the day being displayed is the current day, display current time on the table...
-
+    if (this.checkToday(this.day)) {  // If the day being displayed is the current day, display current time on the table...
       const rect = calendar.getBoundingClientRect();
       const minutes_in_day = 60*24;
       const minutes_so_far = now.getHours()*60 + now.getMinutes();

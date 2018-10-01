@@ -1,8 +1,7 @@
 class widgetNode extends widgetDetails {
 constructor(callerID, queryObjectName, id, name) {
+  // this.startDOM and this.endDOM are instance variables, but can't be set before super and shouldn't be reset after it
   super (queryObjectName, null, id, name, callerID);
-  this.startDOM = null;
-  this.endDOM = null;
 }
 
 finishConstructor(data) {
@@ -97,7 +96,6 @@ buildWidget() { // public - build table header
   this.startDOM   = app.domFunctions.getChildByIdr(widget, "start");
 }
 
-
 buildStart() {
   this.containedWidgets.push(app.idCounter);
   new widgetView(this.startDOM, this.id, "start", this, 'buildEnd');
@@ -107,7 +105,6 @@ buildEnd() {
   this.containedWidgets.push(app.idCounter);
   new widgetView(this.endDOM, this.id, "end");
 }
-
 
 drag(button, evnt) {
   let name = "";
