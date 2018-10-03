@@ -327,7 +327,7 @@ buildDataNode() {   // put in one field label and input row for each field - inc
 addRow(fieldName, fieldCount) {
   let value = "";
 
-  // Create a table row
+  // Create a table row (in dragDrop table - all "this" references are to dragDrop)
   const row = document.createElement('tr');
   row.setAttribute('ondrop', "app.widget('drop', this, event)");
   row.setAttribute("ondragover", "app.widget('allowDrop', this, event)");

@@ -355,7 +355,7 @@ class widgetView {
       const tbody = app.domFunctions.getChildByIdr(dragDropDOM, "container");
       const inputRow = app.domFunctions.getChildByIdr(tbody, "insertContainer"); // The row in the relations widget containing inputs. Anything dropped into the widget will appear just before this row.
 
-      // Create new row
+      // Create new row in dragDrop table. All "this" references are to dragDrop or dragDropTable
       const row = document.createElement('tr');
       row.setAttribute("idr", `item${dragDropObj.itemCount}`); // Assign an idr
       row.setAttribute("ondrop", "app.widget('dropData', this, event)"); // Assign drag and drop methods

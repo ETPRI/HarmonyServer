@@ -145,7 +145,7 @@ class mindmapKeypress {
         const nodeObj = this.d3Functions.objects[nodeID].JSobj; // Get the object representing this node
           if (nodeObj._children && nodeObj._children.length > 0) { // If the object has children, but they are hidden, show them.
             const button = this.d3Functions.objects[nodeID].DOMelements.toggle;
-            this.parent.toggle(button);
+            this.parent.toggleChildren(button);
             // The children, if any, should now be visible.
           }
         if (nodeObj.children && nodeObj.children.length > 0) { // If the object has children, select the oldest child

@@ -316,6 +316,7 @@ addLine(relation, html, orderedNodes, placeholderComment) {
   let editHTML = "";
 
   // If this is the logged-in user's view, they get the full functionality - ability to drag, drop and delete.
+  // This will be converted to a dragDrop table later - all "this" references are to dragDrop or dragDropTable.
   if (app.login.userGUID && app.login.userGUID == this.viewGUID) {
     trHTML = `<tr idr="item${this.idrRow}" ondrop="app.widget('dropData', this, event)"
               ondragover="app.widget('allowDrop', this, event)" draggable="true"
@@ -358,7 +359,7 @@ createDragDrop(widgetRel) {
   widgetRel.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetRelation contains"
   // Create the new dragDrop table
 	widgetRel.dragDrop = new dragDropTable("template", "container", widgetRel.containerDOM, widgetRel.idrRow, widgetRel.idrContent);
-  // Make the edit textbox call the new "changeComment" method instead of dragDrop's "save" method
+  // Make the edit textbox call the new "changeComment" method as well as dragDrop's "save" method
   widgetRel.dragDrop.editDOM.setAttribute("onblur", " app.widget('changeComment', this); app.widget('save', this)");
   // Make a copy of this.existingRelations and attaches it to the dragDrop table
   widgetRel.dragDrop.existingRelations = JSON.parse(JSON.stringify(widgetRel.existingRelations));
@@ -382,7 +383,7 @@ createDragDrop(widgetRel) {
   } // end dragdrop.changeComment function
 
   // create the new dropData function. When something is dropped on a row in the table, dropData checks the source.
-  // If it's a row from the same table, it calls drop instead to rearrange rows. If it's row from another relations table,
+  // If it's a row from the same table, it calls drop instead to rearrange rows. If it's a row from another relations table,
   // it copies the row. If it's a cell from a widgetTableNodes and it was dragged to the input row, it makes a new row.
   // If the source is a cell from a widgetTableNodes, and the row it was dragged to isn't the input row,
   // it updates that row to refer to the node that was dragged.
@@ -469,7 +470,7 @@ createDragDrop(widgetRel) {
         app.regression.record(obj);
       } // end if (cell is not in template row)
     } // end else if (the source was a widgetTableNodes cell)
-  } // end dragDrop.dropData function
+  } // end dragDropTable.dropData function
 
   // Create the new drag function, which sets the active node and stores data about the row being dragged.
   widgetRel.dragDrop.drag = function(input, evnt){ // Expand drag function to store data as well as mark an active node

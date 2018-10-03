@@ -269,7 +269,7 @@ class widgetTableNodes {
       // Create a cell for rowCount and append it
       cell = document.createElement('td');
       row.appendChild(cell);
-      cell.outerHTML = `<td idr = "edit${i}" onClick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${rowCount++}</td>`;
+      cell.outerHTML = `<td idr = "edit${i}" onclick="app.widget('edit',this)" draggable="true" ondragstart="app.widget('drag', this, event)">${rowCount++}</td>`;
 
       // Create a cell for ID and append it
       cell = document.createElement('td');

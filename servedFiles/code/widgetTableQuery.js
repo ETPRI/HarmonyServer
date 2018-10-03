@@ -5,7 +5,6 @@ display a cypher query in a table, used mainly for meta data reporting
 
 */
 
-
 ////////////////////////////////////////////////////////////////////  class start
 class widgetTableQuery {
 constructor (nameQueryObject, id) {
@@ -77,7 +76,6 @@ queryComplete(data) {
   app.regression.record(obj);
 }
 
-
 ////////////////////////////////////////////////////////////////////
 buildHeader() {
   // build header
@@ -110,7 +108,6 @@ buildHeader() {
  this.html = html3;
 }
 
-
 ////////////////////////////////////////////////////////////////////
 buildData() {
   let html = "";
@@ -124,7 +121,6 @@ buildData() {
   }
   this.html = this.html.replace('#data#',html);
 }
-
 
 /* */
 getatt(fieldName){

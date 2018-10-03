@@ -1,27 +1,118 @@
 module.exports = class integrity {
-  /* NOTE: Integrity tests to add later:
+  /* NOTE: Integrity items to add later:
+  Check for constraints - there should be one for every node type (names of metadata nodes) asserting unique GUID exists,
+    and one for M_ChangeLog asserting that unique number exists. Results are of the form:
+    `CONSTRAINT ON (${tolower(name)}:${name}) ASSERT ${tolower(name)}.M_GUID IS UNIQUE` or
+    `CONSTRAINT ON (${tolower(name)}:${name}) ASSERT exists(${tolower(name)}.M_GUID)`
+    If any not found, then set them BEFORE running getChangeCount. (Nothing else will run until getChangeCount is finished.)
   Make sure no item has more than one owner
-  Make sure no two items have the same GUID
   Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class)
   */
 
-  constructor(driver, uuid, stringEscape) {
+  constructor(driver, uuid, stringEscape, defaultUpdate) {
     this.uuid = uuid;
     this.driver = driver;
     this.stringEscape = stringEscape;
-    this.update = false; // Flag determining whether to FIX problems or just ALERT the user to them. Defaults to false (just alert).
-    this.changeCount = 0;
-    this.getChangeCount();
+    this.update = defaultUpdate; // Flag determining whether to FIX problems or just ALERT the user to them.
+    this.changeCount = null; // No other functions can run until this has a value - assigned by getChangeCount
+    this.checkConstraints(); // Makes sure the DB has all the constraints it's supposed to, then calls getChangeCount
   }
 
-  all() {
-    this.missingNodeGUIDS();
-    this.missingRelGUIDS();
-    // this.findLinks();
-    this.checkMetaDataFields();
-    this.verifyCalendars();
-    this.verifyLoginTables();
-    this.uniqueNodeGUIDS();
+  checkConstraints() { // Get a list of all metadata nodes - which should be all node types in the DB
+    console.log ("Searching for metadata to use for constraints...");
+    const query = "MATCH (n:M_MetaData) return n.name as name";
+    let nodes = [];
+    const integrity = this;
+
+    const session = this.driver.session();
+    session
+      .run(query)
+      .subscribe({
+        onNext: function (record) {
+          console.log("Metadata node for constraint found...");
+          nodes.push(record._fields[0]);
+        },
+        onCompleted: function () {
+          console.log("Search for metadata nodes for constraints is finished.");
+          integrity.matchConstraints(nodes);
+          session.close();
+        },
+        onError: function (error) {
+          console.log(error);
+        }
+    });
+  }
+
+  matchConstraints(names) {
+    // Build an array of constraints that should exist - each metadata node should have a unique M_GUID, and each changeLog should have a unique number.
+    // I wasn't actually able to ensure that every node of ANY kind has a unique M_GUID, but this will do for a start.
+    let desiredConstraints = [`CONSTRAINT ON ( m_changelog:M_ChangeLog ) ASSERT m_changelog.number IS UNIQUE`,
+                       `CONSTRAINT ON ( m_changelog:M_ChangeLog ) ASSERT exists(m_changelog.number)`];
+    for (let i = 0; i < names.length; i++) {
+      desiredConstraints.push(`CONSTRAINT ON ( ${names[i].toLowerCase()}:${names[i]} ) ASSERT ${names[i].toLowerCase()}.M_GUID IS UNIQUE`);
+      desiredConstraints.push(`CONSTRAINT ON ( ${names[i].toLowerCase()}:${names[i]} ) ASSERT exists(${names[i].toLowerCase()}.M_GUID)`);
+    }
+
+    // Search for existing constraints
+    const query = "call db.constraints";
+    let existingConstraints = [];
+    const integrity = this;
+
+    const session = this.driver.session();
+    session
+      .run(query)
+      .subscribe({
+        onNext: function (record) {
+          existingConstraints.push(record._fields[0]);
+        },
+        onCompleted: function () {
+          // Build a new array of constraints which SHOULD exist, but don't
+          const neededConstraints = desiredConstraints.filter(x => existingConstraints.indexOf(x) < 0);
+          let fixText = "";
+          if (integrity.update) {
+            fixText = "; attempting to add constraint...";
+          }
+          for (let i = 0; i < neededConstraints.length; i++) {
+            console.log(`Missing constraint found: ${neededConstraints[i]}${fixText}`);
+          }
+
+          if (neededConstraints.length > 0 && integrity.update) { // If constraints are missing and we are correcting problems, then create new constraints
+            integrity.createConstraints(neededConstraints);
+          }
+          else {
+            integrity.getChangeCount(); // Run this as soon as constraints are finished
+          }
+          session.close();
+        },
+        onError: function (error) {
+          console.log(error);
+        }
+    });
+  }
+
+  createConstraints(neededConstraints) {
+    if (neededConstraints.length > 0) { // while there are more constraints to create. Doing it this way should emulate synchronous code, letting me know when I'm done.
+      const constraint = neededConstraints.pop();
+      const query = `CREATE ${constraint}`;
+      const integrity = this;
+
+      const session = this.driver.session();
+
+      session
+        .run(query)
+        .subscribe({
+          onCompleted: function () {
+            integrity.createConstraints(neededConstraints);
+            session.close();
+          },
+          onError: function (error) {
+            console.log(error);
+          }
+      });
+    }
+    else { // when there are no more constraints to add, call getChangeCount
+      this.getChangeCount();
+    }
   }
 
   getChangeCount() {
@@ -42,6 +133,25 @@ module.exports = class integrity {
           console.log(error);
         }
     });
+  }
+
+  all() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "all");
+    }
+    else {
+      this.missingNodeGUIDS();
+      this.missingRelGUIDS();
+      // this.findLinks();
+      this.checkMetaDataFields();
+      this.verifyCalendars();
+      this.verifyLoginTables();
+      this.uniqueNodeGUIDS();
+    }
+  }
+
+  tryAgain(object, methodName, ...args) {
+    object[methodName](...args);
   }
 
   //---------------------------------------------------------------------------
@@ -853,6 +963,7 @@ module.exports = class integrity {
         }
       });
   }
+
   uniqueMixedGUIDS() {
     let query = `match ()-[a]->(), (b) where a.M_GUID = b.M_GUID return distinct a.M_GUID`;
     const session = this.driver.session();

@@ -5,7 +5,6 @@ REST API into a database
 
 */
 
-
 var http = require('http');
 var fs   = require('fs');
 var path = require('path');
@@ -23,7 +22,7 @@ const neo4j  = require('neo4j-driver').v1;
 const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo3i"));
 
 let backup = new backupClass(config, fs, driver, stringEscape);
-let integrity = new integrityClass(driver, uuidv1, stringEscape);
+let integrity = new integrityClass(driver, uuidv1, stringEscape, true);
 let CRUD = new CRUDclass(uuidv1, integrity, driver);
 
 http.createServer(function (request, response) {
@@ -38,7 +37,8 @@ http.createServer(function (request, response) {
       response.setHeader('Content-Type', 'text/plain');
       runGremlin(q.query.gremlinSteps, response);
       return;
-    } else if (request.method === "POST") {
+    }
+    else if (request.method === "POST") {
       // REST API
       let body = '';
       request.on('data', chunk => {
@@ -125,7 +125,6 @@ console.log(`Server running at http://127.0.0.1:${config.port}`);
 
 test();
 
-integrity.update = true;
 integrity.all();
 
 // test/one-time code goes here---------------------------------------------

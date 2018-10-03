@@ -205,7 +205,7 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 	// Get the ID of the widget that the DOM element is inside.
 	const id = this.domFunctions.widgetGetId(widgetElement);
 
-	if (method=="allowDrop") {
+	if (method=="allowDrop") { // I don't remember why I made this separate
 		// If that ID is associated with a widget object which contains the given method...
 		if (id && this.widgets[id] && this.widgets[id][method]) {
 			this.widgets[id][method](widgetElement, ...args); //  Call the method, and pass in widgetElement and any extra args
