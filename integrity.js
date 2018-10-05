@@ -1,12 +1,12 @@
 module.exports = class integrity {
   /* NOTE: Integrity items to add later:
-  Check for constraints - there should be one for every node type (names of metadata nodes) asserting unique GUID exists,
-    and one for M_ChangeLog asserting that unique number exists. Results are of the form:
-    `CONSTRAINT ON (${tolower(name)}:${name}) ASSERT ${tolower(name)}.M_GUID IS UNIQUE` or
-    `CONSTRAINT ON (${tolower(name)}:${name}) ASSERT exists(${tolower(name)}.M_GUID)`
-    If any not found, then set them BEFORE running getChangeCount. (Nothing else will run until getChangeCount is finished.)
   Make sure no item has more than one owner
-  Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class)
+  Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class, or rethink the logic of how the client gets that metadata)
+  Verify that if there are multiple changeLogs referencing the same item GUID:
+    There is at most one "create" changelog
+    The "create" changelog, if it exists, has the lowest number
+    There is at most one "delete" changelog
+    The "delete" changelog, if it exists, has the highest number
   */
 
   constructor(driver, uuid, stringEscape, defaultUpdate) {
@@ -138,16 +138,16 @@ module.exports = class integrity {
   all() {
     if (this.changeCount === null) {
       setTimeout(this.tryAgain, 100, this, "all");
+      return;
     }
-    else {
-      this.missingNodeGUIDS();
-      this.missingRelGUIDS();
-      // this.findLinks();
-      this.checkMetaDataFields();
-      this.verifyCalendars();
-      this.verifyLoginTables();
-      this.uniqueNodeGUIDS();
-    }
+
+    this.missingNodeGUIDS();
+    this.missingRelGUIDS();
+    // this.findLinks();
+    this.checkMetaDataFields();
+    this.verifyCalendars();
+    this.verifyLoginTables();
+    this.uniqueNodeGUIDS();
   }
 
   tryAgain(object, methodName, ...args) {
@@ -157,6 +157,11 @@ module.exports = class integrity {
   //---------------------------------------------------------------------------
 
   missingNodeGUIDS() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "missingNodeGUIDS");
+      return;
+    }
+
     console.log("Checking for missing node GUIDS...");
     let query = "match (n) where not exists(n.M_GUID) return n";
 
@@ -229,6 +234,11 @@ module.exports = class integrity {
 //-----------------------------------------------------------------------------
 
   missingRelGUIDS() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "missingRelGUIDS");
+      return;
+    }
+
     console.log ("Checking for missing relation GUIDS...");
     let query = "match (a)-[r]->(b) where not exists(r.M_GUID) return a, b, r";
 
@@ -299,260 +309,13 @@ module.exports = class integrity {
       });
   }
 
-/*-----------------------------------------------------------------------------
-
-  findLinks() {
-    console.log ("Checking for missing/outdated directLink relations...");
-    let query = `match (sub)<-[:Subject]-(view:M_View)-[:Link]->(obj) return sub, view, obj`;
-
-    const session = this.driver.session();
-    var result = [];
-    const integrity = this;
-
-    session
-      .run(query)
-      .subscribe({
-        onNext: function (record) {
-          const obj={};
-          for (let i=0; i< record.length; i++) {
-            obj[record.keys[i]]=record._fields[i];
-          }
-          result.push(obj);
-        },
-        onCompleted: function () {
-          if (result.length > 0) {
-            integrity.findNextLink(result);
-          }
-          session.close();
-        },
-        onError: function (error) {
-          console.log(error);
-        }
-      });
-  }
-
-  // Data should be an array of objects, each representing one link and containing sub, view and obj objects
-  // For each row, search for a directLink from the subject to the object with the appropriate direction.
-  // If not found, create it with tempCount = 1. If found, and it has no tempCount, set tempCount = 1.
-  // If found, and it has a tempCount, increment the tempCount.
-  findNextLink(data) {
-    if (data.length > 0) { // Keep calling itself recursively while there's more data
-      const line = data.pop();
-      const query = `match (sub), (obj) where ID(sub) = ${line.sub.identity.low} and ID(obj) = ${line.obj.identity.low}
-                   merge (sub)-[d:directLink {direction:'${line.view.properties.direction}'}]->(obj)
-                   on create set d.tempCount = 1, d.newlyCreated = "true", d.M_GUID = "${this.uuid()}"
-                   on match set d.tempCount = coalesce(d.tempCount+1, 1)`;
-
-      const session = this.driver.session();
-      const integrity = this;
-
-      session
-        .run(query)
-        .subscribe({
-          onCompleted: function () {
-            integrity.findNextLink(data);
-            session.close();
-          },
-          onError: function (error) {
-            console.log(error);
-          }
-        });
-    } // end if (there's more data)
-    else { // when there are no more data to process
-      this.deleteLinks();
-    }
-  }
-
-  // find links which existed, but didn't need to (there were no View links associated with them). If updating, delete them.
-  deleteLinks() {
-    let del = "";
-    if (this.update) {
-      del = `delete d create (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
-                                   item_GUID:d.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
-                                   action:'delete'})`;
-    }
-
-    let deleting = "";
-    if (this.update) {
-      deleting = "; deleting...";
-    }
-
-    let query = `match (sub)-[d:directLink]->(obj) where not exists(d.tempCount) ${del} return sub, obj`;
-
-    const session = this.driver.session();
-    const integrity = this;
-
-    session
-      .run(query)
-      .subscribe({
-        onNext: function (record) {
-          const obj={};
-          for (let i=0; i< record.length; i++) {
-            obj[record.keys[i]]=record._fields[i];
-          }
-          console.log(`Found unneeded direct link from ${obj.sub.properties.name}:${obj.sub.labels[0]} to ${obj.obj.properties.name}:${obj.obj.labels[0]}${deleting}`);
-        },
-        onCompleted: function () {
-          integrity.addLinks();
-          session.close();
-        },
-        onError: function (error) {
-          console.log(error);
-        }
-      });
-  }
-
-  // find links which didn't exist, but should have (there are View links between the nodes).
-  // If updating, make them permanent; otherwise, delete them in order not to change the DB.
-  addLinks() {
-    let change = "delete d"; // If we aren't actually changing the DB, then delete the newly-created directLink
-    if (this.update) {
-      // If we DO want to change the DB, then update the new directLink's count and stop marking it as new. Also, create changeLogs.
-      change = `set d.count = d.tempCount remove d.newlyCreated
-                create (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
-                          item_GUID:d.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
-                          action:'create', label:'directLink'}),
-                        (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
-                          item_GUID:d.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
-                          action:'change', attribute:'direction', value:d.direction}),
-                        (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
-                          item_GUID:d.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
-                          action:'change', attribute:'count', value:d.count})`;
-    }
-    let query = `match (sub)-[d:directLink]->(obj) where d.newlyCreated = "true" ${change} return sub, obj`; // Links that weren't IN the DB before we started
-
-    const session = this.driver.session();
-    const integrity = this;
-
-    session
-      .run(query)
-      .subscribe({
-        onNext: function (record) {
-          const obj={};
-          for (let i=0; i< record.length; i++) {
-            obj[record.keys[i]]=record._fields[i];
-          }
-
-          let changing = "";
-          if (integrity.update) {
-            changing = "; adding..."
-          }
-
-          console.log(`Found missing direct link from ${obj.sub.properties.name}:${obj.sub.labels[0]} to ${obj.obj.properties.name}:${obj.obj.labels[0]}${changing}`);
-        },
-        onCompleted: function () {
-          integrity.addCount();
-          session.close();
-        },
-        onError: function (error) {
-          console.log(error);
-        }
-      });
-  }
-
-  // find links which already existed, but had no counts. If updating, set their counts.
-  addCount() {
-    let change = "";
-    if (this.update) {
-      change = `set d.count = d.tempCount
-      create (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
-                item_GUID:d.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
-                action:'change', attribute:'count', value:d.count})`;
-    }
-    let query = `match (sub)-[d:directLink]->(obj) where exists(d.tempCount) and not exists(d.count)
-                 and (not exists(d.newlyCreated) or d.newlyCreated <> "true") ${change} return sub, obj, d.tempCount as count`
-
-    const session = this.driver.session();
-    const integrity = this;
-
-    session
-     .run(query)
-     .subscribe({
-       onNext: function (record) {
-         const obj={};
-         for (let i=0; i< record.length; i++) {
-           obj[record.keys[i]]=record._fields[i];
-         }
-
-         let changing = "";
-         if (integrity.update) {
-           changing = `; setting count to ${obj.count.low}...`;
-         }
-
-         console.log(`Direct link from ${obj.sub.properties.name}:${obj.sub.labels[0]} to ${obj.obj.properties.name}:${obj.obj.labels[0]} is missing "count" field${changing}`);
-       },
-       onCompleted: function () {
-         integrity.updateCount();
-         session.close();
-       },
-       onError: function (error) {
-         console.log(error);
-       }
-     });
-  }
-
-  // find links which existed and had counts, but the counts were inaccurate. If updating, correct the counts.
-  updateCount() {
-    let change = "";
-    if (this.update) {
-      change = `set d.count = d.tempCount
-                create (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
-                          item_GUID:d.M_GUID, user_GUID:'integrity', M_GUID:'${this.uuid()}',
-                          action:'change', attribute:'count', value:d.count})`;
-    }
-    let query = `match (sub)-[d:directLink]->(obj) where exists(d.count) and exists(d.tempCount) and d.count <> d.tempCount
-                 with sub, obj, d, d.count as old ${change} return sub, obj, old, d.tempCount as temp`;
-
-    const session = this.driver.session();
-    const integrity = this;
-
-    session
-     .run(query)
-     .subscribe({
-       onNext: function (record) {
-         const obj={};
-         for (let i=0; i< record.length; i++) {
-           obj[record.keys[i]]=record._fields[i];
-         }
-
-         let changing = "";
-         if (integrity.update) {
-           changing = `; updating count...`;
-         }
-
-         console.log(`Direct link from ${obj.sub.properties.name}:${obj.sub.labels[0]} to ${obj.obj.properties.name}:${obj.obj.labels[0]} has incorrect count (should be ${obj.temp.low}, is ${obj.old.low})${changing}`);
-       },
-       onCompleted: function () {
-         integrity.deleteTempCount();
-         session.close();
-       },
-       onError: function (error) {
-         console.log(error);
-       }
-     });
-  }
-
-  // remove tempCount variable from all directLinks
-  deleteTempCount() {
-    let query = "match ()-[d:directLink]->() where exists(d.tempCount) remove d.tempCount";
-
-    const session = this.driver.session();
-
-    session
-     .run(query)
-     .subscribe({
-       onCompleted: function () {
-         session.close();
-       },
-       onError: function (error) {
-         console.log(error);
-       }
-     });
-  }
-
------------------------------------------------------------------------------*/
-
+//-----------------------------------------------------------------------------
   checkMetaDataFields() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "checkMetaDataFields");
+      return;
+    }
+
     console.log("Checking metadata...");
 
     const session = this.driver.session();
@@ -649,6 +412,11 @@ module.exports = class integrity {
 
 //-----------------------------------------------------------------------------
   verifyCalendars() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "verifyCalendars");
+      return;
+    }
+
     console.log("Checking for existence of calendars...");
     const calendars = [{"name":"dummy", "description":"dummy calendar"}];
     const query = `match (c:calendar) return c`;
@@ -733,6 +501,11 @@ module.exports = class integrity {
 
 //-----------------------------------------------------------------------------
   verifyLoginTables() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "verifyLoginTables");
+      return;
+    }
+
     console.log("Checking for existence of login tables...");
     const query = "match (t:M_LoginTable) return t";
 
@@ -914,6 +687,11 @@ module.exports = class integrity {
 
 //-----------------------------------------------------------------------------
   uniqueNodeGUIDS() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "uniqueNodeGUIDS");
+      return;
+    }
+
     console.log("Checking for uniqueness of GUIDs...");
     let query = `match (a), (b) where a<>b and a.M_GUID = b.M_GUID return distinct a.M_GUID`;
     const session = this.driver.session();

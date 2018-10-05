@@ -9,7 +9,6 @@ class mindmapClick {
     this.currentX = null;
     this.currentY = null;
 
-    // this.currentParent = null; // Is this ever used?
     this.parentNode = null;
     this.prevSibling = null;
     this.nextSibling = null;
@@ -145,7 +144,7 @@ class mindmapClick {
     } // end if (left button)
   }
 
-  editLabel(element, evnt) {
+  editLabel(element) {
     this.releaseNode(element);
     // Check whether the label has a node attached
     const id = element.getAttribute("idr").slice(4); // The idr will look like "nodexxx"
@@ -359,7 +358,7 @@ class mindmapClick {
     return parent;
   }
 
-  releaseNode(element, evnt) { // Removes all the onmousemove, onmouseup and onmouseout events which were set when the node was selected.
+  releaseNode(element) { // Removes all the onmousemove, onmouseup and onmouseout events which were set when the node was selected.
     // Reset mouse methods and ensure all drag variables are null
     element.removeAttribute("onmousemove");
     element.removeAttribute("onmouseup");

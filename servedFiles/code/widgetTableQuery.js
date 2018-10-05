@@ -129,7 +129,7 @@ getatt(fieldName){
     ret="";
   }
 
-  return (ret);
+  return ret;
 }
 
 // init date from metadata db query
@@ -186,8 +186,8 @@ queryObjectsInit() {
 } /// end method
 
 edit(element){
-  const id = element.innerHTML;
-  new widgetNode(this.widgetID, element.nextElementSibling.nextElementSibling.innerText, id);
+  const GUID = element.innerHTML;
+  new widgetNode(this.widgetID, element.nextElementSibling.nextElementSibling.innerText, GUID);
 
   const obj={};
   obj.id=app.domFunctions.widgetGetId(element);

@@ -407,7 +407,7 @@ checkNewField() {
   }
 }
 
-addField(textbox) {
+addField() {
   const row = document.createElement('tr');
   row.setAttribute('idr', `newFieldRow${this.newFields}`);
   this.tBodyDOM.append(row);

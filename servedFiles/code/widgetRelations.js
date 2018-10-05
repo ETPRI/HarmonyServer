@@ -25,7 +25,6 @@ constructor(containerDOM, nodeID, viewGUID, relationType, object, objectMethod) 
   this.idrRow       = 0;            // Number of existing rows added to the table
   this.order = [];                  // Order of relations set by the current user
   this.placeholders = [];
-  // this.viewFound = false;
 
   // Add to app.widgets
   app.widgets[app.idCounter++] = this;
@@ -795,8 +794,6 @@ createView(row, rows) {
   obj.from = {"properties":{"M_GUID":app.login.userGUID}};
   obj.to = {"properties":{"M_GUID":this.nodeGUID}};
   obj.rel = {"type":"View"};
-
-  // const obj = {"type":"M_View", "properties":{"direction":this.relationType}};
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;

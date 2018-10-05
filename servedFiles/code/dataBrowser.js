@@ -218,20 +218,6 @@ class dataBrowser {
 
     // Finish that div and start the one for the details - it should exist even if it's blank
     html += `</tbody></table></div><div idr = "relDetails">${this.updateDetails(detailRel)}</div>`;
-    // Now fill in div for the details of the selected relation, if it exists
-    // if (detailRel) {
-    //   let type = detailRel.type;
-    //
-    //   html += `<table><tr><th>Type</th><td>${type}</td></tr>`; // start div and table, create first row
-    //
-    //   for (let fieldName in detailRel.properties) {
-    //     html += `<tr><th>${fieldName}</th><td>${detailRel.properties[fieldName]}</td></tr>`;
-    //   }
-    //
-    //   html += `</table>`;
-    // }
-    //
-    // html += `</div>`;
 
     cell.innerHTML = html;
   }

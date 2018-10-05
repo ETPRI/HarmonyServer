@@ -22,11 +22,10 @@ class regressionTesting {
   }
 
   buildRegressionHeader() {
-    const regHeader = document.getElementById("regressionHeader");
-    regHeader.setAttribute("hidden", "true");
-    regHeader.setAttribute("class", "widget");
+    this.regHeader.setAttribute("hidden", "true");
+    this.regHeader.setAttribute("class", "widget");
 
-    regHeader.innerHTML = `
+    this.regHeader.innerHTML = `
     <p>To run the premade scripts, make sure you are working in an empty database, then select ALL scripts and play.
        Due to the widget numbering system, later scripts will NOT run properly unless they are run immediately after
       the earlier ones.</p>

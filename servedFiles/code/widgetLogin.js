@@ -136,7 +136,7 @@ class widgetLogin {
 
   // Checks to make sure the user entered both a name and password, then searches for a user with that name and password.
   // Does NOT currently encrypt the password - need to fix before going public. Sends results to this.loginComplete().
-  login(requestCount) {
+  login() {
   	const name = this.nameInput.value;
     const password = this.passwordInput.value;
 
@@ -216,9 +216,8 @@ class widgetLogin {
       dropDown.appendChild(option);
 
       // Turn login button into logout button
-      const loginButton = document.getElementById("loginButton");
-      loginButton.setAttribute("value", "Log Out");
-      loginButton.setAttribute("onclick", "app.widget('logout', this)");
+      this.loginButton.setAttribute("value", "Log Out");
+      this.loginButton.setAttribute("onclick", "app.widget('logout', this)");
 
       // Link the user to the session, then call the getMetaData function to search for metadata
       const obj = {};
@@ -372,7 +371,9 @@ class widgetLogin {
      this.loginButton.setAttribute("onclick", "app.widget('login', this)");
 
      this.userID = null; // Log the user out
+     this.userGUID = null;
      this.userName = null;
+     this.permissions = null;
      this.info.textContent = `Not Logged In`;
      this.info.classList.remove("loggedIn");
 

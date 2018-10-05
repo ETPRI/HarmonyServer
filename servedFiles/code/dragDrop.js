@@ -9,7 +9,24 @@ class dragDrop {
 
     this.activeNode = null; // node which is being dragged
     this.showHide = null;
+    this.editDOM = null;
+    this.domElement = null;
+    this.container = null;
+    this.insertContainer = null;
     this.domFunctions 	= new domFunctions();
+
+    this.inputCount = 0; // number of input fields in the input element
+    this.otherCount = 0; // number of non-input fields
+
+    this.itemCount = 0;
+    if (row) {
+      this.itemCount = row; // Number of finished rows which have been added
+    }
+
+    this.contentCount = 0;
+    if (content) { // existing is an optional value recording the number of rows that are already in the table.
+      this.contentCount = content;
+    }
 
     // add to app.widgets
     this.id = app.idCounter;
@@ -48,20 +65,9 @@ class dragDrop {
       this.insertContainer.setAttribute("ondragstart", "app.widget('drag', this, event)");
     }
 
-    this.itemCount = 0;
-    if (row) {
-      this.itemCount = row; // Number of finished rows which have been added
-    }
-
-    this.inputCount = 0; // number of input fields in the input element
-    this.otherCount = 0; // number of non-input fields
     this.createInputs(this.insertContainer);
     this.insertContainer.setAttribute("idr", "insertContainer");
 
-    this.contentCount = 0;
-    if (content) { // existing is an optional value recording the number of rows that are already in the table.
-      this.contentCount = content;
-    }
   }
 
   createInputs(element) { // To support nested tags

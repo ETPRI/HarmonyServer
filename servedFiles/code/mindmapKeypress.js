@@ -121,7 +121,7 @@ class mindmapKeypress {
   leftArrow() {
     let parentGroup = null;
     if (this.parent.selectedNodes.size == 1) {
-      for (let node of this.parent.selectedNodes) {
+      for (let node of this.parent.selectedNodes) { // Why is this in a loop? I already verified the set size was 1!
         const nodeID = node.getAttribute("idr").slice(5); // the IDR will be like groupxxx
         const nodeObj = this.d3Functions.objects[nodeID].JSobj; // Get the object representing this node
         const parentID = nodeObj.parent;
@@ -161,7 +161,8 @@ class mindmapKeypress {
     }
   }
 
-  // Go to the previous sibling, if any. If this is the first sibling, cycle around to the last one.
+  // If offset is -1 (up arrow), go to the previous sibling, if any. If this is the first sibling, cycle around to the last one.
+  // If offset is 1 (down arrow), go to the next sibling, if any. If this is the last sibling, cycle around to the first one.
   upDownArrow(offset) {
     let siblingGroup = null;
     if (this.parent.selectedNodes.size == 1) {

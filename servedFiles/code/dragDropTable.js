@@ -91,7 +91,7 @@ class dragDropTable extends dragDrop {
   delete(button) {
     // logging
     const obj = {};
-    obj.id = this.domFunctions.widgetGetId(button);
+    obj.id = app.domFunctions.widgetGetId(button);
     obj.idr = button.getAttribute("idr");
     obj.action = "click";
     this.log(JSON.stringify(obj));

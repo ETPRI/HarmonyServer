@@ -439,6 +439,7 @@ class widgetView {
       const activeRow = this.activeToggle.parentElement.parentElement; // activeToggle is in a cell which is in a row
       activeRow.classList.remove("activeView");
       this.activeToggle.setAttribute("value", "+");
+      this.activeToggle = null;
     }
 
     // See whether the view already exists

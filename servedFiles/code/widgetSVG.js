@@ -792,10 +792,10 @@ class widgetSVG {
         objsCopy[i] = this.stripInstances(objsCopy[i].JSobj); // No need for instances or DOM elements
       }
     }
-    this.processNodes(null, objsCopy);
+    this.processNodes(objsCopy);
   }
 
-  processNodes(data, labels) {
+  processNodes(labels) {
     if (labels.length > 0) { // As long as there are more labels to process
       let label = labels.pop();
       while (label == undefined && labels.length > 0) {
@@ -843,9 +843,8 @@ class widgetSVG {
 
             xhttp.onreadystatechange = function() {
               if (this.readyState == 4 && this.status == 200) {
-                const data = JSON.parse(this.responseText);
                 app.stopProgress(SVG.widgetDOM, update);
-                SVG.processNodes(data, labels);
+                SVG.processNodes(labels);
               }
             };
 
@@ -854,7 +853,7 @@ class widgetSVG {
             xhttp.send(JSON.stringify(queryObject));         // send request to server
           }
           else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
-            this.processNodes(null, labels);
+            this.processNodes(labels);
           }
         } // end if (the label was deleted)
         else { // If this label was NOT deleted
@@ -873,9 +872,8 @@ class widgetSVG {
 
               xhttp.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
-                  const data = JSON.parse(this.responseText);
                   app.stopProgress(SVG.widgetDOM, update);
-                  SVG.processNodes(data, labels);
+                  SVG.processNodes(labels);
                 }
               };
 
@@ -884,7 +882,7 @@ class widgetSVG {
               xhttp.send(JSON.stringify(queryObject));         // send request to server
             }
             else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
-              this.processNodes(null, labels);
+              this.processNodes(labels);
             }
           }
           else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
@@ -900,9 +898,8 @@ class widgetSVG {
 
               xhttp.onreadystatechange = function() {
                 if (this.readyState == 4 && this.status == 200) {
-                  const data = JSON.parse(this.responseText);
                   app.stopProgress(SVG.widgetDOM, update);
-                  SVG.processNodes(data, labels);
+                  SVG.processNodes(labels);
                 }
               };
 
@@ -911,7 +908,7 @@ class widgetSVG {
               xhttp.send(JSON.stringify(queryObject));         // send request to server
             }
             else { // If there is no new relation, no need to do anything except call processNodes.
-              this.processNodes(null, labels);
+              this.processNodes(labels);
             }
           } // end else (no existing relation)
         } // end else (the label was not deleted)

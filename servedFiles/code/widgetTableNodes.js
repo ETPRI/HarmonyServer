@@ -14,7 +14,6 @@ class widgetTableNodes {
     this.queryObject     = app.metaData.getNode(queryObjectName);
     this.fields          = this.queryObject.fields;
     this.fieldsDisplayed = this.queryObject.fieldsDisplayed;
-    // this.queryData       = {}; // where returned data will be stored
 
     this.idWidget = app.idCounter;   // strings
     this.searchTrigger = controlId;
@@ -123,7 +122,7 @@ class widgetTableNodes {
     return - attribute value from db
   	*/
     const ret = element.getAttribute("db").split(attName+":")[1].split(";")[0].trim();
-  	return(ret);
+  	return ret;
   }
 
   buildOwner() {
@@ -248,7 +247,6 @@ class widgetTableNodes {
   }
 
   buildData(data) {  // build dynamic part of table
-    // this.queryData = data; // only one row should have been returned
     let html = "";
     const r = data;
     let rowCount = 1;
