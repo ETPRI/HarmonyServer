@@ -1,12 +1,14 @@
 module.exports = class integrity {
   /* NOTE: Integrity items to add later:
-  Make sure no item has more than one owner
-  Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class, or rethink the logic of how the client gets that metadata)
+  Verify that no item has more than one owner
+  Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class,
+    or rethink the logic of how the client gets that metadata)
   Verify that if there are multiple changeLogs referencing the same item GUID:
-    There is at most one "create" changelog
-    The "create" changelog, if it exists, has the lowest number
+    There is (at most?) one "create" changelog
+    The "create" changelog (if it exists?) has the lowest number
     There is at most one "delete" changelog
     The "delete" changelog, if it exists, has the highest number
+    If there is a "delete" changelog then no node or rel with that GUID exists
   */
 
   constructor(driver, uuid, stringEscape, defaultUpdate) {
@@ -17,6 +19,9 @@ module.exports = class integrity {
     this.changeCount = null; // No other functions can run until this has a value - assigned by getChangeCount
     this.checkConstraints(); // Makes sure the DB has all the constraints it's supposed to, then calls getChangeCount
   }
+
+  // These first four need to run FIRST because running the others without constraints,
+  // or without an up-to-date changeCount, could introduce errors.
 
   checkConstraints() { // Get a list of all metadata nodes - which should be all node types in the DB
     console.log ("Searching for metadata to use for constraints...");
@@ -135,6 +140,8 @@ module.exports = class integrity {
     });
   }
 
+//-----------------------------------------------------------------------------
+
   all() {
     if (this.changeCount === null) {
       setTimeout(this.tryAgain, 100, this, "all");
@@ -143,18 +150,18 @@ module.exports = class integrity {
 
     this.missingNodeGUIDS();
     this.missingRelGUIDS();
-    // this.findLinks();
     this.checkMetaDataFields();
     this.verifyCalendars();
     this.verifyLoginTables();
     this.uniqueNodeGUIDS();
+    this.verifyWidgetNodes();
   }
 
   tryAgain(object, methodName, ...args) {
     object[methodName](...args);
   }
 
-  //---------------------------------------------------------------------------
+//-----------------------------------------------------------------------------
 
   missingNodeGUIDS() {
     if (this.changeCount === null) {
@@ -764,4 +771,79 @@ module.exports = class integrity {
         }
       });
   }
+
+//-----------------------------------------------------------------------------
+  verifyWidgetNodes() {
+    if (this.changeCount === null) {
+      setTimeout(this.tryAgain, 100, this, "verifyWidgetNodes");
+      return;
+    }
+
+    console.log("Checking for existence of widget nodes...");
+    const widgets = ["dataBrowser", "trashTable", "widgetTableNodes", "widgetNode", "widgetTableQuery", "widgetCalendar", "widgetSVG"]; // top-level widgets only, for now
+    const query = `match (n:M_Widget) return n`;
+    const session = this.driver.session();
+    const integrity = this;
+    let result = [];
+
+    session
+      .run(query)
+      .subscribe({
+        onNext: function(record) {
+          const obj={};
+          for (let i=0; i< record.length; i++) {
+            obj[record.keys[i]]=record._fields[i];
+          }
+
+          result.push(obj.n.properties.name); // Should add the name to the result array
+        },
+        onCompleted: function() {
+          const needed = widgets.filter(x => result.indexOf(x) < 0); // Keep the names that AREN'T already in the DB
+          if (needed.length > 0) {
+            let fixText = "";
+            if (integrity.update) {
+              fixText = "; adding now";
+              integrity.addWidgetNodes(needed);
+            }
+            console.log(`The following widget types do not have nodes: ${needed}${fixText}`);
+          }
+          session.close();
+        },
+        onError: function(error) {
+          console.log(error);
+        }
+      });
+  }
+
+  addWidgetNodes(needed) {
+    const next = needed.pop();
+    const GUID = this.uuid();
+    const query = `Create (n:M_Widget {name:"${next}", help:"To be added by user", M_GUID:'${GUID}'}),
+    (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
+      item_GUID:"${GUID}", user_GUID:'integrity', M_GUID:'${this.uuid()}',
+      action:'create', label:"M_Widget"}),
+    (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
+      item_GUID:"${GUID}", user_GUID:'integrity', M_GUID:'${this.uuid()}',
+      action:'change', attribute:'name', value:'${next}'}),
+    (change${this.changeCount++}:M_ChangeLog {number:${this.changeCount},
+      item_GUID:"${GUID}", user_GUID:'integrity', M_GUID:'${this.uuid()}',
+      action:'change', attribute:'help', value:"To be added by user"})`;
+
+    const session = this.driver.session();
+    const integrity = this;
+
+    session
+      .run(query)
+      .subscribe({
+        onCompleted: function() {
+          if (needed.length > 0) {
+            integrity.addWidgetNodes(needed);
+          }
+          session.close();
+        },
+        onError: function(error) {
+          console.log(error);
+        }
+      });
+    }
 }

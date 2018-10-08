@@ -80,7 +80,7 @@ queryComplete(data) {
 buildHeader() {
   // build header
 
-  const html =app.widgetHeader() +'<b> '+ this.queryObjectName +` </b></div>
+  const html =app.widgetHeader(widgetTableQuery) +'<b> '+ this.queryObjectName +` </b></div>
 
   <table>
     <thead>#header#</thead>
@@ -223,7 +223,7 @@ showReasons(element) {
 
 buildReasons(data) {
   if (data) { // assuming some trash relations were found
-    let html = app.widgetHeader();
+    let html = app.widgetHeader('trashTable');
     html += `<table><thead>
     <tr><th colspan=3>${data[0].node.properties.name} (node#${data[0].node.id})</th></tr>
     <tr><th>UserID</th><th>User Name</th><th>Reason for trashing</th></tr></thead><tbody>`

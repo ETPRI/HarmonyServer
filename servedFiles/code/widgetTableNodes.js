@@ -141,7 +141,7 @@ class widgetTableNodes {
   ////////////////////////////////////////////////////////////////////
   buildHeader() {
     // build header
-    const html = app.widgetHeader()
+    const html = app.widgetHeader('widgetTableNodes')
     +'<b> '+this.queryObject.nodeLabel +":"+ this.queryObjectName +` </b>
     <input type="button" value="Add" idr = "addButton" onclick="app.widget('addNode',this)">
     <input type="button" value="Search" idr = "searchButton" onclick="app.widgetSearch(this)">

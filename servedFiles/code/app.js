@@ -313,7 +313,7 @@ widgetSearch(domElement) {
 // Also gives the whole widget an ondrop and ondragover so that widgets can be dragged onto each other to rearrange them,
 // and gives the header an ondragstart so that widget headers, and only the headers, can be dragged in this way.
 // Does not close the header div or outer element.
-widgetHeader(tag){
+widgetHeader(widgetType, tag){
 	if (!tag) {
 		tag = "div";
 	}
@@ -324,6 +324,8 @@ widgetHeader(tag){
 	<div idr="header" class="widgetHeader" draggable="true" ondragstart="app.drag(this, event)">
 	<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
 	<input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
+	<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}')">
+	<input type="button" value="!" idr="bugButton" onclick="app.reportBug('${widgetType}')">
 		`)
 }
 
@@ -561,9 +563,6 @@ error(message) {
 // DOMelement is usually the whole widget, but it will also work if it's an element from within the widget.
 // Use it to work up to the top-level widget, then give it a class of "requestRunning".
 startProgress(DOMelement, text) {
-	let widget = DOMelement;
-
-	// How can I get up to the top-level widget?
 	let topWidget = null;
 
 	while (DOMelement) {
@@ -710,6 +709,63 @@ stopProgress(DOMelement, obj) {
 		const ongoing = document.getElementById("ongoing");
 		ongoing.hidden = true;
 	}
+}
+
+showHelp(widgetType) {
+	const obj = {};
+	obj.node = {"type":"M_Widget", "properties":{"name":widgetType}, "merge":true}; // If the help node doesn't exist, create it
+	const xhttp = new XMLHttpRequest();
+	const update = this.startProgress(null, `Searching for help on ${widgetType}`);
+	const app = this;
+
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			const data = JSON.parse(this.responseText);
+			app.stopProgress(null, update);
+			if (data.length == 0) {
+				app.error("Help could not be found or created");
+			}
+			else if (data.length == 1) {
+				new widgetNode(null, "M_Widget", data[0].node.properties.M_GUID);
+			}
+			else {
+				app.error("Multiple help nodes found");
+			}
+		}
+	};
+
+	xhttp.open("POST","");
+	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
+	xhttp.send(JSON.stringify(queryObject));         // send request to server
+}
+
+reportBug(widgetType) {
+	const obj = {};
+	obj.node = {"type":"topic", "properties":{"name":"Harmony Changes"}, "merge":true}; // If the bug node doesn't exist, create it
+	const xhttp = new XMLHttpRequest();
+	const update = this.startProgress(null, `Searching for bug report topic`);
+	const app = this;
+
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			const data = JSON.parse(this.responseText);
+			app.stopProgress(null, update);
+			if (data.length == 0) {
+				app.error("Changes topic could not be found or created");
+			}
+			else if (data.length == 1) {
+				new widgetNode(null, "topic", data[0].node.properties.M_GUID);
+			}
+			else {
+				app.error("Multiple changes topics found");
+			}
+		}
+	};
+
+	xhttp.open("POST","");
+	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
+	xhttp.send(JSON.stringify(queryObject));         // send request to server
+
 }
 
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.

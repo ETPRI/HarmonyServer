@@ -191,6 +191,17 @@ initNodeData() { // move to DB in the future
         "name": {label:"name"}
       }
     }
+
+    this.node.M_Widget = {
+      nodeLabel:"M_Widget"
+      ,orderBy: [{"name":"name"}, {"name":"help"}]
+      ,fieldsDisplayed: ["name", "help"]
+      ,formFieldsDisplayed: ["name", "help"]
+      ,fields: {
+        "name": {label:"Name"}
+        ,"help": {label:"Help"}
+      }
+    }
 } ////// end method
 
 } ////////////////////////////////////////////////////// end class

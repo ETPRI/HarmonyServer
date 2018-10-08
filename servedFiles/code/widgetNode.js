@@ -30,7 +30,7 @@ buildWidget() { // public - build table header
   }
 
   app.idCounter--; // decrement ID counter so that the widget header will end up with the right ID
-  const html = app.widgetHeader() + `<b idr= "nodeTypeLabel" contentEditable="true"
+  const html = app.widgetHeader('widgetNode') + `<b idr= "nodeTypeLabel" contentEditable="true"
                                         onfocus="this.parentNode.draggable = false;"
                                         onblur="this.parentNode.draggable = true;">${this.nodeLabel}</b>
                                         <b idr="nodeLabel">#${id}: ${name}</b></div><table class="widgetBody"><tbody><tr>
@@ -53,7 +53,7 @@ buildWidget() { // public - build table header
   const caller = document.getElementById(this.callerID);
   const newWidget = document.createElement('div'); // create placeholder div
 
-  if (caller.parentElement == parent) { // If the caller is, itself, in the widgets div
+  if (caller && caller.parentElement && caller.parentElement == parent) { // If the caller is, itself, in the widgets div
     parent.insertBefore(newWidget, caller); // Insert the new div before the caller
   }
   else {

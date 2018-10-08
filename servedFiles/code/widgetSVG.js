@@ -65,7 +65,7 @@ class widgetSVG {
       this.name = "Untitled mind map";  // The name starts off untitled; it can change later
     }
 
-    const html = app.widgetHeader() +
+    const html = app.widgetHeader('widgetSVG') +
       `<b idr="name" contenteditable="true"
                      onfocus="this.parentNode.draggable = false;"
                      onblur="this.parentNode.draggable = true;">${this.name}</b>

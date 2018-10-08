@@ -24,7 +24,7 @@ class dataBrowser {
   }
 
   buildWidget() {
-    let html = app.widgetHeader();
+    let html = app.widgetHeader('dataBrowser');
     html += `<b idr="nodeLabel">Data Browsing Tool</b></div><table><tbody><tr>
               <td idr = "leftCell"><p class = "dataBrowserHeader">Incoming Node</p></td>
               <td idr = "inCell"><p class = "dataBrowserHeader">Incoming Relations</p></td>

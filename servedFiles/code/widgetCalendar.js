@@ -35,7 +35,7 @@ class widgetCalendar {
     if (!this.name) {
       this.name = "Untitled calendar";  // Call it "Untitled calendar" for now - can change later
     }
-    const html = app.widgetHeader() +
+    const html = app.widgetHeader('widgetCalendar') +
     `<b idr="name">${this.name}</b>
     <input type="button" idr="backButton" value="<" onclick="app.widget('page', this)">
     <input type="button" class="selectedButton" idr="dayButton" value="Day" onclick="app.widget('changeView', this)">
