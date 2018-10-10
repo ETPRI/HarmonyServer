@@ -205,25 +205,12 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 	// Get the ID of the widget that the DOM element is inside.
 	const id = this.domFunctions.widgetGetId(widgetElement);
 
-	if (method=="allowDrop") { // I don't remember why I made this separate
-		// If that ID is associated with a widget object which contains the given method...
-		if (id && this.widgets[id] && this.widgets[id][method]) {
-			this.widgets[id][method](widgetElement, ...args); //  Call the method, and pass in widgetElement and any extra args
-		} else {
-	     // Create an error message. This could stand to be more informative, but I'm not sure how best to write it.
-			 this.error(`App.widget: method ${method} in widget #${id} could not be called.`);
-		}
-	}
-
-
-	else {
-		// If that ID is associated with a widget object which contains the given method...
-		if (id && this.widgets[id] && this.widgets[id][method]) {
-			this.widgets[id][method](widgetElement, ...args); //  Call the method, and pass in widgetElement and any extra args
-		} else {
-			 // Create an error message. This could stand to be more informative, but I'm not sure how best to write it.
-			 this.error(`App.widget: Error, method: ${method}`);
-		}
+	// If that ID is associated with a widget object which contains the given method...
+	if (id && this.widgets[id] && this.widgets[id][method]) {
+		this.widgets[id][method](widgetElement, ...args); //  Call the method, and pass in widgetElement and any extra args
+	} else {
+     // Create an error message. This could stand to be more informative, but I'm not sure how best to write it.
+		 this.error(`App.widget: method ${method} in widget #${id} could not be called.`);
 	}
 }
 
@@ -318,12 +305,13 @@ widgetHeader(widgetType, tag){
 		tag = "div";
 	}
 	return(`
-	<${tag} id="${this.idCounter++}" class="widget" ondrop="app.drop(this, event)" ondragover="app.allowDrop(this, event)"
+	<${tag} id="${this.idCounter++}" class="widget" ondrop="app.drop(this, event)" ondragover="event.preventDefault()"
 	onmousedown="app.setActiveWidget(this)">
 	<hr>
 	<div idr="header" class="widgetHeader" draggable="true" ondragstart="app.drag(this, event)">
 	<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
 	<input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
+	<input type="button" value = "<>" idr="fullScreenButton" onclick = "app.widgetFullScreen(this)">
 	<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}')">
 	<input type="button" value="!" idr="bugButton" onclick="app.reportBug('${widgetType}')">
 		`)
@@ -337,6 +325,12 @@ widgetHeader(widgetType, tag){
 // are made the same way by the same function. Also assumes that the widget body - the part to expand or
 // collapse - is a child of the widget div and has the class "widgetBody".
 widgetCollapse(domElement) {
+	// If the widget was full-screen, shrink it
+	let fullScreen = this.domFunctions.getChildByIdr(domElement.parentElement, "fullScreenButton");
+	if (fullScreen && fullScreen.value === "><") {
+		this.widgetFullScreen(fullScreen);
+	}
+
 	const children = Array.from(domElement.parentElement.parentElement.children);
 	let widgetBody;
 	for (let i = 0; i < children.length; i++) {
@@ -369,6 +363,12 @@ widgetCollapse(domElement) {
 // and removes it and all widgets contained in it from this.widgets array.
 // Relies on widgets which contain other widgets maintaining a list of contained widgets.
 widgetClose(widgetElement) {
+	// If the widget was full-screen, shrink it
+	let fullScreen = this.domFunctions.getChildByIdr(widgetElement.parentElement, "fullScreenButton");
+	if (fullScreen && fullScreen.value === "><") {
+		this.widgetFullScreen(fullScreen);
+	}
+
 	// Get the ID and DOM element of the widget to be closed
 	const id = this.domFunctions.widgetGetId(widgetElement);
 	const widget = document.getElementById(id);
@@ -409,6 +409,44 @@ widgetClose(widgetElement) {
 	obj.action = "click";
 	this.regression.log(JSON.stringify(obj));
 	this.regression.record(obj);
+}
+
+widgetFullScreen(widgetElement) {
+	const widget = widgetElement.parentElement.parentElement; // parent element is header; grandparent is whole widget
+
+	if (widgetElement.value === "<>") {
+		// Hide all elements on the screen except for the widget. Start with all children of the body, except the widget or its descendant...
+		let ancestor = document.body;
+		while (ancestor !== null) { // Keep going as long as an ancestor of the desired widget was found...
+			const children = ancestor.children;
+			ancestor = null;	// Resets the ancestor to either null...
+
+			for (let i = 0; i < children.length; i++) {
+				if (children[i].contains(widget) && !(children[i] === widget)) {
+					ancestor = children[i];	// or the next-lower ancestor
+				}
+				else if (children[i] !== widget) {
+					children[i].classList.add("hiddenForFS"); // Hides every node that ISN'T either the widget or its ancestor
+				}
+			} // end for (all the ancestor's children)
+		} // end while (an ancestor was found)
+
+		widget.classList.add("fullScreen");
+		widgetElement.value = "><";
+	}
+	else if (widgetElement.value === "><") {
+		// Show all previously hidden elements on the screen
+		const hidden = document.getElementsByClassName('hiddenForFS');
+		while (hidden.length > 0) {
+			hidden[0].classList.remove("hiddenForFS");
+		}
+
+		widget.classList.remove("fullScreen");
+		widgetElement.value = "<>";
+	}
+	else {
+		this.error("Widget fullscreen button's value is not <> or ><");
+	}
 }
 
 // Escapes special character in a string. Stringifying it and then removing the outer quotes is a good shortcut.
@@ -766,6 +804,67 @@ reportBug(widgetType) {
 	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
 	xhttp.send(JSON.stringify(queryObject));         // send request to server
 
+}
+
+createLIS(dataArray, compFunction) {
+	// compFunction is the comparison function. If none was passed in, it defaults to simple comparison using >.
+	if (!compFunction) {
+		compFunction = function(x, y) {if (x > y) return 1; else return -1}; // Returns positive if x is bigger, negative if y is bigger
+	}
+
+	// indices[i] stores the index of the smallest value which ends an i-long ordered subsequence.
+	// It is increasing (both in terms of the values and in terms of the indices of the values),
+	// because if you take the i-long subsequence and remove the last item,
+	// you get an i-minus-1-long subsequence which ends with a lower (and earlier) value.
+	const indices = [];
+
+	// predecessors [i] stores the index of the NEXT-TO-LAST item in the i-long ordered subsequence.
+	const predecessors = [];
+
+	let length = 0; // Length of the longest ordered subsequence found so far.
+
+	for (let i = 0; i < dataArray.length; i++) {
+		// Binary search for the largest positive j ≤ length such that dataArray[indices[j]] < dataArray[i].
+		// That is, the length of the longest subsequence we could ADD dataArray[i] to and still have an increasing subsequence.
+		// The definition of "less than" depends on the comparison function passed in - if none was passed in, just compare.
+		let low = 1;
+		let high = length;
+		while (low <= high) {
+			let mid = Math.ceil((low + high)/2);
+
+			const thisObj = dataArray[i];
+			const indexToCompare = indices[mid];
+			const compareObj = dataArray[indexToCompare];
+			if (compFunction(compareObj, thisObj) < 0) {
+				low = mid + 1;
+			}
+			else {
+				high = mid - 1;
+			}
+		}
+
+		// After searching, low is 1 greater than the length of the longest prefix of dataArray[i] -
+		// in other words, the length of the new subsequence we can make using dataArray[i].
+		const newlength = low;
+
+		// The predecessor of dataArray[i] is the last index of the subsequence of length newlength-1
+		predecessors[i] = indices[newlength-1];
+		indices[newlength] = i;
+
+		if (newlength > length) { // If we found a subsequence longer than any we've found yet, update length
+			length = newlength;
+		}
+	} // end for (every item in dataArray)
+
+	 // Reconstruct the longest increasing subsequence
+	 const sequence = [];
+	 let k = indices[length];
+	 for (let i = length-1; i >= 0; i--) {
+		 sequence[i] = dataArray[k];
+		 k = predecessors[k];
+	 }
+
+	 return sequence; // Returns the LIS array, which is a subset of elements from the original dataArray
 }
 
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.

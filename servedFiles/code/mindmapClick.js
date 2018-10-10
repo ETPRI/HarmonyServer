@@ -76,7 +76,6 @@ class mindmapClick {
       }
 
       // Now  verify NOT clicking one of the buttons, since they're over labels now
-      // I've copied this from elsewhere, which is maybe a sign it should be a function.
       let inAnything = false;
 
       const ID = group.getAttribute("idr").slice(5); // the IDR will be like groupxxx

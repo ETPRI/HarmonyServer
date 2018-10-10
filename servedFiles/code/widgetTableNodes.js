@@ -161,7 +161,7 @@ class widgetTableNodes {
     </div>
     `
 
-    const html2 = html.replace('ondrop="app.drop(this, event)" ondragover="app.allowDrop(this, event)"', ""); // Disable ondrop - can't rearrange search tables anymore
+    const html2 = html.replace('ondrop="app.drop(this, event)" ondragover="event.preventDefault()"', ""); // Disable ondrop - can't rearrange search tables anymore
 
     const strSearch = `
     <select idr = "dropdown#x#", onclick = "app.regression.logSearchChange(this)">

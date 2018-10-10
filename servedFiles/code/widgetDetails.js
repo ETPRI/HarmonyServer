@@ -33,6 +33,7 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
     this.fields               = this.queryObject.fields;
     this.fieldsDisplayed      = this.queryObject.fieldsDisplayed;
     this.formFieldsDisplayed  = this.queryObject.formFieldsDisplayed;
+    this.lastSaveFFD          = this.formFieldsDisplayed;
     this.orderBy              = this.queryObject.orderBy;
     this.newFields            = 0;
     this.hiddenFields         = 0;
@@ -278,6 +279,7 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   dragDrop.checkNewField = this.checkNewField.bind(this);
   dragDrop.addField = this.addField.bind(this);
 
+  // NOTE: Update the dragdrop drop method to include checking for reordering
 
   // Create 'Show All' button
   const button = document.createElement("input");
@@ -330,7 +332,7 @@ addRow(fieldName, fieldCount) {
   // Create a table row (in dragDrop table - all "this" references are to dragDrop)
   const row = document.createElement('tr');
   row.setAttribute('ondrop', "app.widget('drop', this, event)");
-  row.setAttribute("ondragover", "app.widget('allowDrop', this, event)");
+  row.setAttribute("ondragover", "event.preventDefault()");
   row.setAttribute('ondragstart', "app.widget('drag', this, event)");
   row.setAttribute('draggable', "true")
 
@@ -429,20 +431,20 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
   // director function
   if (widgetElement == null || widgetElement.value === "Save") {
     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
-    if (this.dataNode && this.dataNode.properties._trash === true && checkbox.checked === false && app.login.userID) { // If the node was trashed and now shouldn't be
+    if (this.dataNode && this.dataNode.properties._trash === true && checkbox.checked === false) { // If the node was trashed and now shouldn't be
       this.untrashNode();
-    }
-    else if (this.dataNode && !(this.dataNode.properties._trash === true) && checkbox.checked === true && app.login.userID) { // If the node was not trashed and now should be
+    }                         // I used negation here, rather than checking for === false, because _trash could be undefined.
+    else if (this.dataNode && !(this.dataNode.properties._trash === true) && checkbox.checked === true) { // If the node was not trashed and now should be
       this.trashNode();
     }
-    else if (this.dataNode && this.dataNode.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData") && app.login.userID) { // If the node was and should stay trashed, but the reason has changed
+    else if (this.dataNode && this.dataNode.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData")) { // If the node was and should stay trashed, but the reason has changed
       this.updateReason();
     }
     else { // If the node's trash status isn't changing, only the data, go straight to save().
-      this.save();
+      this.save(null, "Save");
     }
-  } else {
-    this.add();
+  } else { // If we're adding a new node
+    this.save(null, "Add");
   }
 }
 
@@ -467,7 +469,7 @@ trashNode() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       app.stopProgress(details.widgetDOM, update);
-      details.save(data);
+      details.save(data, "Save");
     }
   };
 
@@ -498,7 +500,7 @@ updateReason() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       app.stopProgress(details.widgetDOM, update);
-      details.save(data);
+      details.save(data, "Save");
     }
   };
 
@@ -525,7 +527,7 @@ untrashNode() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       app.stopProgress(details.widgetDOM, update);
-      details.save(data);
+      details.save(data, "Save");
     }
   };
 
@@ -535,98 +537,6 @@ untrashNode() {
 }
 
 ////////////////////////////////////////////////////////////////////
-add() { // Builds a query to add a new node, then runs it and passes the result to addComplete
-  let tr = this.tBodyDOM.firstElementChild;
-
-  let data={};
-  let newFields = {};
-  let reordered = false;
-  let currentFields = [];
-
-  const label = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeTypeLabel');
-  const labelText = label.textContent;
-  const renamed = (labelText != this.nodeLabel);
-  if (renamed) { // update metadata nodeLabel object
-    this.nodeLabel = labelText;
-    this.queryObject.nodeLabel = labelText;
-  }
-
-  while (tr) {
-    const inp = tr.lastElementChild.firstElementChild;
-
-    if (inp && inp.hasAttribute("db")) { //  Process input rows with a db value - ones corresponding to existing fields
-      data[inp.getAttribute("db")] = app.stringEscape(inp.value);
-      currentFields.push(inp.getAttribute("db"));
-    }
-
-    // process rows with new fields
-    const idr = tr.getAttribute('idr')
-    if (idr && idr.slice(0,11) == "newFieldRow") {
-      const nameCell = tr.firstElementChild;
-      name = nameCell.firstElementChild.value;
-      const valueCell = nameCell.nextElementSibling;
-      const value = valueCell.firstElementChild.value;
-      if (name != "") {
-        const fieldName = name.replace(/\s/g, "");
-        // Add new field to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
-        this.fields[fieldName] = {label: name};
-        newFields[fieldName] = {label: name};
-        data[fieldName] = value;
-        currentFields.push(fieldName);
-      }
-    }
-    tr=tr.nextElementSibling;
-  }
-
-  // Build a string listing the fields from the form (done above) and a string listing the fields from the field object.
-  // If they don't match, need to update the order of fields in fields, fieldsDisplayed and formFieldsDisplayed.
-  let oldFields = [];
-  for (let fieldName in this.fields) {
-    oldFields.push(fieldName);
-  }
-  reordered = (JSON.stringify(oldFields) != JSON.stringify(currentFields));
-  if (reordered) {
-    let fields = {};
-    let fieldsDisplayed = [];
-    let formFieldsDisplayed = [];
-    for (let i = 0; i < currentFields.length; i++) {
-      const fieldName = currentFields[i];
-      fieldsDisplayed.push(fieldName);
-      formFieldsDisplayed.push(fieldName);
-      fields[fieldName] = this.fields[fieldName];
-    }
-    this.fields = fields;
-    app.metaData.node[this.queryObjectName].fields = fields;
-    this.fieldsDisplayed = fieldsDisplayed;
-    app.metaData.node[this.queryObjectName].fieldsDisplayed = fieldsDisplayed;
-    this.formFieldsDisplayed = formFieldsDisplayed;
-    app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
-  }
-
-  // Change metadata node if needed
-  if (Object.keys(newFields).length > 0 || renamed || reordered) {
-    this.updateMetaData(newFields);
-  }
-
-  const obj = {"name":"n", "type":this.queryObjectName, "properties":data};
-
-  const xhttp = new XMLHttpRequest();
-  const details = this;
-  const update = app.startProgress(this.widgetDOM, "Creating node");
-
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      app.stopProgress(details.widgetDOM, update);
-      details.addComplete(data);
-    }
-  };
-
-  xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
-}
-
 updateMetaData(newFields) {
   const metadataObj = {};
   metadataObj.from = {"id":app.login.userID, "return":false};
@@ -735,10 +645,14 @@ changed(input) { // Logs changes to fields, and highlights when they are differe
   app.regression.record(obj);
 }
 
-save(trashUntrash) { // Builds query to update a node, runs it and passes the results to saveData()
+save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs it and passes the results to saveData() or addComplete()
   let tr = this.tBodyDOM.firstElementChild;
 
-  let data = [];
+  let data = {}; // Data can be an object representing properties (for a new node) or an array of changes (for an existing one)
+  if (buttonValue === "Save") {
+    data = [];
+  }
+
   let newFields = {};
   let reordered = false;
   let currentFields = [];
@@ -771,19 +685,25 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
         currentFields.push(fieldName);
 
         // Add field name and value to list of changes
-        const change = {};
-        change.property = fieldName;
-        change.value = app.stringEscape(inp.value);  // assume string
-        data.push(change);
+        if (buttonValue === "Save") { // If saving, data is an array of change objects, to pass into CRUD as "obj.changes"
+          const change = {};
+          change.property = fieldName;
+          change.value = app.stringEscape(inp.value);  // assume string
+          data.push(change);
+        }
+        else { // If adding, data is an object where keys are field names and values are field values, to pass into CRUD as "obj.properties"
+          data[fieldName] = value;
+        }
       }
     }
 
     // process existing fields
     else {
       currentFields.push(inp.getAttribute("db"));
-      if(inp.getAttribute("class") === "changedData") {
+      const fieldName = inp.getAttribute("db");
+
+      if(buttonValue == "Save" && inp.getAttribute("class") === "changedData") {
         // create a set for this field
-        const fieldName = inp.getAttribute("db");
         if (fieldName in this.fields) {
           const change = {};
           change.property = fieldName;
@@ -795,6 +715,9 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
           }
           data.push(change);
         }
+      }
+      else if (buttonValue == "Add") {
+        data[inp.getAttribute("db")] = app.stringEscape(inp.value);
       }
     }
 
@@ -832,10 +755,11 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
 
   // Change metadata node if needed
   if (Object.keys(newFields).length > 0 || renamed || reordered) {
+    this.lastSaveFFD = this.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save - has to update on new fields or reorder. Doesn't have to update on rename, but does no harm.
     this.updateMetaData(newFields);
   }
 
-  if (data===[]) {
+  if (data.length == 0) { //This should only ever come up when saving - both because adding uses an object, not an array, for data and because adding should add every field to data every time.
     if (trashUntrash) { // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
       const obj = {};
       obj.id = this.idWidget;
@@ -848,10 +772,6 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
     }
   }
   else {
-    const obj = {};
-    obj.node = {"name":"n", "id":this.id};
-    obj.changes = data;
-
     const xhttp = new XMLHttpRequest();
     const details = this;
     const update = app.startProgress(this.widgetDOM, "Saving node");
@@ -860,12 +780,29 @@ save(trashUntrash) { // Builds query to update a node, runs it and passes the re
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
         app.stopProgress(details.widgetDOM, update);
-        details.saveData(data);
+        if (buttonValue === "Save") {
+          details.saveData(data);
+        }
+        else {
+          details.addComplete(data);
+        }
       }
     };
 
+    let obj = {};
+    let queryObject = {};
+
+    if (buttonValue === "Save") {
+      obj.node = {"name":"n", "id":this.id};
+      obj.changes = data;
+      queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
+    }
+    else {
+      obj = {"name":"n", "type":this.queryObjectName, "properties":data};
+      queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
+    }
+
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 }

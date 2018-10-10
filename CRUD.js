@@ -18,6 +18,8 @@ module.exports = class CRUD {
     let dataObj = obj.query;
     const uuid = this.uuid();
 
+    const createChangeNumber = ++this.integrity.changeCount;
+
     const strings = {ret:"", where:""}; // where won't be used here, but I'm including it for consistency
     const changeLogData = {"userGUID":obj.GUID, "itemGUID":uuid, "changeLogs":""}
     const node = this.buildSearchString(dataObj, strings, "where", "node", changeLogData);
@@ -26,7 +28,7 @@ module.exports = class CRUD {
       strings.ret = `return ${strings.ret}`;
     }
 
-    let changeLogs = `(change0:M_ChangeLog {number:${++this.integrity.changeCount}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
+    let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
                        action:'create', label:'${dataObj.type}', M_GUID:'${this.uuid()}'}), ${changeLogData.changeLogs}`;
     changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
@@ -133,6 +135,8 @@ module.exports = class CRUD {
     let dataObj = obj.query;
     const strings = {ret:"", where:""};
 
+    const createChangeNumber = ++this.integrity.changeCount;
+
     // Build the string representing the "from" node - what goes in the first set of parentheses
     let from = "";
     if (dataObj.from) {
@@ -166,7 +170,7 @@ module.exports = class CRUD {
 
     // finish the string to generate changeLogs
     const changeUUID = this.uuid();
-    let changeLogs = `(change0:M_ChangeLog {number:${++this.integrity.changeCount}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
+    let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
                        to_GUID:to.M_GUID, from_GUID:from.M_GUID, label:'${dataObj.rel.type}',
                        action:'create', M_GUID:'${changeUUID}'}), ${changeLogData.changeLogs}`;
     changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "

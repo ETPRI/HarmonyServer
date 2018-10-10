@@ -58,7 +58,7 @@ class dragDrop {
       this.insertContainer.setAttribute("ondrop", "app.widget('drop', this, event)");
     }
     if (!this.insertContainer.hasAttribute("ondragover")) { // Same goes for ondragover...
-      this.insertContainer.setAttribute("ondragover", "app.widget('allowDrop', this, event)");
+      this.insertContainer.setAttribute("ondragover", "event.preventDefault()");
     }
     this.insertContainer.setAttribute("draggable", "true");
     if (!this.insertContainer.hasAttribute("ondragstart")) { // and ondragstart.
@@ -202,7 +202,7 @@ class dragDrop {
       newEl.setAttribute("ondrop", "app.widget('drop', this, event)");
     }
     if (!newEl.hasAttribute("ondragover")) { // Same goes for ondragover...
-      newEl.setAttribute("ondragover", "app.widget('allowDrop', this, event)");
+      newEl.setAttribute("ondragover", "event.preventDefault()");
     }
     newEl.setAttribute("draggable", "true");
     if (!newEl.hasAttribute("ondragstart")) { // and ondragstart.

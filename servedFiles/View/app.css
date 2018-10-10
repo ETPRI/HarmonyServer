@@ -347,7 +347,9 @@ text.editText {
 	display: none;
 }
 
-.hidden {display: none} !important
+.hidden {display: none !important}
+
+.hiddenForFS {display: none !important}
 
 .nodeText {
 	-webkit-touch-callout: none !important;
@@ -459,4 +461,12 @@ textarea {
 	color: #FFF;
 	font-weight: bold;
 	text-align: center;
+}
+
+.fullScreen {
+	width:100%;
+	height:100%;
+	position: absolute;
+	top: 0;
+	left: 0;
 }

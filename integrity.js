@@ -3,6 +3,13 @@ module.exports = class integrity {
   Verify that no item has more than one owner
   Verify that metadata exists? (drawback is I'd have to duplicate code from metadata class,
     or rethink the logic of how the client gets that metadata)
+
+    If I move ensuring that metadata exists onto the server, to run when the server starts, then I don't NEED that check in app -
+    the metadata will DEFINITELY exist and be up-to-date by the time app runs - so I can take that part out and just include
+    a query to GET the metadata. I may not even need a metadata class in that case - just an object, stored in app, whose
+    properties can be queried. And if I did it that way, then I could handcraft the queries to create the metadata objects,
+    instead of running them through createNode. I could add constraints at the same time.
+
   Verify that if there are multiple changeLogs referencing the same item GUID:
     There is (at most?) one "create" changelog
     The "create" changelog (if it exists?) has the lowest number

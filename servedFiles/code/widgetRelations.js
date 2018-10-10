@@ -318,7 +318,7 @@ addLine(relation, html, orderedNodes, placeholderComment) {
   // This will be converted to a dragDrop table later - all "this" references are to dragDrop or dragDropTable.
   if (app.login.userGUID && app.login.userGUID == this.viewGUID) {
     trHTML = `<tr idr="item${this.idrRow}" ondrop="app.widget('dropData', this, event)"
-              ondragover="app.widget('allowDrop', this, event)" draggable="true"
+              ondragover="event.preventDefault()" draggable="true"
               ondragstart="app.widget('drag', this, event)">`
     deleteHTML = `<td><button idr="delete${this.idrRow}" onclick="app.widget('markForDeletion', this)">Delete</button></td>`;
     editHTML = `ondblclick="app.widget('edit', this, event)"`;

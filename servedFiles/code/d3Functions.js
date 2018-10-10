@@ -49,7 +49,7 @@ class d3Functions {
     return newObj;
   }
 
-  createLongestIncreasingSubsequence(d) { // d is the data for this node
+  createLongestIncreasingSubsequence(d) { // d is the data for this node. CAN ALSO ACCESS APP
     const d3 = d.data.instance;
     const current = d3.objects[d.data.id].JSobj;
     const saved = d3.savedObjects[d.data.id];
@@ -78,63 +78,7 @@ class d3Functions {
     // If this label has at least two children that were also present at last save,
     // we need to find its longest increasing subsequence.
     if (commonChildren.length > 1) {
-      // indices[i] stores the index of the smallest value which ends an i-long ordered subsequence.
-      // It is increasing, because if you take the i-long subsequence and remove the last item,
-      // you get an i-minus-1-long subsequence which ends with a lower value.
-      const indices = [];
-
-      // predecessors [i] stores the index of the NEXT-TO-LAST item in the i-long ordered subsequence.
-      const predecessors = [];
-
-      let length = 0; // Length of the longest ordered subsequence found so far.
-
-      for (let i = 0; i < commonChildren.length; i++) {
-        // Binary search for the largest positive j ≤ length such that commonChildren[indices[j]] < commonChildren[i].
-        // That is, the length of the longest subsequence we could ADD commonChildren[i] to and still have an increasing subsequence.
-        // A label is considered "less than" another if it occurs first (has a lower index) in savedChildren.
-        // Search using savedIndices because comparing integers is much easier than comparing objects.
-        let low = 1;
-        let high = length;
-        while (low <= high) {
-          let mid = Math.ceil((low + high)/2);
-          const thisObj = commonChildren[i];
-          const thisID = thisObj.id;
-          const thisSavedIndex = savedIndices.indexOf(thisID);
-          const indexToCompare = indices[mid];
-          const compareObject = commonChildren[indexToCompare];
-          const compareID = compareObject.id;
-          const compareSavedIndex = savedIndices.indexOf(compareID);
-          if (compareSavedIndex < thisSavedIndex) {
-            low = mid + 1;
-          }
-          else {
-            high = mid - 1;
-          }
-        }
-
-        // After searching, low is 1 greater than the length of the longest prefix of commonChildren[i] -
-        // in other words, the length of the new subsequence we can make using commonChildren[i].
-        const newlength = low;
-
-        // The predecessor of commonChildren[i] is the last index of the subsequence of length newlength-1
-        predecessors[i] = indices[newlength-1];
-        indices[newlength] = i;
-
-        if (newlength > length) { // If we found a subsequence longer than any we've found yet, update length
-          length = newlength;
-        }
-      } // end for (every item in commonChildren)
-
-       // Reconstruct the longest increasing subsequence
-       const sequence = [];
-       let k = indices[length];
-       for (let i = length-1; i >= 0; i--) {
-         sequence[i] = commonChildren[k].id;
-         k = predecessors[k];
-       }
-
-       // At this point, sequence is the LIS array - we just need to store it. "current" is the JS object for this label.
-       current.LIS = sequence;
+      current.LIS = app.createLIS(commonChildren, function (x, y) {return savedIndices.indexOf(x.id) - savedIndices.indexOf(y.id)});
     } // end if (at least two common children; need to find LIS)
   }
 
@@ -148,7 +92,7 @@ class d3Functions {
     //  If this label still has the same non-null parent, and that parent has a LIS array which doesn't include this label
     // (meaning that it has at least two children and this label is NOT one of the ones which is considered "in order"),
     // then this node should be marked as rearranged, so return true. Otherwise, return false.
-    if (currentParentID == savedParentID && currentParent && currentParent.JSobj.LIS && !(currentParent.JSobj.LIS.includes(d.data.id))) {
+    if (currentParentID == savedParentID && currentParent && currentParent.JSobj.LIS && !(currentParent.JSobj.LIS.includes(d.data))) {
       return true;
     }
     else return false;
