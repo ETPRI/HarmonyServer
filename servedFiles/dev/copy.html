@@ -1,9 +1,13 @@
 <html>
 <script src="copy.js"></script>
-
 <b>Copy from the logged-in server to a database on another server</b><br>
-Notes: No need to enter "http" - that is added by the program.
+Notes: No need to enter "http" - that is added by the program.<br>
 If entering an IP address, DO include the port number (unless it's a default port).<br>
+<br>
+Step 1: Log into the server you want to copy from (if you're seeing this, you should have done this step already)<br>
+Step 2: Start an empty Neo4j database and NodeJS server on the destination computer<br>
+Step 3: Enter the IP address, including port number, of the destination computer in the text box below these instructions and click the Start button<br>
+<br>
 Destination URL: <input type="text" id="copyDestination"><br>
 <input type="button" id="startCopyTo" value="start" onclick="copy.checkOtherDB(copy)"><br><hr>
 

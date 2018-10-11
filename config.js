@@ -7,4 +7,6 @@ config.collection = "Persons";
 config.neo4jBackup = "backups/Neo4j";
 config.harmonyServer = "192.168.1.99";
 config.harmonyBeta = "192.168.1.99:8080";
+config.neo4j = {};
+config.neo4j.password = "paleo3i";
 module.exports = config;

@@ -293,32 +293,48 @@ class widgetLogin {
     // b) a settings object whose properties are used to update metadata
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      let properties = row.metadata.properties; // default values
-      const name = properties.name;
+      const name = row.metadata.properties.name;
 
-      const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
-      for (let i = 0; i < propertyNames.length; i++) {
-        if (row.settings && row.settings.properties[propertyNames[i]]) { // user-specific values overrule defaults if they are present, except for "fields"
-          properties[propertyNames[i]] = row.settings.properties[propertyNames[i]];
+      if (row.settings) { // If a settings relation was found
+        let settings = row.settings.properties;
+        delete settings.M_GUID; // all other properties should be stored in app.metadata
+
+        // parse all properties
+        for (let prop in settings) {
+          settings[prop] = JSON.parse(settings[prop]);
         }
 
-        if (properties[propertyNames[i]]) {
-          app.metaData.node[name][propertyNames[i]] = JSON.parse(properties[propertyNames[i]]);
-        }
+        // Add any missing values to settings, then store it in app.metaData
+        app.updateObject(app.metaData.node[name], settings);
+        app.metaData.node[name] = settings;
       }
 
-      // Now check the fields. If a field is in the relation, then overwrite THAT SPECIFIC FIELD in properties.
-      let fields = JSON.parse(properties.fields); // fields from metadata object
-      if (row.settings && row.settings.properties.fields) {
-        const relFields = JSON.parse(row.settings.properties.fields); // fields from relation
-        for (let name in relFields) {
-          // Replace label (and if, somehow, the user had a field the node didn't, add it)
-          fields[name] = relFields[name];
-        } // end for (every field in the relation)
-      } // end if (there are fields stored in the relation)
-
-      // Then plug the result into app.metaData.node[name].fields
-      app.metaData.node[name].fields = fields;
+      // let properties = row.metadata.properties; // default values
+      // const name = properties.name;
+      //
+      // const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
+      // for (let i = 0; i < propertyNames.length; i++) {
+      //   if (row.settings && row.settings.properties[propertyNames[i]]) { // user-specific values overrule defaults if they are present, except for "fields"
+      //     properties[propertyNames[i]] = row.settings.properties[propertyNames[i]];
+      //   }
+      //
+      //   if (properties[propertyNames[i]]) {
+      //     app.metaData.node[name][propertyNames[i]] = JSON.parse(properties[propertyNames[i]]);
+      //   }
+      // }
+      //
+      // // Now check the fields. If a field is in the relation, then overwrite THAT SPECIFIC FIELD in properties.
+      // let fields = JSON.parse(properties.fields); // fields from metadata object
+      // if (row.settings && row.settings.properties.fields) {
+      //   const relFields = JSON.parse(row.settings.properties.fields); // fields from relation
+      //   for (let name in relFields) {
+      //     // Replace label (and if, somehow, the user had a field the node didn't, add it)
+      //     fields[name] = relFields[name];
+      //   } // end for (every field in the relation)
+      // } // end if (there are fields stored in the relation)
+      //
+      // // Then plug the result into app.metaData.node[name].fields
+      // app.metaData.node[name].fields = fields;
 
       // Create a widgetTableNodes widget for this node type
       app.widgets[name] = new widgetTableNodes(name, null);
@@ -334,8 +350,6 @@ class widgetLogin {
 
       button.outerHTML = `<input type="button" value="${app.metaData.node[name].nodeLabel}" onclick="app.menuNodes('${name}')">`
     } // end for (each metadata node)
-
-    // Once metadata are updated, can call app.menuNodesInit to update dropdown list
   }
 
   // Logs the user out: resets login information to null, resets the info paragraph to say "not logged in",

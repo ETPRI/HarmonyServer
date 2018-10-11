@@ -110,12 +110,33 @@ addMetaData(data) {
 		// a metadata node was NOT found, create one.
 		for (let i = 0; i < data.length; i++) {
 			const node = data[i].node.properties;
-			this.metaData.node[node.name] = {};
-			this.metaData.node[node.name].nodeLabel = JSON.parse(node.nodeLabel);
-			this.metaData.node[node.name].orderBy = JSON.parse(node.orderBy);
-			this.metaData.node[node.name].fieldsDisplayed = JSON.parse(node.fieldsDisplayed);
-			this.metaData.node[node.name].formFieldsDisplayed = JSON.parse(node.formFieldsDisplayed);
-			this.metaData.node[node.name].fields = JSON.parse(node.fields);
+			const name = node.name;
+			delete node.name;
+			delete node.M_GUID; // All properties other than these two should be stored in app.metaData
+
+			// parse all properties
+			for (let prop in node) {
+				node[prop] = JSON.parse(node[prop]);
+			}
+
+			const updated = this.updateObject(this.metaData.node[name], node); // Bring in any fields which are in metadata but aren't in node
+			this.metaData.node[name] = node;
+
+			if (updated) { // If anything was added to the DB node from the metadata class, save the updated DB node
+				const obj = {};
+				obj.node = {"type":"M_MetaData", "properties":{"name":name}};
+				obj.changes = [{"property":"nodeLabel", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].nodeLabel))}
+											,{"property":"orderBy", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].orderBy))}
+											,{"property":"fields", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].fields))}
+											,{"property":"fieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].fieldsDisplayed))}
+											,{"property":"formFieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].formFieldsDisplayed))}];
+
+				const xhttp = new XMLHttpRequest();
+
+				xhttp.open("POST","");
+				const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
+				xhttp.send(JSON.stringify(queryObject));         // send request to server
+			}
 		}
 
 		let type;
@@ -137,6 +158,23 @@ addMetaData(data) {
 			}
 		}
 	}
+}
+
+updateObject(copyFrom, copyTo) {
+	let updated = false; // becomes true if copyTo changes
+	const fromKeys = Object.keys(copyFrom);
+	for (let i = 0; i < fromKeys.length; i++) {
+		const key = fromKeys[i];
+		if (!(key in copyTo)) {
+			copyTo[key] = copyFrom[key]; // If this attribute wasn't in copyTo, add it
+			updated = true;
+		}
+		// If this attribute is itself an object, call updateObject recursively to add any fields which from has and to doesn't
+		else if (typeof copyTo[key] === 'object' && typeof copyFrom[key] === 'object') {
+			updated = (updated || this.updateObject(copyFrom[key], copyTo[key])); // updated stays true if it was true; otherwise takes the return value
+		}
+	}
+	return updated;
 }
 
 keyPressed(evnt) {

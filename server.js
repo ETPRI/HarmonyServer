@@ -19,7 +19,7 @@ const config = require('./config');
 const neo4j  = require('neo4j-driver').v1;
 // Create a driver instance, for the user neo4j with password neo4j.
 // It should be enough to have a single driver per database per application.
-const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", "paleo3i"));
+const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", config.neo4j.password));
 
 let backup = new backupClass(config, fs, driver, stringEscape);
 let integrity = new integrityClass(driver, uuidv1, stringEscape, true);
