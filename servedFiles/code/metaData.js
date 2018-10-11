@@ -63,7 +63,7 @@ initNodeData() { // move to DB in the future
     ,formFieldsDisplayed: ["name", "web"]
     ,fields: {"name":       {label: "Name" }
       ,"web":      {label: "Web"}
-      ,"comment":  {label: "Comment"  }
+      ,"comment":  {label: "Comment"}
     }}
 
   this.node.topic = {
@@ -71,8 +71,8 @@ initNodeData() { // move to DB in the future
     ,orderBy: [{"name":"name"}, {"name":"comment"}]
     ,fieldsDisplayed: ["name", "comment"]
     ,formFieldsDisplayed: ["name", "comment"]
-    ,fields: {"name":       {label: "Name" }
-      ,"comment":    {label: "Comment"}
+    ,fields: {"name":       {label: "Name", input:{name:"input"} }
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }}
 
 

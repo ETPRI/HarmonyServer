@@ -396,7 +396,7 @@ z-index: 1;
 }
 */
 
-textarea {
+.mindmapNotes {
 	border-width: 0;
 	font: 15px "Courier New";
 	margin: 0;

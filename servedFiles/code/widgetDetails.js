@@ -280,6 +280,14 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   dragDrop.addField = this.addField.bind(this);
 
   // NOTE: Update the dragdrop drop method to include checking for reordering
+  // const oldDrop = dragDrop.drop;
+  // dragDrop.drop = function(input, evnt) {
+  //   // Get array of fieldnames in current order
+  //
+  //   //
+  //
+  //   oldDrop.apply(this, input, evnt);
+  // }
 
   // Create 'Show All' button
   const button = document.createElement("input");
@@ -361,12 +369,33 @@ addRow(fieldName, fieldCount) {
 
   const dataField = document.createElement('td');
   row.appendChild(dataField);
-  const input = document.createElement('input');
+
+  let inputType = "input";
+  if (this.fields[fieldName].input && this.fields[fieldName].input.name) {
+    inputType = this.fields[fieldName].input.name;
+  }
+  const input = document.createElement(inputType);
+
+  if (inputType == "input" && this.fields[fieldName].input && this.fields[fieldName].input.size) {
+    input.setAttribute("size", this.fields[fieldName].input.size);
+  }
+  else if (inputType == "textarea") {
+    if (this.fields[fieldName].input && this.fields[fieldName].input.rows) {
+      input.rows = this.fields[fieldName].input.rows;
+    }
+    if (this.fields[fieldName].input && this.fields[fieldName].input.cols) {
+      input.cols = this.fields[fieldName].input.cols;
+    }
+  }
+
   dataField.appendChild(input);
-  input.outerHTML = `<input type = "text" db = ${fieldName} idr = "input${fieldCount}"
-                      onChange = "app.widget('changed',this)" value = "${value}"
-                      onfocus = "this.parentNode.parentNode.draggable = false;"
-                      onblur = "this.parentNode.parentNode.draggable = true;">`;
+
+  input.setAttribute("db", fieldName);
+  input.setAttribute("idr", `input${fieldCount}`);
+  input.setAttribute("onchange", "app.widget('changed',this)");
+  input.value = value;
+  input.setAttribute("onfocus", "this.parentNode.parentNode.draggable = false;");
+  input.setAttribute("onblur", "this.parentNode.parentNode.draggable = true;");
 
   return row;
 }

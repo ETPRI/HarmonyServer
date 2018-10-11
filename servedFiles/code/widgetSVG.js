@@ -108,6 +108,7 @@ class widgetSVG {
     this.notesText.setAttribute("hidden", "true");
     this.notesText.setAttribute("idr", "notes");
     this.notesText.setAttribute("oncontextmenu", "event.preventDefault()");
+    this.notesText.classList.add("mindmapNotes");
     this.SVG_DOM.appendChild(this.notesText);
 
     d3.select(`#svg${this.widgetID}`).append("rect")
