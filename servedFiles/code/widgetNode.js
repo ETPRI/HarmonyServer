@@ -81,6 +81,8 @@ buildWidget() { // public - build table header
     <p>Display Name: <input idr="labelInput" type="text"></p>
     <p><input idr="showTable" type="checkbox"> Show this field in the table</p>
     <p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
+    <p><input type="button" idr="restoreSizeButton" value="Restore textarea to default size"
+      onclick="app.widget('restoreSize', this)"></p>
     <p><input type="button" value="OK" onclick = "app.widget('popupOK', this)">
     <input type="button" value="Cancel" onclick="app.widget('popupCancel', this)"></p>
   </div>

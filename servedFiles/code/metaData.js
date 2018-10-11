@@ -53,7 +53,7 @@ initNodeData() { // move to DB in the future
     ,"nameFirst":  {label: "First Name"}
     ,"email":      {label: "Email"     }
     ,"state":      {label: "State"     }
-    ,"comment":    {label: "Comment"   }
+    ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }}
 
   this.node.organization = {
@@ -63,7 +63,7 @@ initNodeData() { // move to DB in the future
     ,formFieldsDisplayed: ["name", "web"]
     ,fields: {"name":       {label: "Name" }
       ,"web":      {label: "Web"}
-      ,"comment":  {label: "Comment"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }}
 
   this.node.topic = {
@@ -88,7 +88,7 @@ initNodeData() { // move to DB in the future
     ,"state":      {label: "State"  }
     ,"postalCode": {label: "Zip"  }
     ,"country":    {label: "Country"  }
-    ,"comment":    {label: "Comment"  }
+    ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }}
 
   this.node.mindmap = {
@@ -98,7 +98,7 @@ initNodeData() { // move to DB in the future
     ,formFieldsDisplayed: ["name", "comment"] // , "creator", "created", "lastEditor", "lastEdited"
     ,fields: {
       "name":         {label: "Name"}
-      ,"comment":     {label: "Comment"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
       // ,"creator":     {label: "Created by"}  // Add this stuff later - have to research how to search by a date
       // ,"created":     {label: "Created on", type: "date"}
       // ,"lastEditor":  {label: "Last edited by"}
@@ -113,6 +113,7 @@ initNodeData() { // move to DB in the future
       ,fields: {
         "name": {label: "Name"}
         ,"description": {label: "Description"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
         // Add more here later - probably search criteria (each calendar is like a different search for events)
       }
     }
@@ -125,6 +126,7 @@ initNodeData() { // move to DB in the future
       ,fields: {
         "direction": {label:"direction"}
         ,"order": {label:"order"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
       }
     }
 
@@ -135,6 +137,7 @@ initNodeData() { // move to DB in the future
       ,formFieldsDisplayed: ["name"]
       ,fields: {
         "name": {label:"name"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
       }
     }
 
@@ -153,6 +156,7 @@ initNodeData() { // move to DB in the future
         ,"to_GUID": {label: "to_GUID"}
         ,"item_GUID": {label: "item_GUID"}
         ,"user_GUID": {label: "user_GUID"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
       }
     }
 
@@ -168,6 +172,7 @@ initNodeData() { // move to DB in the future
         ,"fieldsDisplayed": {label: "Table fields"}
         ,"formFieldsDisplayed": {label: "Form fields"}
         ,"orderBy": {label: "Order by"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
       }
     }
 
@@ -179,6 +184,7 @@ initNodeData() { // move to DB in the future
       ,fields: {
         "startTime": {label: "Start time"}
         ,"endTime": {label: "End time"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
       }
     }
 
@@ -189,6 +195,7 @@ initNodeData() { // move to DB in the future
       ,formFieldsDisplayed: ["name"]
       ,fields: {
         "name": {label:"name"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
       }
     }
 
@@ -200,6 +207,7 @@ initNodeData() { // move to DB in the future
       ,fields: {
         "name": {label:"Name"}
         ,"help": {label:"Help"}
+        ,"comment":    {label: "Comment", input:{name:"textarea"}}
       }
     }
 } ////// end method

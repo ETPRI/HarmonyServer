@@ -139,6 +139,8 @@ buildWidget() { // public - build table header
     <p>Display Name: <input idr="labelInput" type="text"></p>
     <p><input idr="showTable" type="checkbox"> Show this field in the table</p>
     <p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
+    <p><input type="button" idr="restoreSizeButton" value="Restore textarea to default size"
+      onclick="app.widget('restoreSize', this)"></p>
     <p><input type="button" value="OK" onclick = "app.widget('popupOK', this)">
     <input type="button" value="Cancel" onclick="app.widget('popupCancel', this)"></p>
   </div>
@@ -160,6 +162,15 @@ showPopup(label) {
   // set text in label textbox to "label" field name (stored as text of label)
   const labelInput = app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
   labelInput.value = label.textContent;
+
+  // Show or hide restore size button
+  const restoreSize = app.domFunctions.getChildByIdr(this.fieldPopup, 'restoreSizeButton');
+  if (this.fields[fieldName].input && this.fields[fieldName].input.name === "textarea") {
+    restoreSize.classList.remove("hidden");
+  }
+  else {
+    restoreSize.classList.add("hidden");
+  }
 
   const tableCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
   if (this.fieldsDisplayed.indexOf(fieldName) != -1) {
@@ -235,6 +246,26 @@ popupOK(button) {
 
   // close popup
   this.fieldPopup.hidden = true;
+}
+
+restoreSize(button) {
+  const header = app.domFunctions.getChildByIdr(this.fieldPopup, 'popupHeader');
+  const db = header.textContent;
+  delete this.fields[db].input.height;
+  delete this.fields[db].input.width;
+
+  const textareas = Array.from(this.tBodyDOM.getElementsByTagName('textarea'));
+  const textarea = textareas.filter(x=>x.getAttribute('db') == db)[0];
+
+  if (textarea) {
+    textarea.removeAttribute("style"); // removes the height and width settings
+    if (this.fields[db].input && this.fields[db].input.rows) {
+      textarea.rows = this.fields[db].input.rows;
+    }
+    if (this.fields[db].input && this.fields[db].input.cols) {
+      textarea.cols = this.fields[db].input.cols;
+    }
+  }
 }
 
 buildDataNode() {   // put in one field label and input row for each field - includes creating dragdrop table
@@ -380,12 +411,20 @@ addRow(fieldName, fieldCount) {
     input.setAttribute("size", this.fields[fieldName].input.size);
   }
   else if (inputType == "textarea") {
-    if (this.fields[fieldName].input && this.fields[fieldName].input.rows) {
+    let pixSize = false; // Pixel sizes, set by the user, overrule rows and columns set by default
+
+    if (this.fields[fieldName].input && this.fields[fieldName].input.height) {
+      input.setAttribute("style", `height:${this.fields[fieldName].input.height}px; width:${this.fields[fieldName].input.width}px;`);
+      pixSize = true;
+    }
+
+    if (!pixSize && this.fields[fieldName].input && this.fields[fieldName].input.rows) {
       input.rows = this.fields[fieldName].input.rows;
     }
-    if (this.fields[fieldName].input && this.fields[fieldName].input.cols) {
+    if (!pixSize && this.fields[fieldName].input && this.fields[fieldName].input.cols) {
       input.cols = this.fields[fieldName].input.cols;
     }
+
   }
 
   dataField.appendChild(input);
@@ -573,7 +612,7 @@ updateMetaData(newFields) {
   metadataObj.to = {"type":"M_MetaData", "name":"metadata", "properties":{"name":this.queryObjectName}};
   metadataObj.changes = [];
 
-  const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
+  const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy', 'fields'];
   for (let i = 0; i < propertyNames.length; i++) {
     const change = {};
     change.item = "rel";
@@ -694,7 +733,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     this.queryObject.nodeLabel = labelText;
   }
 
-  while (tr) {
+  while (tr) { // goes through all rows - that is, all fields
     const inp = tr.lastElementChild.firstElementChild;  // find <input> element
 
     // process new fields
@@ -730,6 +769,10 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     else {
       currentFields.push(inp.getAttribute("db"));
       const fieldName = inp.getAttribute("db");
+      if (this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.name === "textarea") {
+        this.fields[fieldName].input.height = inp.clientHeight;
+        this.fields[fieldName].input.width = inp.clientWidth; // Update local metadata object
+      }
 
       if(buttonValue == "Save" && inp.getAttribute("class") === "changedData") {
         // create a set for this field
@@ -782,11 +825,11 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
   }
 
-  // Change metadata node if needed
-  if (Object.keys(newFields).length > 0 || renamed || reordered) {
-    this.lastSaveFFD = this.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save - has to update on new fields or reorder. Doesn't have to update on rename, but does no harm.
-    this.updateMetaData(newFields);
-  }
+  // I used to make this optional - done only if a change needed to be made -
+  // but as more and more possible changes appear, that gets less practical.
+  // I think I'll just go ahead and update the settings every time.
+  this.lastSaveFFD = this.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save - has to update on new fields or reorder. Doesn't have to update on rename, but does no harm.
+  this.updateMetaData(newFields);
 
   if (data.length == 0) { //This should only ever come up when saving - both because adding uses an object, not an array, for data and because adding should add every field to data every time.
     if (trashUntrash) { // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
