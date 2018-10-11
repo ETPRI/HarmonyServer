@@ -11,11 +11,12 @@ class widgetSVG {
     this.callerID = callerID;
     this.owner = null;
 
-    this.d3Functions  = null;
-    this.clicks       = null;
-    this.keys         = null;
-    this.detailsPane  = null;
-    this.details      = null;
+    this.d3Functions    = null;
+    this.clicks         = null;
+    this.keys           = null;
+    this.detailsPane    = null;
+    this.mindmapDetails = null;
+    this.details        = null;
 
     this.nodeLabel = app.metaData.getNode('mindmap').nodeLabel;
 
@@ -82,8 +83,10 @@ class widgetSVG {
         onmousedown="app.widget('dragStart', this, event)"
     </svg></td>
     <td id = "detailsPane" class="hidden">
-      <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
-      <b idr="nodeLabel">#${this.mapID}: ${this.name}</b>
+      <div id="mindmapDetails">
+        <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
+        <b idr="nodeLabel">#${this.mapID}: ${this.name}</b>
+      </div>
     </td></tr></table></div></div>`;
 
     const parent = document.getElementById('widgets');
@@ -121,8 +124,9 @@ class widgetSVG {
     this.keys = new mindmapKeypress(this.d3Functions, this.newChild.bind(this), this.newSibling.bind(this), this); // Navigation is likely to be standard, but effects of tab and enter may change
 
     this.detailsPane = document.getElementById('detailsPane');
+    this.mindmapDetails = document.getElementById('mindmapDetails');
     this.containedWidgets.push(app.idCounter);
-    this.details = new widgetDetails('mindmap', this.detailsPane, this.mapGUID);
+    this.details = new widgetDetails('mindmap', this.mindmapDetails, this.mapGUID);
 
     if (data) {
       this.loadComplete(data);
@@ -479,6 +483,13 @@ class widgetSVG {
   }
 
   dragStart(SVG, evnt) {
+    // Show mindmap details in details pane
+    let details = this.detailsPane.children;
+    for (let i = 0; i < details.length; i++) {
+      details[i].classList.add('hidden');
+    }
+    this.mindmapDetails.classList.remove('hidden');
+
     // Verify empty spot
     const elements = this.clicks.checkClickedNode(null, evnt.clientX, evnt.clientY);
     if (elements == null) {
@@ -1056,27 +1067,6 @@ class widgetSVG {
     this.d3Functions.update();
   }
 
-  toggleDetails(button, evnt) {
-    const group = button.parentElement;
-    const ID = group.getAttribute("idr").slice(5); // the IDR will be like groupxxx
-    const obj = this.d3Functions.objects[ID].JSobj;
-    if (obj.type != "") {
-      // Look for an existing popup for this node (there should be one).
-      const popup = this.d3Functions.objects[ID].DOMelements.popupGroup;
-      const tree = group.parentElement;
-      if (popup.classList.contains("hidden")) { // In order to make sure this popup is on top...
-        group.appendChild(popup); // Make the popup top in its node group...
-        tree.appendChild(group); // and the node top in its tree...
-        this.SVG_DOM.appendChild(tree); // and the tree top in the SVG.
-        popup.classList.remove("hidden")
-      }
-      else {
-        popup.classList.add("hidden");
-      }
-    }
-    this.makeSelectedNode(group);
-  }
-
   toggleNotes(button, evnt) {
     const ID = button.getAttribute("idr").slice(4); // idr is like notexxx
     const obj = this.d3Functions.objects[ID].JSobj;
@@ -1152,11 +1142,11 @@ class widgetSVG {
   // If it has a mindmap or calendar attached, opens the mindmap or calendar.
   // If it has any other type of node attached, opens a widgetNode table showing that node's details.
   showNode(button, evnt) {
-    const data = button.parentElement.parentElement.__data__.data;
-    const GUID = data.nodeID;
-    const type = data.type;
+    const GUID = button.getAttribute("GUID");
+    const link = button.getAttribute("link");
+    const DBType = button.getAttribute("DBType");
 
-    switch(type) {
+    switch(DBType) {
       case 'mindmap':
         new widgetSVG(this.widgetID, GUID);
         break;
@@ -1164,17 +1154,24 @@ class widgetSVG {
         new widgetCalendar(this.widgetID, GUID);
         break;
       case 'link':
-        window.open(data.details[0].value); // For now, assume the uri is the first (and only) detail
+        window.open(link);
         break;
       case 'file':
         alert ("Still working on this");
         break;
       default:
-        new widgetNode(this.widgetID, data.DBType, GUID);
+        new widgetNode(this.widgetID, DBType, GUID);
     }
   }
 
   disassociate(button, evnt) {
+    // Show mindmap details in details pane
+    let details = this.detailsPane.children;
+    for (let i = 0; i < details.length; i++) {
+      details[i].classList.add('hidden');
+    }
+    this.mindmapDetails.classList.remove('hidden');
+
     // Get object
     const ID = button.getAttribute("idr").slice(12); // This IDR will be like "disassociatexxx"
     const obj = this.d3Functions.objects[ID].JSobj;
@@ -1188,7 +1185,7 @@ class widgetSVG {
     popup.classList.add("hidden");
 
     // Check whether to hide buttons
-    this.checkHideButtons(button.parentElement, evnt);
+    // this.checkHideButtons(button.parentElement, evnt);
 
     this.d3Functions.update();
   }
@@ -1222,6 +1219,16 @@ class widgetSVG {
       this.selectedNodes.add(group);
       group.classList.add("selected");
     }
+
+    if (this.selectedNodes.size === 1) { // If that leaves a single item in the set
+      const elements = this.selectedNodes.entries(); // element is the first (and only) item in the set
+      for (let element of elements) {
+        if (element[0].__data__.data.type !== "") {
+          this.mindmapDetails.classList.add('hidden');
+          this.d3Functions.objects[element[0].__data__.data.id].DOMelements.detailsTable.classList.remove('hidden');
+        }
+      }
+    }
   }
 
   // Make the buttons (and their text) visible when the main rect is moused over
@@ -1235,7 +1242,6 @@ class widgetSVG {
     else {
     prefixes = ["toggle", "toggleText1",
                       "note", "showNotesText1",
-                      "detail", "showDetailsText1",
                       "edit", "editText1"];
     }
     for (let i = 0; i < prefixes.length; i++) {
@@ -1259,7 +1265,7 @@ class widgetSVG {
     const group = element.parentElement;
     const ID = group.getAttribute("idr").slice(5); // the IDR will be like groupxxx
 
-    const prefixes = ["node", "toggle", "note", "detail", "edit", "restore"];
+    const prefixes = ["node", "toggle", "note", "edit", "restore"];
     for (let i = 0; i < prefixes.length; i++) {
       const idr = prefixes[i] + ID;
       const element = this.d3Functions.objects[ID].DOMelements[prefixes[i]];
@@ -1271,13 +1277,10 @@ class widgetSVG {
       }
     }
 
-    const detailPopup = this.d3Functions.objects[ID].DOMelements.popupGroup;
-    const popupOpen = !(detailPopup.classList.contains("hidden"));
-
     const obj = this.d3Functions.objects[ID].JSobj;
     const editing = this.notesLabel == obj;
 
-    if (!(inAnything || popupOpen || editing)) {
+    if (!(inAnything || editing)) {
       this.hideEverything(ID);
     }
   }
@@ -1285,10 +1288,8 @@ class widgetSVG {
   hideEverything(ID) {
     const prefixes = ["toggle", "toggleText1", "toggleExpln", "toggleExpBox",
                       "note", "showNotesText1", "noteExpln", "noteExpBox",
-                      "detail", "detailExpln", "showDetailsText1", "detailExpBox",
                       "edit", "editText1", "editExpln", "editExpBox",
-                      "restore", "restoreText", "restoreExpln", "restoreExpBox",
-                      "popupGroup"];
+                      "restore", "restoreText", "restoreExpln", "restoreExpBox"];
 
     for (let i = 0; i < prefixes.length; i++) {
       const idr = prefixes[i] + ID;

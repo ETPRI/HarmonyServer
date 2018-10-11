@@ -229,7 +229,7 @@ module.exports = class CRUD {
     const query = `match (${from})-[${rel}]->(${to}) ${strings.where} with to, from, rel, rel.M_GUID as id
                    delete rel create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${this.uuid()}'})
                    ${strings.ret}`;
-    sendQuery(query, response);
+    this.sendQuery(query, response);
   }
 
   changeRelation(obj, response) {

@@ -78,7 +78,8 @@ class d3Functions {
     // If this label has at least two children that were also present at last save,
     // we need to find its longest increasing subsequence.
     if (commonChildren.length > 1) {
-      current.LIS = app.createLIS(commonChildren, function (x, y) {return savedIndices.indexOf(x.id) - savedIndices.indexOf(y.id)});
+      const objLIS = app.createLIS(commonChildren, function (x, y) {return savedIndices.indexOf(x.id) - savedIndices.indexOf(y.id)});
+      current.LIS = objLIS.map(x=>x.id); // Store LIS consisting of IDs only
     } // end if (at least two common children; need to find LIS)
   }
 
@@ -92,7 +93,7 @@ class d3Functions {
     //  If this label still has the same non-null parent, and that parent has a LIS array which doesn't include this label
     // (meaning that it has at least two children and this label is NOT one of the ones which is considered "in order"),
     // then this node should be marked as rearranged, so return true. Otherwise, return false.
-    if (currentParentID == savedParentID && currentParent && currentParent.JSobj.LIS && !(currentParent.JSobj.LIS.includes(d.data))) {
+    if (currentParentID == savedParentID && currentParent && currentParent.JSobj.LIS && !(currentParent.JSobj.LIS.includes(d.data.id))) {
       return true;
     }
     else return false;
@@ -198,18 +199,36 @@ class d3Functions {
   // NOTE: I don't know why yet, but it seems that when building a group for each tree, data is stored in d.
   // When building a node for each leaf WITHIN a tree (in buildTree), data is stored in d.data.
   buildTree(datum) {
-    const buildPopup = function(datum) {
-      const texts = d3.select(this).select(".detailPopupVisible").selectAll(".detailText")
-        .data(datum.data.details, function(d) {return d.field});
-
-      texts.enter().append("text")
-        .attr("class", "detailText")
-        .text(function(d) {return `${d.field}: ${d.value}`})
-        .attr("transform", function(d, i) {return `translate(-${d.instance.popupWidth/2}
-                                                              ${20 -d.instance.nodeHeight*i})`})
-
-      texts.text(function(d) {return `${d.field}: ${d.value}`});
-      texts.exit().remove();
+    const buildDetails = function(datum) {
+      const table = document.createElement('table');
+      table.classList.add('hidden');
+      const header = document.createElement('thead');
+      table.appendChild(header);
+      let showButton = "";
+      if (datum.data.type === "link") { // URLs get an Open Link button
+        showButton = `<input type="button" value="Open link" onclick="app.widget('showNode', this)"
+        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}" link="${datum.data.details[0]}">`;// For now, assume the uri is the first (and only) detail
+      }
+      else if (datum.data.type !== "" && datum.data.type !== "file") { // Files and plain text get no button; everything else gets "Open Node"
+        showButton = `<input type="button" value="Open node" onclick="app.widget('showNode', this)"
+        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}">`;
+      }
+      header.innerHTML =
+        `<tr><th colspan="2">
+          ${datum.data.name}: ${datum.data.type} ${showButton}
+          <input type="button" value="Disassociate" idr="disassociate${datum.data.id}" onclick="app.widget('disassociate', this)">
+        </tr></th>`;
+      const body = document.createElement('tbody');
+      table.appendChild(body);
+      for (let i = 0; i < datum.data.details.length; i++) {
+        const d = datum.data.details[i];
+        const row = document.createElement('tr');
+        body.appendChild(row);
+        row.innerHTML = `<th>${d.field}</th><td>${d.value}</td>`;
+      }
+      datum.data.instance.objects[datum.data.id].DOMelements.detailsTable = table;
+      const detailsPane = datum.data.instance.parent.detailsPane;
+      detailsPane.appendChild(table);
     }
 
     const tree = d3.tree()
@@ -246,7 +265,6 @@ class d3Functions {
         d.data.instance.objects[d.data.id].DOMelements.notes = this;
       });
 
-
     nodeEnter.append("rect")  // Main rectangle
       .attr("width", this.getAttribute("nodeWidth"))
       .attr("height", this.getAttribute("nodeHeight"))
@@ -259,7 +277,6 @@ class d3Functions {
       .each(function(d) {
         d.data.instance.objects[d.data.id].DOMelements.node = this;
       });
-
 
     nodeEnter.append("rect")  // toggle rectangle
       .attr("width", this.getAttribute("nodeHeight")/2)
@@ -274,7 +291,6 @@ class d3Functions {
         d.data.instance.objects[d.data.id].DOMelements.toggle = this;
       });
 
-
     nodeEnter.append("text") // Toggle button text
       .attr("idr", function(d) {return `toggleText1${d.data.id}`})
       .attr("transform", `translate (${this.getAttribute("nodeHeight")*11/4} ${this.getAttribute("nodeHeight") *0.5 + 3})`)
@@ -282,7 +298,6 @@ class d3Functions {
       .each(function(d) {
         d.data.instance.objects[d.data.id].DOMelements.toggleText1 = this;
       });
-
 
     nodeEnter.append("rect") // Toggle explanation box...
       .attr("width", 320)
@@ -293,7 +308,6 @@ class d3Functions {
       .each(function(d) {
         d.data.instance.objects[d.data.id].DOMelements.toggleExpBox = this;
       });
-
 
     nodeEnter.append("text") // and text
       .attr("idr", function(d) {return `toggleExpln${d.data.id}`;})
@@ -343,47 +357,6 @@ class d3Functions {
       .text("Toggle notes (always enabled)")
       .each(function(d) {
         d.data.instance.objects[d.data.id].DOMelements.noteExpln = this;
-      });
-
-    nodeEnter.append("rect")  // Detail display rectangle
-      .attr("width", this.getAttribute("nodeHeight")/2)
-      .attr("height", this.getAttribute("nodeHeight")/2)
-      .attr("idr", function(d) {return `detail${d.data.id}`})
-      .attr("transform", `translate(${this.getAttribute("nodeHeight")/4} ${this.getAttribute("nodeHeight")/4})`)
-      .attr("onmouseover", "app.widget('toggleExplain', this, event, 'detail')")
-      .attr("onmouseout", "app.widget('toggleExplain', this, event, 'detail'); app.widget('checkHideButtons', this, event)")
-      .attr("mousedownObj", '{"method":"toggleDetails"}')
-      .attr("class", "detailsRect hidden")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.detail = this;
-      });
-
-    nodeEnter.append("text") // Show details button text
-      .attr("idr", function(d) {return `showDetailsText1${d.data.id}`})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")/2} ${this.getAttribute("nodeHeight") *0.5 + 3})`)
-      .attr("class", "detailButtonText unselectable hidden")
-      .text("D")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.showDetailsText1 = this;
-      });
-
-    nodeEnter.append("rect") // Details explanation box...
-      .attr("width", 300)
-      .attr("height", 20)
-      .attr("idr", function(d) {return `detailExpBox${d.data.id}`})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")/2 - 150} ${this.getAttribute("nodeHeight") *-0.5 - 10})`)
-      .attr("class", "detailExpBox hidden")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.detailExpBox = this;
-      });
-
-    nodeEnter.append("text") // ... and text
-      .attr("idr", function(d) {return `detailExpln${d.data.id}`;})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")*1/2} ${this.getAttribute("nodeHeight") *-0.5 + 4})`)
-      .attr("class", "detailExpln unselectable hidden")
-      .text("Toggle details (disabled for labels with nothing attached)")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.detailExpln = this;
       });
 
     nodeEnter.append("rect")  // Edit rectangle
@@ -468,75 +441,6 @@ class d3Functions {
         d.data.instance.objects[d.data.id].DOMelements.restoreExpln = this;
       })
 
-    nodeEnter.append("g") // Create a detail popup group with a rectangle in it
-      .attr("idr", function(d) {return `popupGroup${d.data.id}`})
-      .attr("class", "detailPopupVisible hidden")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.popupGroup = this;
-      })
-      .append("rect")                                             // Large popup rectangle...
-        .attr("idr", function(d) {return`popupRect${d.data.id}`})
-        .attr("class", "detailPopup")
-        .each(function(d) {
-          d.data.instance.objects[d.data.id].DOMelements.popupRect = this;
-        })
-      .select(function() { return this.parentNode; })
-        .append("rect")                                           // Header rectangle
-        .attr("idr", function (d) {return `detailHeader${d.data.id}`})
-        .attr("class", "detailHeader")
-        .attr("height", this.getAttribute("nodeHeight"))
-        .attr("width", this.getAttribute("popupWidth"))
-        .each(function(d) {
-          d.data.instance.objects[d.data.id].DOMelements.detailHeader = this;
-        })
-      .select(function() { return this.parentNode; })
-        .append("rect")                                           // disassociate button
-        .attr("idr", function(d) {return `disassociate${d.data.id}`})
-        .attr("class", "disassociateButton")
-        .attr("height", this.getAttribute("nodeHeight"))
-        .attr("width", this.getAttribute("nodeHeight"))
-        .attr("mousedownObj", '{"method":"disassociate"}')
-        .each(function(d) {
-          d.data.instance.objects[d.data.id].DOMelements.disassociate = this;
-        })
-      .select(function() { return this.parentNode; })             // disassociate text
-        .append("text")
-        .attr("dx", function(d) {return `-${d.data.instance.popupWidth - d.data.instance.nodeHeight/2}`;})
-        .attr("idr", function(d) {return `disassociateText${d.data.id}`;})
-        .attr("class", "disassociateText unselectable")
-        .text("X")
-        .each(function(d) {
-          d.data.instance.objects[d.data.id].DOMelements.disassociateText = this;
-        })
-      .select(function() { return this.parentNode; })
-        .append("rect")                                           // Show Node button
-        .attr("idr", function(d) {return `showNode${d.data.id}`})
-        .attr("class", "showNodeButton")
-        .attr("height", this.getAttribute("nodeHeight"))
-        .attr("width", this.getAttribute("nodeHeight"))
-        .attr("mousedownObj", '{"method":"showNode"}')
-        .each(function(d) {
-          d.data.instance.objects[d.data.id].DOMelements.showNode = this;
-        })
-      .select(function() { return this.parentNode; })             // Show Node text
-        .append("text")
-        .attr("dx", function(d) {return `-${d.data.instance.nodeHeight/2}`;})
-        .attr("idr", function(d) {return `showNodeText${d.data.id}`;})
-        .attr("class", "showNodeText unselectable")
-        .text("+")
-        .each(function(d) {
-          d.data.instance.objects[d.data.id].DOMelements.showNodeText = this;
-        })
-      .select(function() {return this.parentNode; })
-        .append("text")                                           // Text in header
-        .attr("dx", function(d) {return `-${d.data.instance.popupWidth/2}`;})
-        .attr("class", "detailHeaderText unselectable")
-        .attr("idr", function(d) {return `detailHeaderText${d.data.id}`})
-        .text(function(d) { return `Name: ${d.data.name} Type: ${d.data.type}`; })
-        .each(function(d) {
-          d.data.instance.objects[d.data.id].DOMelements.detailHeaderText = this;
-        });
-
     nodeEnter.append("text") // Add text
       .attr("dx", this.getAttribute("nodeWidth")/2)
       .attr("dy", this.getAttribute("nodeHeight")/2 + 6)
@@ -586,35 +490,11 @@ class d3Functions {
         })
       .text(function(d) {if (d.data.children && d.data.children.length > 0) return "-"; else return "+";});
 
-    allNodes.selectAll(".detailsRect")
-      .classed("inactive", function(d) {if (d.data.type == "") return true; else return false});
-
-    allNodes.selectAll(".detailButtonText")
-      .classed("inactiveText", function(d) {if (d.data.type == "") return true; else return false});
-
     allNodes.selectAll(".editRect")
       .classed("inactive", function(d) {if (d.data.nodeID) return true; else return false});
 
     allNodes.selectAll(".editText")
       .classed("inactiveText", function(d) {if (d.data.nodeID) return true; else return false});
-
-    allNodes.selectAll(".detailPopup")
-      .attr("width", this.getAttribute("popupWidth"))
-      // This is fairly complicated. It allots one line (of height nodeHeight) for each entry in the details object,
-      // plus an additional line for the node's name and type.
-      .attr("height", function(d) {return (d.data.details.length + 1) * d.data.instance.nodeHeight;})
-      .attr("transform", function(d) {return `translate(-${d.data.instance.popupWidth}
-                                                        -${d.data.details.length * d.data.instance.nodeHeight})`;});
-
-    allNodes.selectAll(".detailHeader")
-      .attr("transform", function(d) {return `translate(-${d.data.instance.popupWidth}
-                                                        -${d.data.details.length * d.data.instance.nodeHeight})`});
-
-    allNodes.selectAll(".disassociateButton")
-      .attr("transform", function(d) {return `translate(-${d.data.instance.popupWidth}
-                                                        -${d.data.details.length * d.data.instance.nodeHeight})`});
-
-    allNodes.selectAll(".disassociateText").attr("dy", function(d) {return -1*(d.data.details.length * d.data.instance.nodeHeight - 20);});
 
     allNodes.selectAll(".showNodeButton")
       .attr("transform", function(d) {return `translate(-${d.data.instance.nodeHeight}
@@ -622,11 +502,8 @@ class d3Functions {
 
     allNodes.selectAll(".showNodeText").attr("dy", function(d) {return -1*(d.data.details.length * d.data.instance.nodeHeight - 20);});
 
-    allNodes.selectAll(".detailHeaderText")
-      .text(function(d) { return `Name: ${d.data.name} Type: ${d.data.type}`; })
-      .attr("dy", function(d) {return -d.data.instance.nodeHeight * (d.data.details.length - 0.5) + 6});
+    allNodes.each(buildDetails);
 
-    allNodes.each(buildPopup);
 
     // Update text
     d3.selectAll(".node").each(function(d) { // For each node
