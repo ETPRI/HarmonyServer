@@ -137,6 +137,7 @@ addMetaData(data) {
 				const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
 				xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
+			node.name = name; // put the name back for the next step
 		}
 
 		let type;
