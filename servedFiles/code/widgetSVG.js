@@ -90,10 +90,18 @@ class widgetSVG {
     </td></tr></table></div></div>`;
 
     const parent = document.getElementById('widgets');
-    const caller = document.getElementById(this.callerID);
+    let caller = document.getElementById(this.callerID);
     const newWidget = document.createElement('div'); // create placeholder div
 
-    if (caller.parentElement == parent) { // If the caller is, itself, in the widgets div
+    // I want to insert the new widget before the TOP-LEVEL widget that called it, if that widget is in the widgets div.
+    // The ID passed in is that of the widget that called it, but it may be in another widget. So go up the chain until
+    // either caller's parent is the widgets div (meaning that caller is a top-level widget in the widgets div), or caller
+    // has no parent (meaning that the original caller was NOT in the widgets div, since no ancestor in that div was found).
+    while (caller.parentElement && caller.parentElement !== parent) {
+      caller = caller.parentElement;
+    }
+
+    if (caller.parentElement == parent) { // If the caller (or its parent widget) is, itself, in the widgets div
       parent.insertBefore(newWidget, caller); // Insert the new div before the caller
     }
     else {

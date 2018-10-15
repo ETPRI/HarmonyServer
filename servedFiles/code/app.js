@@ -172,7 +172,8 @@ updateObject(copyFrom, copyTo) {
 		}
 		// If this attribute is itself an object, call updateObject recursively to add any fields which from has and to doesn't
 		else if (typeof copyTo[key] === 'object' && typeof copyFrom[key] === 'object') {
-			updated = (updated || this.updateObject(copyFrom[key], copyTo[key])); // updated stays true if it was true; otherwise takes the return value
+			const recursiveUpdate = this.updateObject(copyFrom[key], copyTo[key]);
+			updated = (updated || recursiveUpdate); // updated stays true if it was true; otherwise takes the return value
 		}
 	}
 	return updated;

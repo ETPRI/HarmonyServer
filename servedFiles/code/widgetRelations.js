@@ -310,7 +310,7 @@ addLine(relation, html, orderedNodes, placeholderComment) {
 
   // Default is that this is NOT the logged-in user's view. The row can only be dragged,
   // the cells can't be interacted with at all and the delete button is not needed.
-  let trHTML = `<tr idr="item${this.idrRow}" draggable="true" ondragstart="app.widget('drag', this, event)">`;
+  let trHTML = `<tr idr="item${++this.idrRow}" draggable="true" ondragstart="app.widget('drag', this, event)">`;
   let deleteHTML = "";
   let editHTML = "";
 
@@ -327,11 +327,21 @@ addLine(relation, html, orderedNodes, placeholderComment) {
     this.existingRelations[this.idrRow] = {'comment':cells[2], 'nodeID':nodeID, 'name':cells[0], 'type':cells[1]};
   }
 
-  html += trHTML + `<td>${++this.idrRow}</td> <td hidden>${GUID}</td>
-                    <td hidden idr="content${this.idrContent++}">${nodeID}</td>
-                    <td idr="content${this.idrContent++}">${cells[0]}</td>
-                    <td>${cells[1]}</td>
-                    <td idr="content${this.idrContent++}" ${editHTML}>${cells[2]}</td>
+  // Assign a special IDR to the cell containing the type
+  let cell1IDR = `type${this.idrRow}`;
+  let cell2IDR = `content${this.idrContent++}`;
+
+  if (this.viewGUID == 'summary') {
+    cell1IDR = `content${this.idrContent}`;
+    cell2IDR = `type${this.idrRow}`;
+  }
+
+  html += trHTML + `<td onclick="app.widget('open', this)">${this.idrRow}</td>
+                    <td hidden idr="content${this.idrContent++}">${GUID}</td>
+                    <td hidden idr="GUID${this.idrRow}">${nodeID}</td>
+                    <td idr="content${this.idrContent++}" onclick="app.widget('open', this)">${cells[0]}</td>
+                    <td idr="${cell1IDR}" onclick="app.widget('open', this)">${cells[1]}</td>
+                    <td idr="${cell2IDR}" ${editHTML}>${cells[2]}</td>
                     ${deleteHTML}</tr>`;
 
 
@@ -346,13 +356,15 @@ addLine(relation, html, orderedNodes, placeholderComment) {
   return html;
 }
 
-// Creates a dragDrop table if the logged-in user is looking at their own view. Adds three new functions to the table:
+// Creates a dragDrop table if the logged-in user is looking at their own view. Adds four new functions to the table:
   // changeComment fires when a comment textbox is blurred, and adds or removes the "changedData" class depending on whether
     // the comment now matches the comment stored in the database.
   // dropData fires when a node from another view or a node table is dragged to the table. It either creates a new row
     //for that node, or changes the node referenced in the row that was dragged to.
   // drag overrides the drag function from the dragDrop class. It does the same thing - set the active node -
     // but it also records data about the line being dragged (in case that row is dragged to another table).
+  // open is really a widgetRelations function, but needs to be callable by app.widget from within the table,
+    // so it is passed to dragDrop. It opens a node when the user clicks on its line in the table.
 // Takes the widgetRelation object as an argument because it's called by setTimeout and can't refer to it as "this".
 createDragDrop(widgetRel) {
   widgetRel.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetRelation contains"
@@ -507,6 +519,29 @@ createDragDrop(widgetRel) {
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
   } // end dragDrop.drag function
+
+  widgetRel.dragDrop.open = widgetRel.open.bind(widgetRel); // So cells within the dragdrop table can call open
+}
+
+open(cell) { // opens the node, if any, associated with the row that the clicked-on cell is in
+  const row = cell.parentElement;
+  const rowNum = row.getAttribute('idr').slice(4); // row IDR is like "itemxxx"
+  const GUIDcell = app.domFunctions.getChildByIdr(row, `GUID${rowNum}`);
+  const GUID = GUIDcell.textContent;
+  const typeCell = app.domFunctions.getChildByIdr(row, `type${rowNum}`);
+  const type = typeCell.textContent;
+
+  if (GUID && type) { // If these both exist, then the relation should be to a node, not just a comment, so can be opened
+    if (type == 'mindmap') {
+      new widgetSVG(this.id, GUID);
+    }
+    else if (type == "calendar") {
+      new widgetCalendar(this.id, GUID);
+    }
+    else {
+      new widgetNode(this.id, type, GUID);
+    }
+  }
 }
 
 // If the logged-in user is looking at their own view, calls this.processNext(), which will save all rows, save their ordering,

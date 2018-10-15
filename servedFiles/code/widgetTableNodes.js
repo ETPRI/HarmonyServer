@@ -432,10 +432,10 @@ class widgetTableNodes {
     // NOTE: This is brittle - assumes that an element can only be edited by clicking the row number,
     // and that the ID is always next to the row number. Think about changing later.
     const id = element.nextElementSibling.innerHTML; // the id is in the next (hidden) cell
-    if (this.queryObject.nodeLabel == 'mindmap') {
+    if (this.queryObjectName == 'mindmap') {
       new widgetSVG(this.idWidget, id);
     }
-    else if (this.queryObject.nodeLabel == "calendar") {
+    else if (this.queryObjectName == "calendar") {
       new widgetCalendar(this.idWidget, id);
     }
     else {
