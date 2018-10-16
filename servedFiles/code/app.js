@@ -171,7 +171,7 @@ updateObject(copyFrom, copyTo) {
 			updated = true;
 		}
 		// If this attribute is itself an object, call updateObject recursively to add any fields which from has and to doesn't
-		else if (typeof copyTo[key] === 'object' && typeof copyFrom[key] === 'object') {
+		else if (typeof copyTo[key] === 'object' && !(Array.isArray(copyTo[key])) && typeof copyFrom[key] === 'object' && !(Array.isArray(copyFrom[key]))) {
 			const recursiveUpdate = this.updateObject(copyFrom[key], copyTo[key]);
 			updated = (updated || recursiveUpdate); // updated stays true if it was true; otherwise takes the return value
 		}
@@ -359,7 +359,6 @@ widgetHeader(widgetType, tag){
 
 // Expands or collapses a widget when the expand/collapse button in that widget is clicked.
 // Also changes the text on the button back and forth between "__" and "+".
-
 // Currently, assumes that the expand/collapse button is in the header, which is in the widget div
 // (it is thus the grandchild of the widget div), which should always be true because all widget headers
 // are made the same way by the same function. Also assumes that the widget body - the part to expand or

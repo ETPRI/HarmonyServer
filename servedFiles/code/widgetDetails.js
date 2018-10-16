@@ -314,8 +314,10 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   // const oldDrop = dragDrop.drop;
   // dragDrop.drop = function(input, evnt) {
   //   // Get array of fieldnames in current order
-  //
-  //   //
+  //   // Array of fieldnames in last saved order is this.lastSaveFFD
+  //   // Pass the array to app.createLIS along with a comparison function - this.lastSaveFFD.indexOf(a) - this.lastSaveFFD.indexOf(b)
+  //   // Go through each row and if its name IS in lastSaveFFD, but ISN'T in the LIS, give it the changedData class.
+  //   // If its name ISN'T in lastSaveFFD, give it the newData class.
   //
   //   oldDrop.apply(this, input, evnt);
   // }
@@ -744,7 +746,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       const name = nameCell.firstElementChild.value;
       const valueCell = nameCell.nextElementSibling;
       const value = valueCell.firstElementChild.value;
-      if (name != "") {
+      if (name != "" && currentFields.indexOf(name) == -1) { // If the field has been filled in, and that name didn't already exist
         const fieldName = name.replace(/\s/g, "");
         // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
         this.fields[fieldName] = {label: name};
@@ -812,7 +814,8 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       if (this.fieldsDisplayed.indexOf(fieldName) !== -1) {
         fieldsDisplayed.push(fieldName);
       }
-      if (this.formFieldsDisplayed.indexOf(fieldName) !== -1) {
+      // If this field is in this.formFieldsDisplayed (so should also be in formFieldsDisplayed) and isn't a duplicate
+      if (this.formFieldsDisplayed.indexOf(fieldName) !== -1 && formFieldsDisplayed.indexOf(fieldName) === -1) {
         formFieldsDisplayed.push(fieldName);
       }
       fields[fieldName] = this.fields[fieldName];
@@ -828,7 +831,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   // I used to make this optional - done only if a change needed to be made -
   // but as more and more possible changes appear, that gets less practical.
   // I think I'll just go ahead and update the settings every time.
-  this.lastSaveFFD = this.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save - has to update on new fields or reorder. Doesn't have to update on rename, but does no harm.
+  this.lastSaveFFD = this.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save
   this.updateMetaData(newFields);
 
   if (data.length == 0) { //This should only ever come up when saving - both because adding uses an object, not an array, for data and because adding should add every field to data every time.
@@ -839,8 +842,11 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       obj.action = "click";
       app.regression.log(JSON.stringify(obj));
       app.regression.record(obj);
-    } else { // If the node was NOT trashed or untrashed AND there were no changes to fields, just alert that there were no changes. No need to log in this case.
-    alert("No changes to save")
+    // If the node was NOT trashed or untrashed AND there were no changes to fields, AND this is a standalone node
+    // (because if it's a calendar or mindmap, the user may be saving changes other than the ones shown by details),
+    // then just alert that there were no changes. No need to log in this case.
+  } else if (this.widgetDOM.parentElement === document.getElementById("widgets")) {
+    alert("No changes to save");
     }
   }
   else {
