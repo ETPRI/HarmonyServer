@@ -207,7 +207,14 @@ class d3Functions {
       let showButton = "";
       if (datum.data.type === "link") { // URLs get an Open Link button
         showButton = `<input type="button" value="Open link" onclick="app.widget('showNode', this)"
-        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}" link="${datum.data.details[0]}">`;// For now, assume the uri is the first (and only) detail
+        GUID="${datum.data.nodeID}" DBType="link" link="${datum.data.details[0].value}">`;// For now, assume the uri is the first (and only) detail
+      }
+      else if (datum.data.type === "calendar" || datum.data.type === "mindmap") { // These get two buttons - to show normally or as a node
+        showButton = `<input type="button" value="Open" onclick="app.widget('showNode', this)"
+        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}">
+        <input type="button" value="Open as node" onclick="app.widget('showNode', this)"
+        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}">`;
+
       }
       else if (datum.data.type !== "" && datum.data.type !== "file") { // Files and plain text get no button; everything else gets "Open Node"
         showButton = `<input type="button" value="Open node" onclick="app.widget('showNode', this)"

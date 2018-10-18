@@ -24,6 +24,8 @@ constructor() {
 	this.tableHeader		= null;
 	this.adminButtons		= null;
 
+	this.userNodes			= [];
+
 	this.dropNodes			= 1;
 }
 
@@ -143,7 +145,7 @@ addMetaData(data) {
 		let type;
 		for (type in this.metaData.node) { // for every entry in this.metaData.node...
 			let DBNode = data.find(x => x.node.properties.name === type); // look for a matching DB metadata node.
-			if (!DBNode) { // If there is no such node, create one.
+			if (!DBNode && type !== "all") { // If there is no such node, create one (except for "all", which doesn't get a node).
 				const obj = {"type":"M_MetaData", "properties":{"name":type}};
 				obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
 				obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
@@ -352,8 +354,8 @@ widgetHeader(widgetType, tag){
 	<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
 	<input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
 	<input type="button" value = "<>" idr="fullScreenButton" onclick = "app.widgetFullScreen(this)">
-	<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}')">
-	<input type="button" value="!" idr="bugButton" onclick="app.reportBug('${widgetType}')">
+	<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}', app.domFunctions.widgetGetId(this))">
+	<input type="button" value="!" idr="bugButton" onclick="app.reportBug('${widgetType}', app.domFunctions.widgetGetId(this))">
 		`)
 }
 
@@ -788,7 +790,7 @@ stopProgress(DOMelement, obj) {
 	}
 }
 
-showHelp(widgetType) {
+showHelp(widgetType, button) {
 	const obj = {};
 	obj.node = {"type":"M_Widget", "properties":{"name":widgetType}, "merge":true}; // If the help node doesn't exist, create it
 	const xhttp = new XMLHttpRequest();
@@ -803,7 +805,7 @@ showHelp(widgetType) {
 				app.error("Help could not be found or created");
 			}
 			else if (data.length == 1) {
-				new widgetNode(null, "M_Widget", data[0].node.properties.M_GUID);
+				new widgetNode(button, "M_Widget", data[0].node.properties.M_GUID);
 			}
 			else {
 				app.error("Multiple help nodes found");
@@ -816,7 +818,7 @@ showHelp(widgetType) {
 	xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
-reportBug(widgetType) {
+reportBug(widgetType, button) {
 	const obj = {};
 	obj.node = {"type":"topic", "properties":{"name":"Harmony Changes"}, "merge":true}; // If the bug node doesn't exist, create it
 	const xhttp = new XMLHttpRequest();
@@ -831,7 +833,7 @@ reportBug(widgetType) {
 				app.error("Changes topic could not be found or created");
 			}
 			else if (data.length == 1) {
-				new widgetNode(null, "topic", data[0].node.properties.M_GUID);
+				new widgetNode(button, "topic", data[0].node.properties.M_GUID);
 			}
 			else {
 				app.error("Multiple changes topics found");

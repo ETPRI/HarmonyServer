@@ -494,6 +494,9 @@ module.exports = class CRUD {
 
     // Build the where clause, starting with requirement that current user has not trashed this node
     let where = `where a.M_GUID='${GUID}' and not (a)-[:Trash]->(${dataObj.name}) and `;
+    if (dataObj.type === "all") {
+      where += `not labels(${dataObj.name})[0] starts with "M_" and `; // Screen out metadata nodes
+    }
 
     for (let field in dataObj.where) {
       if (dataObj.where[field].fieldType == "string") {
@@ -582,7 +585,12 @@ module.exports = class CRUD {
       withClause += `, owner`;
     }
 
-    let match = `match (${dataObj.name}:${dataObj.type})`;
+    let type = "";
+    if (dataObj.type !== "all") {
+      type = `:${dataObj.type}`;
+    }
+
+    let match = `match (${dataObj.name}${type})`;
 
     // NOTE: These next two won't work together - if I ever hit a situation where a person can have an owner, I'll have to rewrite.
     if (dataObj.owner) {
@@ -600,7 +608,10 @@ module.exports = class CRUD {
       withClause += `, link${i}`;
     }
 
-    let orderBy = this.buildOrderString(dataObj.orderBy, "n");
+    let orderBy = this.buildOrderString(dataObj.orderBy, dataObj.name);
+    if (dataObj.type === "all") {
+      orderBy = this.buildOrderString(dataObj.orderBy, dataObj.name, `order by labels(${dataObj.name})[0], `);
+    }
 
     const query = `${match}, (a) ${where} ${permCheck} ${ownerCheck} ${withClause} ${linkCheck}
                    ${ret} ${orderBy} limit ${dataObj.limit}`;
@@ -697,8 +708,11 @@ module.exports = class CRUD {
   }
 
   // orderArray: Array of objects containing item (except for changeNode), name and direction ("A" or "D", but "A" is default and doesn't need to be specified)
-  buildOrderString(orderArray, defaultName) {
-    let order = "order by ";
+  buildOrderString(orderArray, defaultName, initialValue) {
+    let order = initialValue;
+    if (!order) {
+      order = "order by ";
+    }
     let item = defaultName; // name to use if no item is specified
     for (let i = 0; i < orderArray.length; i++) {
       let o = orderArray[i];

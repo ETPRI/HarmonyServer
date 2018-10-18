@@ -38,6 +38,7 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
     this.newFields            = 0;
     this.hiddenFields         = 0;
     this.dataNode             = null;
+    this.showHideFieldsButton = null;
 
     this.idWidget = app.idCounter;
     app.widgets[app.idCounter++] = this; // Add to app.widgets
@@ -200,6 +201,7 @@ popupOK(button) {
   const formCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
   const db = header.textContent;
   const formLabel = app.domFunctions.getChildByIdr(this.widgetDOM, `th${db}`, true);
+  const row = formLabel.parentElement;
   formLabel.innerText = label.value;
 
   // update metadata class
@@ -213,10 +215,20 @@ popupOK(button) {
 
   if (formCheck.checked && this.formFieldsDisplayed.indexOf(db) == -1) { // If the field should be displayed and currently isn't
     this.formFieldsDisplayed.push(db);
+    row.hidden = false;
+    row.classList.remove("notShown");
+    this.hiddenFields--;
   }
 
   else if (!(formCheck.checked) && this.formFieldsDisplayed.indexOf(db) != -1) { // If the field shouldn't be displayed and is
     this.formFieldsDisplayed.splice(this.formFieldsDisplayed.indexOf(db), 1);
+    row.hidden = true;
+    row.classList.add("notShown");
+    this.hiddenFields++;
+    this.showHideFieldsButton.disabled = false;
+    if (this.showHideFieldsButton.value.slice(0, 6) === "Show A") {
+      this.showHideFieldsButton.value = `Show All (${this.hiddenFields})`;
+    }
   }
 
   this.fields[db].label = label.value;
@@ -308,6 +320,7 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   dragDrop.showPopup = this.showPopup.bind(this);
   dragDrop.changed = this.changed.bind(this);
   dragDrop.checkNewField = this.checkNewField.bind(this);
+  dragDrop.checkDuplicateField = this.checkDuplicateField.bind(this);
   dragDrop.addField = this.addField.bind(this);
 
   // NOTE: Update the dragdrop drop method to include checking for reordering
@@ -323,16 +336,19 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   // }
 
   // Create 'Show All' button
-  const button = document.createElement("input");
+  this.showHideFieldsButton = document.createElement("input");
+  this.showHideFieldsButton.setAttribute('type', 'button');
   const mainCell = app.domFunctions.getChildByIdr(this.widgetDOM, 'main');
-  mainCell.appendChild(button);
+  mainCell.appendChild(this.showHideFieldsButton);
   if (this.hiddenFields == 0) {
-    button.outerHTML = `<input type="button" value="Show All (0)" disabled>`;
+    this.showHideFieldsButton.value = "Show All (0)";
+    this.showHideFieldsButton.disabled = true;
   }
   else {
-    button.outerHTML = `<input type="button" value="Show All (${this.hiddenFields})" onclick = "app.widget('showHideAllFields', this)">`;
+    this.showHideFieldsButton.value = `Show All (${this.hiddenFields})`;
+    this.showHideFieldsButton.setAttribute('onclick', "app.widget('showHideAllFields', this)");
   }
-  button.setAttribute('style', 'text-align:center');
+  this.showHideFieldsButton.setAttribute('style', 'text-align:center');
 
   const trashHTML = `<b>Trash Node</b>
                 <input type="checkbox" onclick="app.widget('toggleReason', this)" idr="trashCheck">
@@ -375,7 +391,8 @@ addRow(fieldName, fieldCount) {
   row.setAttribute('ondrop', "app.widget('drop', this, event)");
   row.setAttribute("ondragover", "event.preventDefault()");
   row.setAttribute('ondragstart', "app.widget('drag', this, event)");
-  row.setAttribute('draggable', "true")
+  row.setAttribute('draggable', "true");
+  row.setAttribute('idr', `tr${fieldName}`);
 
   this.tBodyDOM.appendChild(row);
 
@@ -459,6 +476,54 @@ showHideAllFields(button) {
   }
 }
 
+checkDuplicateField(input) {
+  let name = input.value;
+  let label = "";
+  const dupName = (name in this.fields);
+  if (dupName) {
+    label = this.fields[name].label;
+  }
+  const dbName = Object.keys(this.fields).find(key => this.fields[key].label === name);
+  const dupLabel = (dbName !== undefined);
+  if (dupLabel) {
+    label = name;
+    name = dbName;
+  }
+  // At this point, if the field exists, name is the DB name and label is the label
+
+  if (dupName || dupLabel) { // If this is a duplicate fieldname or label
+    // If this field is not currently displayed (because it's not in formFieldsDisplayed and hidden fields are hidden)
+    if (this.formFieldsDisplayed.indexOf(name) === -1 && this.showHideFieldsButton.value.slice(0,6) === "Show A") {
+      let text = "This field already exists, but is not displayed. Do you want to display it?";
+      if (dupName && name !== label) {
+        text = `This field already exists with the label ${label}, but is not displayed. Do you want to display it?`;
+      }
+      if (confirm(text)) {
+        const row = app.domFunctions.getChildByIdr(this.widgetDOM, `tr${name}`, true);
+        row.hidden = false;
+        row.classList.remove("notShown");
+        this.hiddenFields--;
+        if (this.hiddenFields === 0) {
+          this.showHideFieldsButton.value = `Show All (0)`;
+          this.showHideFieldsButton.disabled = true;
+        }
+        else if (this.showHideFieldsButton.value.slice(0, 6) === "Show A") {
+          this.showHideFieldsButton.value = `Show All (${this.hiddenFields})`;
+        }
+      } // end if (the user agrees to display the hidden field)
+    } // end if (the field exists, but is hidden)
+    else {
+      let text = "This field already exists. Please use the existing field or choose a new name.";
+      if (dupName && name !== label) {
+        text = `This field already exists with the label ${label}. Please use the existing field or choose a new name.`;
+      }
+      alert (text);
+    } // end else (the field is NOT hidden)
+    // Whether the field was hidden or not, whether the user agreed to display it or not, delete the text in this textbox
+    input.value = "";
+  } // end if (the fieldname exists)
+}
+
 checkNewField() {
   const rows = this.tBodyDOM.children;
   let add = true;
@@ -488,7 +553,7 @@ addField() {
   row.appendChild(nameCell);
   const nameIn = document.createElement('input');
   nameCell.appendChild(nameIn);
-  nameIn.outerHTML = `<input type = "text" idr = "newFieldName${this.newFields}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkNewField', this)" value = "">`
+  nameIn.outerHTML = `<input type = "text" idr = "newFieldName${this.newFields}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkDuplicateField', this); app.widget('checkNewField', this)" value = "">`
 
   const valueCell = document.createElement('td');
   row.appendChild(valueCell);
@@ -747,7 +812,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       const valueCell = nameCell.nextElementSibling;
       const value = valueCell.firstElementChild.value;
       if (name != "" && currentFields.indexOf(name) == -1) { // If the field has been filled in, and that name didn't already exist
-        const fieldName = name.replace(/\s/g, "");
+        const fieldName = name.replace(/\s/g, "").replace(/\(/g, "").replace(/\)/g, "");
         // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
         this.fields[fieldName] = {label: name};
         newFields[fieldName] = {label: name};

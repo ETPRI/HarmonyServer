@@ -141,9 +141,12 @@ class widgetTableNodes {
   ////////////////////////////////////////////////////////////////////
   buildHeader() {
     // build header
-    const html = app.widgetHeader('widgetTableNodes')
-    +'<b> '+this.queryObject.nodeLabel +":"+ this.queryObjectName +` </b>
-    <input type="button" value="Add" idr = "addButton" onclick="app.widget('addNode',this)">
+    let addText = "";
+    if (this.queryObjectName !== "all") {
+      addText = `<input type="button" value="Add" idr = "addButton" onclick="app.widget('addNode',this)">`;
+    }
+    const html = `${app.widgetHeader('widgetTableNodes')}
+    <b>${this.queryObject.nodeLabel}:${this.queryObjectName}</b>${addText}
     <input type="button" value="Search" idr = "searchButton" onclick="app.widgetSearch(this)">
     limit <input value ="9" idr = "limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
     </div>
@@ -274,6 +277,10 @@ class widgetTableNodes {
       row.appendChild(cell);
       cell.outerHTML = `<td hidden>${r[i].n.properties.M_GUID}</td>`;
 
+      if (this.queryObjectName === "all") {
+        r[i].n.properties.type = r[i].n.labels[0];
+      }
+
       // For each display field, create a cell and append it
       for (let j=0; j<this.fieldsDisplayed.length; j++) {
         cell = document.createElement('td');
@@ -396,8 +403,18 @@ class widgetTableNodes {
     }
     const IDcell = nodeRow.children[1]; // The ID will always be the second cell in the table, after the number
     const ID = IDcell.textContent;
-    const type = this.queryObject.nodeLabel;
-    const DBType = this.queryObjectName;
+    let type = this.queryObject.nodeLabel;
+    if (type == "All Nodes") {
+      const typeCell = nodeRow.children[2]; // If this came from the "All Nodes" table, get the correct label...
+      type = typeCell.textContent;
+    }
+    let DBType = this.queryObjectName;
+    if (DBType == "all") {
+      const typeCell = nodeRow.children[2]; // and the correct DB name
+      type = typeCell.textContent;
+      const fieldNames = Object.keys(app.metaData.node);
+      DBType = fieldNames.find(fieldName => app.metaData.node[fieldName].nodeLabel == type);
+    }
 
     const data = {};
     data.name = name;
@@ -431,15 +448,22 @@ class widgetTableNodes {
   edit(element){
     // NOTE: This is brittle - assumes that an element can only be edited by clicking the row number,
     // and that the ID is always next to the row number. Think about changing later.
-    const id = element.nextElementSibling.innerHTML; // the id is in the next (hidden) cell
-    if (this.queryObjectName == 'mindmap') {
+    const idCell = element.nextElementSibling;
+    const id = idCell.innerHTML; // the id is in the next (hidden) cell
+
+    let type = this.queryObjectName;
+    if (type === "all") { // If this is an "all" table, extract the type from the type cell (the first visible one after the row number)
+      type = idCell.nextElementSibling.innerHTML;
+    }
+
+    if (type == 'mindmap') {
       new widgetSVG(this.idWidget, id);
     }
-    else if (this.queryObjectName == "calendar") {
+    else if (type == "calendar") {
       new widgetCalendar(this.idWidget, id);
     }
     else {
-      new widgetNode(this.idWidget, this.queryObjectName, id);
+      new widgetNode(this.idWidget, type, id);
     }
     // log
     const obj = {};

@@ -305,6 +305,13 @@ addLine(relation, html, orderedNodes, placeholderComment) {
   } // end if (relation exists)
 
   else if (placeholderComment) { // placeholder relation
+    if (app.login.userGUID && app.login.userGUID == this.viewGUID) { // provide dropdown for the logged-in user
+      cells[1] = `<select idr="typeSelect${this.idrRow + 1}"><option value=""></option>`;
+      for (let i = 0; i < app.userNodes.length; i++) {
+        cells[1] += `<option value = "${app.userNodes[i].db}">${app.userNodes[i].label}</option>`;
+      }
+      cells[1] += `</select>`;
+    }
     cells[2] = placeholderComment;
   }
 
@@ -356,13 +363,15 @@ addLine(relation, html, orderedNodes, placeholderComment) {
   return html;
 }
 
-// Creates a dragDrop table if the logged-in user is looking at their own view. Adds four new functions to the table:
+// Creates a dragDrop table if the logged-in user is looking at their own view. Adds five new functions to the table:
   // changeComment fires when a comment textbox is blurred, and adds or removes the "changedData" class depending on whether
     // the comment now matches the comment stored in the database.
   // dropData fires when a node from another view or a node table is dragged to the table. It either creates a new row
-    //for that node, or changes the node referenced in the row that was dragged to.
+    // for that node, or changes the node referenced in the row that was dragged to.
   // drag overrides the drag function from the dragDrop class. It does the same thing - set the active node -
     // but it also records data about the line being dragged (in case that row is dragged to another table).
+  // insert overrides the old insert function. It does the same thing as the original but also adds
+    // a type dropdown list for comments.
   // open is really a widgetRelations function, but needs to be callable by app.widget from within the table,
     // so it is passed to dragDrop. It opens a node when the user clicks on its line in the table.
 // Takes the widgetRelation object as an argument because it's called by setTimeout and can't refer to it as "this".
@@ -435,7 +444,17 @@ createDragDrop(widgetRel) {
         const nameCell = row.children[3];
         nameCell.textContent = data.name;
         const typeCell = row.children[4];
-        typeCell.textContent = data.type;
+        if (data.type) {
+          typeCell.innerHTML = data.type;
+        }
+        else {
+          let html = `<select idr="typeSelect${idr.slice(4)}"><option value=""></option>`;
+          for (let i = 0; i < app.userNodes.length; i++) {
+            html += `<option value = "${app.userNodes[i].db}">${app.userNodes[i].label}</option>`;
+          }
+          html += `</select>`;
+          typeCell.innerHTML = html;
+        }
         if ('comment' in data) {
           const commentCell = row.children[5];
           commentCell.textContent = data.comment;
@@ -493,7 +512,10 @@ createDragDrop(widgetRel) {
     const nameCell = this.activeNode.children[3];
     const name = nameCell.textContent;
     const typeCell = this.activeNode.children[4];
-    const type = typeCell.textContent;
+    let type = "";
+    if (typeCell.children.length == 0) { // If the cell has a child, it should be a dropdown, which should NOT be copied (it should be remade)
+      type = typeCell.textContent;
+    }
     const commentCell = this.activeNode.children[5];
     const comment = commentCell.textContent;
 
@@ -519,6 +541,23 @@ createDragDrop(widgetRel) {
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
   } // end dragDrop.drag function
+
+  const oldInsert = widgetRel.dragDrop.insert;
+  widgetRel.dragDrop.insert = function(input, row){
+    const newRow = oldInsert.apply(this, input, row);
+    // If this is running, this must be the logged-in user's view (others aren't dragDrop tables).
+    // So a) there needs to be a type dropdown for comments, and b) the type cell will always be the 5th in the row.
+    const typeCell = newRow.children[4];
+    if (typeCell.innerHTML === "") { // If there's not already a type or dropdown list
+      let html = `<select idr="typeSelect${this.itemCount-1}"><option value=""></option>`;
+      for (let i = 0; i < app.userNodes.length; i++) {
+        html += `<option value = "${app.userNodes[i].db}">${app.userNodes[i].label}</option>`;
+      }
+      html += `</select>`;
+      typeCell.innerHTML = html;
+    }
+    return newRow;
+  }
 
   widgetRel.dragDrop.open = widgetRel.open.bind(widgetRel); // So cells within the dragdrop table can call open
 }
@@ -602,9 +641,45 @@ processNext(data, rows, prevFunction) {
     // if this is a placeholder relation, add it to the placeholders array. Doesn't matter whether it's changed or not,
     // as long as it's not deleted. Add to order array as well.
     else if (row.children[2].textContent === "" && row.getAttribute('idr') !== 'insertContainer') {
-      this.placeholders.push(row.children[5].textContent); // add comment to array
-      this.order.push(`p${this.placeholders.length-1}`); // add index to order array, prefaced by "p" for "placeholder"
-      this.processNext(null, rows);
+      // Check whether the user selected anything from the dropdown list. If so, create a new node and attach it
+      const idrNum = row.getAttribute('idr').slice(4); // idr is like "itemxxx"
+      const typeSelect = app.domFunctions.getChildByIdr(row, `typeSelect${idrNum}`);
+      const type = typeSelect.options[typeSelect.selectedIndex].value;
+      if (type != "") {
+        // Create node, return, then update fields and add "newData" class and call processNext
+        const obj = {"type":type, "properties":{"name":row.children[5].textContent}};
+
+        const xhttp = new XMLHttpRequest();
+        const relations = this;
+        const update = app.startProgress(this.containerDOM, "Creating new node");
+
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            const data = JSON.parse(this.responseText);
+            app.stopProgress(relations.containerDOM, update);
+            const nodeIDcell = row.children[2];
+            nodeIDcell.textContent = data[0].node.properties.M_GUID;
+            const nameCell = row.children[3];
+            nameCell.textContent = data[0].node.properties.name;
+            const typeCell = row.children[4];
+            typeCell.textContent = data[0].node.labels[0];
+            row.classList.remove('changedData');
+            row.classList.add('newData');
+            rows.push(row);
+            relations.processNext(null, rows);
+          }
+        };
+
+        xhttp.open("POST","");
+        const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
+        xhttp.send(JSON.stringify(queryObject));         // send request to server
+      }
+      // Otherwise, add the comment to the placeholders list and move on.
+      else {
+        this.placeholders.push(row.children[5].textContent); // add comment to array
+        this.order.push(`p${this.placeholders.length-1}`); // add index to order array, prefaced by "p" for "placeholder"
+        this.processNext(null, rows);
+      }
     }
     else if (row.classList.contains("newData")) { // If the relation is new, add it. Can't add to order array yet - that will be done once a relation ID is assigned.
       this.addNode(row, rows);
@@ -785,6 +860,12 @@ createLink(row, rows) {
   // Get the ID of the other node, if one was specified. Now that placeholders are not stored as links, this should ALWAYS HAPPEN.
   if (nodeGUIDcell.textContent != "") {
     otherNodeGUID = nodeGUIDcell.textContent;
+    let startGUID = this.nodeGUID;
+    let endGUID = otherNodeGUID;
+    if (this.relationType == "end") {
+      startGUID = otherNodeGUID;
+      endGUID = this.nodeGUID;
+    }
 
     // Build a string of attributes for the relation. Each attribute takes the form name:value.
     // Start at i = 5 because the first 5 columns describe the node or are auto-generated - they aren't attributes of the relation.
@@ -797,9 +878,9 @@ createLink(row, rows) {
     }
 
     const obj = {};
-    obj.from = {"properties":{"M_GUID":this.nodeGUID}};
+    obj.from = {"properties":{"M_GUID":startGUID}};
     obj.rel = {"type":"ViewLink", "properties":attributes, "name":"link"};
-    obj.to = {"properties":{"M_GUID":otherNodeGUID}};
+    obj.to = {"properties":{"M_GUID":endGUID}};
 
     const xhttp = new XMLHttpRequest();
     const relationObj = this;

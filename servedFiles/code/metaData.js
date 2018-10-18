@@ -118,6 +118,17 @@ initNodeData() { // move to DB in the future
       }
     }
 
+    this.node.all = {
+      nodeLabel:"All Nodes"
+      ,orderBy: [{"name":"name"}, {"name":"comment"}]
+      ,fieldsDisplayed:["type", "name", "comment"]
+      ,fields: {
+        "type": {label:"Type"}
+        ,"name": {label:"Name"}
+        ,"comment": {label:"Comment", input:{name:"textarea"}}
+      }
+    }
+
     this.node.M_View = {
       nodeLabel: "M_View"
       ,orderBy: [{"name":"direction"}, {"name":"order"}]

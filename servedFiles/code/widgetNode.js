@@ -57,7 +57,7 @@ buildWidget() { // public - build table header
   // The ID passed in is that of the widget that called it, but it may be in another widget. So go up the chain until
   // either caller's parent is the widgets div (meaning that caller is a top-level widget in the widgets div), or caller
   // has no parent (meaning that the original caller was NOT in the widgets div, since no ancestor in that div was found).
-  while (caller.parentElement && caller.parentElement !== parent) {
+  while (caller && caller.parentElement && caller.parentElement !== parent) {
     caller = caller.parentElement;
   }
 

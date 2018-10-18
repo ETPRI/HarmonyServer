@@ -66,13 +66,13 @@ class widgetSVG {
       this.name = "Untitled mind map";  // The name starts off untitled; it can change later
     }
 
-    const html = app.widgetHeader('widgetSVG') +
+    const html = app.widgetHeader('widgetSVG') + // I've hidden the show/hide details button for now, and shown the details pane.
       `<b idr="name" contenteditable="true"
                      onfocus="this.parentNode.draggable = false;"
                      onblur="this.parentNode.draggable = true;">${this.name}</b>
       <input type="button" idr="save" value="Save" onclick="app.widget('startSave', this)">
       <input type="button" idr="saveAs" value="Save As" onclick="app.widget('startSave', this)">
-      <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)">
+      <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)" class="hidden">
     </div>
     <div class = "widgetBody"><table><tr idr="svgRow"><td>
       <svg id="svg${this.widgetID}" width="${this.width}" height="${this.height}" viewBox = "0 0 ${this.width} ${this.height}"
@@ -82,7 +82,7 @@ class widgetSVG {
         oncontextmenu="event.preventDefault()"
         onmousedown="app.widget('dragStart', this, event)"
     </svg></td>
-    <td id = "detailsPane" class="hidden">
+    <td id = "detailsPane">
       <div id="mindmapDetails">
         <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
         <b idr="nodeLabel">#${this.mapID}: ${this.name}</b>
@@ -97,7 +97,7 @@ class widgetSVG {
     // The ID passed in is that of the widget that called it, but it may be in another widget. So go up the chain until
     // either caller's parent is the widgets div (meaning that caller is a top-level widget in the widgets div), or caller
     // has no parent (meaning that the original caller was NOT in the widgets div, since no ancestor in that div was found).
-    while (caller.parentElement && caller.parentElement !== parent) {
+    while (caller && caller.parentElement && caller.parentElement !== parent) {
       caller = caller.parentElement;
     }
 
@@ -136,6 +136,13 @@ class widgetSVG {
     this.mindmapDetails = document.getElementById('mindmapDetails');
     this.containedWidgets.push(app.idCounter);
     this.details = new widgetDetails('mindmap', this.mindmapDetails, this.mapGUID);
+
+    const main = app.domFunctions.getChildByIdr(this.mindmapDetails, 'main');
+    const button = document.createElement('input');
+    this.mindmapDetails.insertBefore(button, main);
+    button.outerHTML = `<input type="button" value="Open as node" onclick="app.widget('showNode', this)"
+    GUID="${this.mapGUID}" DBType="mindmap">`;
+    this.details.showNode = this.showNode.bind(this);
 
     if (data) {
       this.loadComplete(data);
@@ -264,6 +271,8 @@ class widgetSVG {
               }
               break;
             case "Permissions":
+            case "View":
+            case "ViewLink":
               break;
             default:
               app.error("This mindmap has a relationship of an unrecognized type.");
@@ -1157,7 +1166,12 @@ class widgetSVG {
 
     switch(DBType) {
       case 'mindmap':
-        new widgetSVG(this.widgetID, GUID);
+        if (button.value == "Open as node") {
+          new widgetNode(this.widgetID, "mindmap", GUID);
+        }
+        else {
+          new widgetSVG(this.widgetID, GUID);
+        }
         break;
       case 'calendar':
         new widgetCalendar(this.widgetID, GUID);
@@ -1188,10 +1202,6 @@ class widgetSVG {
     obj.nodeID = null;
     obj.type = "";
     obj.details = [];
-
-    // Close detail popup
-    const popup = this.d3Functions.objects[ID].DOMelements.popupGroup;
-    popup.classList.add("hidden");
 
     // Check whether to hide buttons
     // this.checkHideButtons(button.parentElement, evnt);
