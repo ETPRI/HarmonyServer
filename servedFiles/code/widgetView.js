@@ -402,7 +402,7 @@ class widgetView {
     const obj = {};
     obj.from = {"properties":{"M_GUID":app.login.userGUID}};
     obj.to = {"id":this.nodeID};
-    obj.rel = {"type":"View"};
+    obj.rel = {"type":"View", "merge":true};
 
     const xhttp = new XMLHttpRequest();
     const view = this;
@@ -417,7 +417,7 @@ class widgetView {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Log click

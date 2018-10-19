@@ -28,27 +28,32 @@
     <script src="../code/mindmapClick.js"></script>
   </head>
 
-  <body>
-    <div class="statusBar">
-      <p id="available">Available</p>
-      <ul style="list-style-type:none" id="ongoing" hidden></ul>
-    </div>
+  <body onresize = "app.resize()">
     <div id="loginDiv"></div>
     <div id="regressionHeader"></div>
     <div id="debugHeader"></div>
     <div id="tableHeader">
-      <div id="buttons"></div>
-      <div id="adminButtons"></div>
-      <table>
-        <tbody>
-          <tr id="dropNodes" class = "dropNodes">
-            <td>Required Links:</td>
-            <td id="dropNode0"
-            ondragover = "event.preventDefault()"
-            ondrop = "app.dropLink(this, event)"></td>
-          </tr>
-        </tbody>
-      </table>
+      <div id="buttonsDiv" class="widget">
+        <div class="widgetHeader">
+          <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
+          <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Button Header', this)">
+          <b>Node Search Buttons</b>
+        </div>
+        <div class="widgetBody">
+          <div id="buttons"></div>
+          <div id="adminButtons"></div>
+          <table>
+            <tbody>
+              <tr id="dropNodes" class = "dropNodes">
+                <td>Required Links:</td>
+                <td id="dropNode0"
+                ondragover = "event.preventDefault()"
+                ondrop = "app.dropLink(this, event)"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
     <div id="workSpace">
       <div id="widgets"> </div>

@@ -161,9 +161,7 @@ class d3Functions {
       }
     }
 
-    // Finally, see if there's a new (blank) node. If so, append a text box to it to get the name,
-    // then make it NOT the new node anymore. Similarly, check for a new object (whether attached to a blank node or not).
-    // If there is one, make it the selected node.
+    // See if there's a new (blank) node. If so, append a text box to it to get the name, then make it NOT the new node anymore.
     if (this.editNode != null) {
       const newNode = app.domFunctions.getChildByIdr(this.SVG_DOM, `node${this.editNode}`);
       this.SVG_DOM.parentElement.appendChild(this.editDOM);
@@ -172,6 +170,8 @@ class d3Functions {
       this.editDOM.setAttribute("style", `position:absolute; left:${bounds.left + window.scrollX}px; top:${bounds.top + window.scrollY}px`);
       this.editDOM.select(); // This isn't working. Back-burner goal: Figure out why; study focus in general; fix focus in dragDrop table
     }
+
+    // Similarly, check for a new object (whether attached to a blank node or not). If there is one, make it the selected node.
     if (this.newObject) {
       const id = this.newObject.id;
       const select = this.objects[id].DOMelements.group;
@@ -181,6 +181,7 @@ class d3Functions {
       this.newObject = null;
     }
 
+    // If any objects should be selected, give them the "selected" class
     if (this.selectObjectCollection.size>0) {
       for (let object of this.selectObjectCollection) {
         const id = object.id;
@@ -192,6 +193,8 @@ class d3Functions {
       }
       this.selectObjectCollection.clear();
     }
+
+    this.parent.resize();
   }
 
   // Builds an individual tree, given the data to build it from and the group to build it in.
@@ -200,41 +203,76 @@ class d3Functions {
   // When building a node for each leaf WITHIN a tree (in buildTree), data is stored in d.data.
   buildTree(datum) {
     const buildDetails = function(datum) {
+      const d = datum.data;
+      const d3 = d.instance;
       const table = document.createElement('table');
-      table.classList.add('hidden');
+
+      // If this is a new table, or the old table for this label was hidden, hide this one
+      if (!(d3.objects[d.id]) ||
+          !(d3.objects[d.id].DOMelements.detailsTable) ||
+           (d3.objects[d.id].DOMelements.detailsTable.classList.contains('hidden'))) {
+             table.classList.add('hidden');
+      }
+
+      // Old table is no longer needed, so remove it
+      if (d3.objects[d.id] && (d3.objects[d.id].DOMelements.detailsTable)) {
+        d3.objects[d.id].DOMelements.detailsTable.parentElement.removeChild(d3.objects[d.id].DOMelements.detailsTable);
+      }
+
       const header = document.createElement('thead');
       table.appendChild(header);
       let showButton = "";
-      if (datum.data.type === "link") { // URLs get an Open Link button
+      let disassociateButton = `<input type="button" value="Disassociate" idr="disassociate${datum.data.id}" onclick="app.widget('disassociate', this)">`;
+      if (d.type === "link") { // URLs get an Open Link button
         showButton = `<input type="button" value="Open link" onclick="app.widget('showNode', this)"
-        GUID="${datum.data.nodeID}" DBType="link" link="${datum.data.details[0].value}">`;// For now, assume the uri is the first (and only) detail
+        GUID="${d.nodeID}" DBType="link" link="${d.details[0].value}">`;// For now, assume the uri is the first (and only) detail
       }
-      else if (datum.data.type === "calendar" || datum.data.type === "mindmap") { // These get two buttons - to show normally or as a node
+      else if (d.type === "calendar" || d.type === "mindmap") { // These get two buttons - to show normally or as a node
         showButton = `<input type="button" value="Open" onclick="app.widget('showNode', this)"
-        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}">
+        GUID="${d.nodeID}" DBType="${d.DBType}">
         <input type="button" value="Open as node" onclick="app.widget('showNode', this)"
-        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}">`;
+        GUID="${d.nodeID}" DBType="${d.DBType}">`;
 
       }
-      else if (datum.data.type !== "" && datum.data.type !== "file") { // Files and plain text get no button; everything else gets "Open Node"
+      else if (d.type !== "" && d.type !== "file") { // Files and plain text get no button; everything else gets "Open Node"
         showButton = `<input type="button" value="Open node" onclick="app.widget('showNode', this)"
-        GUID="${datum.data.nodeID}" DBType="${datum.data.DBType}">`;
+        GUID="${d.nodeID}" DBType="${d.DBType}">`;
+      }
+
+      else if (d.type === "") { // plain text also doesn't get a disassociate button. I may give it an Edit button later, though.
+        disassociateButton = "";
       }
       header.innerHTML =
         `<tr><th colspan="2">
-          ${datum.data.name}: ${datum.data.type} ${showButton}
-          <input type="button" value="Disassociate" idr="disassociate${datum.data.id}" onclick="app.widget('disassociate', this)">
+          ${d.name}: ${d.type} ${showButton} ${disassociateButton}
         </tr></th>`;
       const body = document.createElement('tbody');
       table.appendChild(body);
-      for (let i = 0; i < datum.data.details.length; i++) {
-        const d = datum.data.details[i];
+      const row = document.createElement('tr');
+      body.appendChild(row);
+
+      let heightString = "";
+      let widthString = "";
+      // if (datum.data.notesHeight) { // If it has a notesHeight, it will also have a notesWidth
+      //   heightString = ` height:${datum.data.notesHeight}px;`;
+      //   widthString = ` width:${datum.data.notesWidth}px;`;
+      // }
+
+      let notes="";
+      if (d.notes) {
+        notes = d.notes;
+      }
+
+      row.innerHTML = `<th>Notes:</th><td><textarea onblur="app.widget('changeNotes', this)" labelID=${datum.data.id}>${notes}</textarea></td>`;
+
+      for (let i = 0; i < d.details.length; i++) {
+        const details = d.details[i];
         const row = document.createElement('tr');
         body.appendChild(row);
-        row.innerHTML = `<th>${d.field}</th><td>${d.value}</td>`;
+        row.innerHTML = `<th>${details.field}</th><td>${details.value}</td>`;
       }
-      datum.data.instance.objects[datum.data.id].DOMelements.detailsTable = table;
-      const detailsPane = datum.data.instance.parent.detailsPane;
+      d3.objects[d.id].DOMelements.detailsTable = table;
+      const detailsPane = d3.parent.detailsPane;
       detailsPane.appendChild(table);
     }
 
@@ -262,16 +300,6 @@ class d3Functions {
         d.data.instance.objects[d.data.id].DOMelements.group = this;
       });
 
-    nodeEnter.append("rect")  // notes indicator rectangle. Appended first so it's behind the main rect
-      .attr("width", this.getAttribute("nodeHeight"))
-      .attr("height", this.getAttribute("nodeHeight"))
-      .attr("transform", `translate(${10 + parseInt(this.getAttribute("nodeWidth")) - parseInt(this.getAttribute("nodeHeight"))} -10)`)
-      .attr("idr", function(d) {return `notes${d.data.id}`; })
-      .attr("class", "notesRect")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.notes = this;
-      });
-
     nodeEnter.append("rect")  // Main rectangle
       .attr("width", this.getAttribute("nodeWidth"))
       .attr("height", this.getAttribute("nodeHeight"))
@@ -289,7 +317,7 @@ class d3Functions {
       .attr("width", this.getAttribute("nodeHeight")/2)
       .attr("height", this.getAttribute("nodeHeight")/2)
       .attr("idr", function(d) {return `toggle${d.data.id}`})
-      .attr("transform", `translate(${this.getAttribute("nodeHeight")*5/2} ${this.getAttribute("nodeHeight")/4})`)
+      .attr("transform", `translate(${this.getAttribute("nodeWidth") - this.getAttribute("nodeHeight")*3/4} ${this.getAttribute("nodeHeight")/4})`)
       .attr("mousedownObj", '{"method":"toggleChildren"}')
       .attr("onmouseover", "app.widget('toggleExplain', this, event, 'toggle')")
       .attr("onmouseout", "app.widget('toggleExplain', this, event, 'toggle'); app.widget('checkHideButtons', this, event)")
@@ -300,7 +328,7 @@ class d3Functions {
 
     nodeEnter.append("text") // Toggle button text
       .attr("idr", function(d) {return `toggleText1${d.data.id}`})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")*11/4} ${this.getAttribute("nodeHeight") *0.5 + 3})`)
+      .attr("transform", `translate (${this.getAttribute("nodeWidth") - this.getAttribute("nodeHeight")/2} ${this.getAttribute("nodeHeight") *0.5 + 3})`)
       .attr("class", "toggleButtonText unselectable hidden")
       .each(function(d) {
         d.data.instance.objects[d.data.id].DOMelements.toggleText1 = this;
@@ -325,52 +353,11 @@ class d3Functions {
         d.data.instance.objects[d.data.id].DOMelements.toggleExpln = this;
       });
 
-    nodeEnter.append("rect")  // Show Notes rectangle
-      .attr("width", this.getAttribute("nodeHeight")/2)
-      .attr("height", this.getAttribute("nodeHeight")/2)
-      .attr("idr", function(d) {return `note${d.data.id}`})
-      .attr("transform", `translate(${this.getAttribute("nodeHeight")*7/4} ${this.getAttribute("nodeHeight")/4})`)
-      .attr("mousedownObj", '{"method":"toggleNotes"}')
-      .attr("onmouseover", "app.widget('toggleExplain', this, event, 'note')")
-      .attr("onmouseout", "app.widget('toggleExplain', this, event, 'note'); app.widget('checkHideButtons', this, event)")
-      .attr("class", "showNotesRect hidden")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.note = this;
-      });
-
-    nodeEnter.append("text") // Show notes button text
-      .attr("idr", function(d) {return `showNotesText1${d.data.id}`})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")*2} ${this.getAttribute("nodeHeight") *0.5 + 3})`)
-      .attr("class", "notesButtonText unselectable hidden")
-      .text("N")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.showNotesText1 = this;
-      });
-
-    nodeEnter.append("rect") // Notes explanation box...
-      .attr("width", 180)
-      .attr("height", 20)
-      .attr("idr", function(d) {return `noteExpBox${d.data.id}`})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")*2 - 90} ${this.getAttribute("nodeHeight") *-0.5 - 10})`)
-      .attr("class", "noteExpBox hidden")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.noteExpBox = this;
-      });
-
-    nodeEnter.append("text") // ... and text
-      .attr("idr", function(d) {return `noteExpln${d.data.id}`;})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")*2} ${this.getAttribute("nodeHeight") *-0.5 + 4})`)
-      .attr("class", "noteExpln unselectable hidden")
-      .text("Toggle notes (always enabled)")
-      .each(function(d) {
-        d.data.instance.objects[d.data.id].DOMelements.noteExpln = this;
-      });
-
     nodeEnter.append("rect")  // Edit rectangle
       .attr("width", this.getAttribute("nodeHeight")/2)
       .attr("height", this.getAttribute("nodeHeight")/2)
       .attr("idr", function(d) {return `edit${d.data.id}`})
-      .attr("transform", `translate(${this.getAttribute("nodeHeight")} ${this.getAttribute("nodeHeight")/4})`)
+      .attr("transform", `translate(${this.getAttribute("nodeHeight")/4} ${this.getAttribute("nodeHeight")/4})`)
       .attr("onmouseover", "app.widget('toggleExplain', this, event, 'edit')")
       .attr("onmouseout", "app.widget('toggleExplain', this, event, 'edit'); app.widget('checkHideButtons', this, event)")
       .attr("mousedownObj", '{"subclass":"clicks", "method":"editLabel"}') // Change the name
@@ -381,7 +368,7 @@ class d3Functions {
 
     nodeEnter.append("text") // Edit button text
       .attr("idr", function(d) {return `editText1${d.data.id}`})
-      .attr("transform", `translate (${this.getAttribute("nodeHeight")*5/4} ${this.getAttribute("nodeHeight") * 0.5 + 3})`)
+      .attr("transform", `translate (${this.getAttribute("nodeHeight")/2} ${this.getAttribute("nodeHeight") * 0.5 + 3})`)
       .attr("class", "editText unselectable hidden")
       .text("E")
       .each(function(d) {

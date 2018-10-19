@@ -1,3 +1,11 @@
+.fullWidth {
+	width: 100%;
+}
+
+.detailsPane {
+	width: 360px;
+}
+
 .statusBar {
 	width: 300px;
 	float: right;
@@ -112,18 +120,18 @@ td {
 }
 
 .loggedIn {
-	color: green;
 	font-weight: bold;
 	font-size: 120%;
 }
 
-.activeView {background-color: yellow}
+.activeView {background-color: lightblue}
 
 svg {
 	border-style: ridge;
 	border-width: 5px;
 	background-color: antiquewhite;
 	-webkit-user-select:none;
+	width: 100%;
 }
 
 .parent .nodeRect {

@@ -1,7 +1,29 @@
-<p id="userInfo">Not Logged In</p>
-<p>Username: <input id="userName" onblur="app.regression.logText(this)">
-  Password: <input type="password" id="password" onblur="app.regression.logText(this)" onkeydown="app.widget('loginOnEnter', this, event)"></p>
+<div class="widgetHeader">
+    <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
+    <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Harmony, Active Dev', this, 'topic')">
+    <span id="userInfo">Not Logged In</span>
+</div>
+<div class="widgetBody">
+  <div class="statusBar">
+    <p id="available">Available</p>
+    <ul style="list-style-type:none" id="ongoing" hidden></ul>
+  </div>
+  <p>Username: <input id="userName" onblur="app.regression.logText(this)">
+    Password: <input type="password" id="password" onblur="app.regression.logText(this)"
+                     onkeydown="app.widget('loginOnEnter', this, event)">
+  </p>
   <input id="loginButton" type="button" value="Log In" onclick="app.widget('createSession', this)">
   <input id="debugButton" type="button" value="Show Debug Menu" onclick="app.showDebug(this)" hidden="true">
   <input id="regressionButton" type="button" value="Show Regression Menu" onclick="app.showRegression(this)" hidden="true">
+  <table>
+    <tbody>
+      <tr id="faveNodes" idr="faveNodes" class = "dropNodes">
+        <td id="faveNodesLabel">Favorite Nodes (Shortcuts):</td>
+        <td id="faveNode0" draggable="true"
+          ondragover="event.preventDefault()" ondragstart="app.widget('drag', this, event)"
+          ondrop="app.dropLink(this, event); app.widget('saveFavorite', this)"></td>
+      </tr>
+    </tbody>
+  </table>
   <hr style="clear:right">
+</div>

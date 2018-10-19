@@ -26,7 +26,10 @@ constructor() {
 
 	this.userNodes			= [];
 
-	this.dropNodes			= 1;
+	this.dropNode				= 1;
+	this.faveNode 			= 1;
+
+	this.doOnResize			= [];
 }
 
 // Calls all the functions which need to run at the start of a session.
@@ -347,7 +350,7 @@ widgetHeader(widgetType, tag){
 		tag = "div";
 	}
 	return(`
-	<${tag} id="${this.idCounter++}" class="widget" ondrop="app.drop(this, event)" ondragover="event.preventDefault()"
+	<${tag} id="${this.idCounter++}" class="widget fullWidth" ondrop="app.drop(this, event)" ondragover="event.preventDefault()"
 	onmousedown="app.setActiveWidget(this)">
 	<hr>
 	<div idr="header" class="widgetHeader" draggable="true" ondragstart="app.drag(this, event)">
@@ -355,7 +358,6 @@ widgetHeader(widgetType, tag){
 	<input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
 	<input type="button" value = "<>" idr="fullScreenButton" onclick = "app.widgetFullScreen(this)">
 	<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}', app.domFunctions.widgetGetId(this))">
-	<input type="button" value="!" idr="bugButton" onclick="app.reportBug('${widgetType}', app.domFunctions.widgetGetId(this))">
 		`)
 }
 
@@ -597,8 +599,15 @@ dropLink(input, evnt) {
 	const dataText = evnt.dataTransfer.getData("text/plain");
 	const data = JSON.parse(dataText);
 
-	// verify that the data represent a node
-	if (!data || !(
+	// If this came from a draggable TD in the same widget, it should be from rearranging tds in a draggable row.
+	// Call dragdrop.drag to handle it.
+	if (data && data.sourceType == "dragDrop" && data.sourceTag == "TD" && data.sourceID == this.domFunctions.widgetGetId(input)) {
+		this.widget('drop', input, evnt);
+		return;
+	}
+
+	// Otherwise, verify that the data represent a node
+	else if (!data || !(
 			data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
 			data.sourceType == "widgetRelations" && data.sourceTag == "TR" ||
 			data.sourceType == "widgetNode" && data.sourceTag == "B" ||
@@ -607,19 +616,55 @@ dropLink(input, evnt) {
 		return;
 	}
 
-	// If the cell was the blank one, create a new blank cell at the end of the tr.
+	// Figure out which type of cell this was dropped into - for now, choices are dropNode and faveNode
+	const name = input.getAttribute("id").slice(0,8); // dropNode or faveNode - have to tweak this logic if I ever have a choice without 8 chars
+	let dropCode = "app.dropLink(this, event)";
+	let deleteCode = "app.deleteLink(this)";
+	let dragCode = "";
+	if (name === "faveNode") {
+		dropCode += "; app.widget('saveFavorite', this)";
+		deleteCode = `app.widget('deleteFavorite', this); ${deleteCode}`;
+		dragCode = `draggable="true" ondragstart="app.widget('drag', this, event)"`
+	}
+	// If the cell was the blank one, create a new blank cell after it.
 	if (input.innerHTML === "") {
 		const row = input.parentElement;
 		const cell = document.createElement("td");
-		row.appendChild(cell);
-		cell.outerHTML = `<td id="dropNode${this.dropNodes++}"
+		// Add the new cell right after the input
+		if(input.nextSibling) {
+			row.insertBefore(cell, input.nextSibling);
+		}
+		else {
+			row.appendChild(cell);
+		}
+		cell.outerHTML = `<td id="${name}${this[name]++}"
 											ondragover = "event.preventDefault()"
-											ondrop = "app.dropLink(this, event)"></td>`;
+											ondrop = "${dropCode}"${dragCode}></td>`;
+	}
+
+	else if (name === "faveNode") {
+		this.login.deleteFavorite(input);
 	}
 
 	// If the data represent a node, then we should have, among other things, name, type (the label) and nodeID (the GUID).
-	input.innerHTML = `<input type="button" value="X" onclick="app.deleteLink(this)">${data.name}`;
+	input.innerHTML = `<input type="button" value="X" onclick="${deleteCode}">
+	<span onclick = "app.openNode('${data.type}', '${data.nodeID}')">${data.name}:${data.type}</span>`;
 	input.setAttribute('GUID', data.nodeID);
+	input.setAttribute('name', data.name);
+	input.setAttribute('type', data.type);
+}
+
+openNode(type, GUID) {
+	if (type == 'mindmap') {
+		new widgetSVG(null, GUID);
+	}
+	else if (type == "calendar") {
+		new widgetCalendar(null, GUID);
+	}
+	else {
+		new widgetNode(null, type, GUID);
+	}
+
 }
 
 deleteLink(input) {
@@ -790,9 +835,12 @@ stopProgress(DOMelement, obj) {
 	}
 }
 
-showHelp(widgetType, button) {
+showHelp(widgetType, button, nodeType) {
+	if (!nodeType) {
+		nodeType = "M_Widget";
+	}
 	const obj = {};
-	obj.node = {"type":"M_Widget", "properties":{"name":widgetType}, "merge":true}; // If the help node doesn't exist, create it
+	obj.node = {"type":nodeType, "properties":{"name":widgetType}, "merge":true}; // If the help node doesn't exist, create it
 	const xhttp = new XMLHttpRequest();
 	const update = this.startProgress(null, `Searching for help on ${widgetType}`);
 	const app = this;
@@ -816,35 +864,6 @@ showHelp(widgetType, button) {
 	xhttp.open("POST","");
 	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
 	xhttp.send(JSON.stringify(queryObject));         // send request to server
-}
-
-reportBug(widgetType, button) {
-	const obj = {};
-	obj.node = {"type":"topic", "properties":{"name":"Harmony Changes"}, "merge":true}; // If the bug node doesn't exist, create it
-	const xhttp = new XMLHttpRequest();
-	const update = this.startProgress(null, `Searching for bug report topic`);
-	const app = this;
-
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			const data = JSON.parse(this.responseText);
-			app.stopProgress(null, update);
-			if (data.length == 0) {
-				app.error("Changes topic could not be found or created");
-			}
-			else if (data.length == 1) {
-				new widgetNode(button, "topic", data[0].node.properties.M_GUID);
-			}
-			else {
-				app.error("Multiple changes topics found");
-			}
-		}
-	};
-
-	xhttp.open("POST","");
-	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
-	xhttp.send(JSON.stringify(queryObject));         // send request to server
-
 }
 
 createLIS(dataArray, compFunction) {
@@ -908,6 +927,16 @@ createLIS(dataArray, compFunction) {
 	 return sequence; // Returns the LIS array, which is a subset of elements from the original dataArray
 }
 
+resize() {
+	for (let i in this.doOnResize) { // Run all methods that run when a user logs in
+		const object = this.doOnResize[i].object;
+		const method = this.doOnResize[i].method;
+		const args = this.doOnResize[i].args;
+		if (object && method in object) { // Assuming the object that was provided still exists and has the given method...
+			object[method](...args); // run the method in the object with the args.
+		}
+	}
+}
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.
 // Can be called directly by app.html, or by clicking a single button. Currently empty.
 test() {}

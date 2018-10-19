@@ -21,7 +21,6 @@ class widgetSVG {
     this.nodeLabel = app.metaData.getNode('mindmap').nodeLabel;
 
     // constants for drawing
-    this.width = 1200; // Width of the SVG element
     this.height = 600; // Height of the SVG element
 
     // variables for dragging map and selecting nodes
@@ -74,15 +73,15 @@ class widgetSVG {
       <input type="button" idr="saveAs" value="Save As" onclick="app.widget('startSave', this)">
       <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)" class="hidden">
     </div>
-    <div class = "widgetBody"><table><tr idr="svgRow"><td>
-      <svg id="svg${this.widgetID}" width="${this.width}" height="${this.height}" viewBox = "0 0 ${this.width} ${this.height}"
+    <div class = "widgetBody fullWidth"><table class="fullWidth"><tr idr="svgRow"><td>
+      <svg id="svg${this.widgetID}" height="${this.height}"
         ondblclick="app.widget('newBox', this, event)"
         ondragover="app.widget('allowDrop', this, event)"
         ondrop="app.widget('dropAdd', this, event)"
         oncontextmenu="event.preventDefault()"
         onmousedown="app.widget('dragStart', this, event)"
     </svg></td>
-    <td id = "detailsPane">
+    <td id = "detailsPane" class = "detailsPane">
       <div id="mindmapDetails">
         <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
         <b idr="nodeLabel">#${this.mapID}: ${this.name}</b>
@@ -110,7 +109,10 @@ class widgetSVG {
 
     newWidget.outerHTML = html; // replace placeholder with the div that was just written
     this.SVG_DOM = document.getElementById(`svg${this.widgetID}`);
+    this.SVG_DOM.setAttribute("viewBox", `0 0 ${this.SVG_DOM.getBoundingClientRect().width - 10} ${this.height}`);
     this.widgetDOM = document.getElementById(`${this.widgetID}`);
+    const obj = {"object":this, "method":"resize", "args":[]};
+    app.doOnResize.push(obj);
 
     this.notesText = document.createElement("textarea");
     this.notesText.setAttribute("hidden", "true");
@@ -236,30 +238,32 @@ class widgetSVG {
           switch (type) {
             case "MapNode":
               const labelID = data[i].rel.properties.id;
-              const node = data[i].optional;
-              const nodeType = node.labels[0];
-              const labelObj = this.d3Functions.objects[labelID].JSobj;
-              labelObj.name = node.properties.name;
-              labelObj.nodeID = node.properties.M_GUID;
-              labelObj.type = nodeType;
+              if (this.d3Functions.objects[labelID]) { // If this label still exists
+                const node = data[i].optional;
+                const nodeType = node.labels[0];
+                const labelObj = this.d3Functions.objects[labelID].JSobj;
+                labelObj.name = node.properties.name;
+                labelObj.nodeID = node.properties.M_GUID;
+                labelObj.type = nodeType;
 
-              labelObj.details = [];
-              const fields = app.metaData.node[nodeType].fieldsDisplayed;
-              if (fields) {
-                for (let j = 0; j < fields.length; j++) {
-                  const field = fields[j];
-                  if (field != "name") {
-                    const newRow = {};
-                    newRow.field = field;
-                    newRow.value = node.properties[field];
-                    newRow.instance = this.d3Functions;
-                    labelObj.details.push(newRow);
+                labelObj.details = [];
+
+                const fields = app.metaData.node[nodeType].fieldsDisplayed;
+                if (fields) {
+                  for (let j = 0; j < fields.length; j++) {
+                    const field = fields[j];
+                    if (field != "name") {
+                      const newRow = {};
+                      newRow.field = field;
+                      newRow.value = node.properties[field];
+                      newRow.instance = this.d3Functions;
+                      labelObj.details.push(newRow);
+                    }
                   }
                 }
+                const savedCopy = this.d3Functions.savedObjects[labelID];
+                savedCopy.inDB = true;
               }
-
-              const savedCopy = this.d3Functions.savedObjects[labelID];
-              savedCopy.inDB = true;
               break;
             case "Owner":
               this.owner = {};
@@ -591,7 +595,18 @@ class widgetSVG {
     let viewBox = SVG.getAttribute("viewBox").split(" ");
     viewBox[0] = parseInt(viewBox[0]) - dx;
     viewBox[1] = parseInt(viewBox[1]) - dy;
-    SVG.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${this.width} ${this.height}`)
+    SVG.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${SVG.getBoundingClientRect().width - 10} ${this.height}`);
+  }
+
+  resize() {
+    let viewBox = this.SVG_DOM.getAttribute("viewBox").split(" ");
+    viewBox[0] = parseInt(viewBox[0]);
+    viewBox[1] = parseInt(viewBox[1]);
+    let width = this.SVG_DOM.getBoundingClientRect().width - 10;
+    if (width < 0) {
+      width = 0;
+    }
+    this.SVG_DOM.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${width} ${this.height}`);
   }
 
   mouseup(SVG, evnt) {
@@ -1085,52 +1100,6 @@ class widgetSVG {
     this.d3Functions.update();
   }
 
-  toggleNotes(button, evnt) {
-    const ID = button.getAttribute("idr").slice(4); // idr is like notexxx
-    const obj = this.d3Functions.objects[ID].JSobj;
-    if (this.notesLabel == obj) { // If this label's notes are shown already
-      this.notesLabel.notes = this.notesText.value;
-      this.notesLabel.notesHeight = this.notesText.clientHeight;
-      this.notesLabel.notesWidth = this.notesText.clientWidth;
-      this.notesLabel = null;
-      this.notesText.hidden = true;
-      this.notesText.value = "";
-      this.notesText.setAttribute("style", "position:static");
-      this.SVG_DOM.appendChild(this.notesText);
-      this.d3Functions.update();
-    }
-    else { // If this label's notes are NOT already shown
-      this.SVG_DOM.parentElement.appendChild(this.notesText);
-      this.notesText.hidden = false;
-      let heightString = "";
-      let widthString = "";
-
-      // Get the object data
-      if (obj.notes) {
-        this.notesText.value = obj.notes;
-      }
-
-      if (obj.notesHeight) { // If it has a notesHeight, it will also have a notesWidth
-        heightString = ` height:${obj.notesHeight}px;`;
-        widthString = ` width:${obj.notesWidth}px;`;
-      }
-
-      // Get the rectangle's location
-      const rect = this.d3Functions.objects[ID].DOMelements.node;
-      const bounds = rect.getBoundingClientRect();
-      let leftPos = bounds.left + window.scrollX + this.d3Functions.nodeWidth;
-      let topPos = bounds.top + window.scrollY;
-
-      // Make the notes text area visible
-      this.notesText.setAttribute("style", `position:absolute; left:${leftPos}px; top:${topPos}px;${heightString}${widthString}`);
-
-      this.notesLabel = obj;
-      this.notesText.select();
-
-      this.makeSelectedNode(rect.parentElement);
-    } // end else (notes are not shown; show them)
-  }
-
   // Show or hide explanations for inactive buttons
   toggleExplain(button, evnt, prefix) {
     const group = button.parentElement;
@@ -1260,7 +1229,6 @@ class widgetSVG {
     }
     else {
     prefixes = ["toggle", "toggleText1",
-                      "note", "showNotesText1",
                       "edit", "editText1"];
     }
     for (let i = 0; i < prefixes.length; i++) {
@@ -1284,7 +1252,7 @@ class widgetSVG {
     const group = element.parentElement;
     const ID = group.getAttribute("idr").slice(5); // the IDR will be like groupxxx
 
-    const prefixes = ["node", "toggle", "note", "edit", "restore"];
+    const prefixes = ["node", "toggle", "edit", "restore"];
     for (let i = 0; i < prefixes.length; i++) {
       const idr = prefixes[i] + ID;
       const element = this.d3Functions.objects[ID].DOMelements[prefixes[i]];
@@ -1306,7 +1274,6 @@ class widgetSVG {
 
   hideEverything(ID) {
     const prefixes = ["toggle", "toggleText1", "toggleExpln", "toggleExpBox",
-                      "note", "showNotesText1", "noteExpln", "noteExpBox",
                       "edit", "editText1", "editExpln", "editExpBox",
                       "restore", "restoreText", "restoreExpln", "restoreExpBox"];
 
@@ -1322,6 +1289,23 @@ class widgetSVG {
     if(editing) {
       const note = this.d3Functions.objects[ID].DOMelements.note;
       this.toggleNotes(note);
+    }
+  }
+
+  changeNotes(textarea) {
+    let id = parseInt(textarea.getAttribute('labelID'));
+
+    let objs = this.d3Functions.objects;
+    let saved = this.d3Functions.savedObjects;
+
+    if (id !== null) {
+      objs[id].JSobj.notes = textarea.value;
+      if (saved[id].notes === textarea.value) {
+        textarea.classList.remove('changedData');
+      }
+      else {
+        textarea.classList.add('changedData');
+      }
     }
   }
 }

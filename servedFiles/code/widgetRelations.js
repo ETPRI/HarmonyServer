@@ -304,7 +304,10 @@ addLine(relation, html, orderedNodes, placeholderComment) {
     }
   } // end if (relation exists)
 
-  else if (placeholderComment) { // placeholder relation
+  else { // placeholder relation - should always be the case when there is no relation. Default placeholder comment is empty string
+    if (!placeholderComment) {
+      placeholderComment = "";
+    }
     if (app.login.userGUID && app.login.userGUID == this.viewGUID) { // provide dropdown for the logged-in user
       cells[1] = `<select idr="typeSelect${this.idrRow + 1}"><option value=""></option>`;
       for (let i = 0; i < app.userNodes.length; i++) {
@@ -544,7 +547,7 @@ createDragDrop(widgetRel) {
 
   const oldInsert = widgetRel.dragDrop.insert;
   widgetRel.dragDrop.insert = function(input, row){
-    const newRow = oldInsert.apply(this, input, row);
+    const newRow = oldInsert.call(this, input, row);
     // If this is running, this must be the logged-in user's view (others aren't dragDrop tables).
     // So a) there needs to be a type dropdown for comments, and b) the type cell will always be the 5th in the row.
     const typeCell = newRow.children[4];
@@ -643,11 +646,17 @@ processNext(data, rows, prevFunction) {
     else if (row.children[2].textContent === "" && row.getAttribute('idr') !== 'insertContainer') {
       // Check whether the user selected anything from the dropdown list. If so, create a new node and attach it
       const idrNum = row.getAttribute('idr').slice(4); // idr is like "itemxxx"
+
+      let type = 0;
+
       const typeSelect = app.domFunctions.getChildByIdr(row, `typeSelect${idrNum}`);
-      const type = typeSelect.options[typeSelect.selectedIndex].value;
-      if (type != "") {
+      if (typeSelect) {
+        type = typeSelect.options[typeSelect.selectedIndex].value;
+      }
+
+      if (type !== "") {
         // Create node, return, then update fields and add "newData" class and call processNext
-        const obj = {"type":type, "properties":{"name":row.children[5].textContent}};
+        const obj = {"type":type, "properties":{"name":app.stringEscape(row.children[5].textContent)}};
 
         const xhttp = new XMLHttpRequest();
         const relations = this;
@@ -676,7 +685,7 @@ processNext(data, rows, prevFunction) {
       }
       // Otherwise, add the comment to the placeholders list and move on.
       else {
-        this.placeholders.push(row.children[5].textContent); // add comment to array
+        this.placeholders.push(app.stringEscape(row.children[5].textContent)); // add comment to array
         this.order.push(`p${this.placeholders.length-1}`); // add index to order array, prefaced by "p" for "placeholder"
         this.processNext(null, rows);
       }
@@ -909,7 +918,7 @@ createView(row, rows) {
   const obj = {};
   obj.from = {"properties":{"M_GUID":app.login.userGUID}};
   obj.to = {"properties":{"M_GUID":this.nodeGUID}};
-  obj.rel = {"type":"View"};
+  obj.rel = {"type":"View", "merge":true};
 
   const xhttp = new XMLHttpRequest();
   const relationObj = this;
@@ -924,7 +933,7 @@ createView(row, rows) {
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 

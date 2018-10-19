@@ -219,7 +219,7 @@ class widgetLogin {
       this.loginButton.setAttribute("value", "Log Out");
       this.loginButton.setAttribute("onclick", "app.widget('logout', this)");
 
-      // Link the user to the session, then call the getMetaData function to search for metadata
+      // Link the user to the session, then call the getMetaData function to search for metadata and the getFavorites function to get favorite nodes
       const obj = {};
       obj.from = {"properties":{"M_GUID":this.userGUID}};
       obj.rel = {"type":"User"};
@@ -233,6 +233,7 @@ class widgetLogin {
         if (this.readyState == 4 && this.status == 200) {
           app.stopProgress(login.loginDiv, update);
           login.getMetaData();
+          login.getFavorites();
         }
       };
 
@@ -362,6 +363,161 @@ class widgetLogin {
     } // end for (each metadata node)
   }
 
+  getFavorites() {
+    const obj = {};
+    obj.from = {"id":this.userID};
+    obj.rel = {"type":"Favorite", "return":false};
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+    const update = app.startProgress(this.loginDiv, "Restoring settings");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        app.stopProgress(login.loginDiv, update);
+        login.loadFavorites(data);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.userGUID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+  }
+
+  loadFavorites(data) {
+    let GUIDs = null;
+    if (data[0] && data[0].from.properties.favoriteGUIDs) {
+     GUIDs = JSON.parse(data[0].from.properties.favoriteGUIDs);
+    }
+    const row = document.getElementById("faveNodes");
+    if (GUIDs) { // Assuming the user has any ordered favorites stored
+      for (let i = 0; i < GUIDs.length; i++) { // Go through all the ordered GUIDs the user stored
+        const cell = row.lastElementChild; // The blank cell should be the last one since the user hasn't had a chance to rearrange yet
+        // Get the data item with the given GUID, if any
+        const fave = data.filter(node => node.to && node.to.properties && node.to.properties.M_GUID == GUIDs[i]);
+        if (fave.length == 1) { // If this item exists, add a cell for it...
+          this.addFavoriteCell(row, cell, fave[0].to);
+
+          // And remove the item from data
+          const index = data.indexOf(fave[0]);
+          delete data[index];
+        }
+      }
+    }
+    // Now if there are any unordered favorites (there shouldn't be, but there probably will be for some reason), put them at the end
+    for (let i = 0; i < data.length; i++) {
+      if (data[i]) {
+        const cell = row.lastElementChild; // The blank cell should be the last one since the user hasn't had a chance to rearrange yet
+        this.addFavoriteCell(row, cell, data[i].to);
+      }
+    }
+
+    // Now turn the row into a dragdrop widget.
+    row.parentElement.setAttribute("id", app.idCounter);
+    row.parentElement.classList.add("widget");
+    this.faveDragDrop = new dragDrop(row.getAttribute('idr'), null, 0, 0);
+    this.faveDragDrop.saveFavorite = this.saveFavorite.bind(this);
+    this.faveDragDrop.deleteFavorite = this.deleteFavorite.bind(this);
+    // On drop, also update list of favorites GUIDs
+    const oldDrop = this.faveDragDrop.drop;
+    this.faveDragDrop.drop = function(input, evnt) {
+      oldDrop.call(this, input, evnt);
+      app.login.saveFavoritesList();
+    }
+  }
+
+  addFavoriteCell(row, cell, d) {
+    // Fill in data for this cell...
+    cell.innerHTML = `<input type="button" value="X" onclick="app.widget('deleteFavorite', this); app.deleteLink(this)">
+    <span onclick = "app.openNode('${d.labels[0]}', '${d.properties.M_GUID}')">${d.properties.name}:${d.labels[0]}</span>`;
+    cell.setAttribute('GUID', d.properties.M_GUID);
+    cell.setAttribute('name', d.properties.name);
+    cell.setAttribute('type', d.labels[0]);
+
+    // Then create the next one
+    const newCell = document.createElement("td");
+    row.appendChild(newCell);
+    newCell.outerHTML = `<td id="faveNode${app.faveNode++}" draggable="true"
+                      ondragover = "event.preventDefault()" ondragstart="app.widget('drag', this, event)"
+                      ondrop = "app.dropLink(this, event); app.widget('saveFavorite', this)"></td>`;
+  }
+
+  saveFavorite(input) {
+    let obj = {};
+    obj.from = {"id":this.userID};
+    obj.to = {"properties":{"M_GUID":input.getAttribute("GUID")}};
+    obj.rel = {"type":"Favorite", "merge":true};
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+    const update = app.startProgress(this.loginDiv, "Saving favorite");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        app.stopProgress(login.loginDiv, update);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+  }
+
+  saveFavoritesList() {
+    const row = document.getElementById("faveNodes");
+    const cells = row.children;
+    const GUIDs = [];
+    for (let i = 0; i < cells.length; i++) {
+      if (cells[i].getAttribute("GUID")) { // If this cell has a GUID - meaning it's not blank
+        GUIDs.push(cells[i].getAttribute("GUID"));
+      }
+    }
+    const obj = {};
+    obj.node = {"id":this.userID};
+    obj.changes = [{"property": "favoriteGUIDs", "value":app.stringEscape(JSON.stringify(GUIDs))}];
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+    const update = app.startProgress(this.loginDiv, "Updating favorites");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        app.stopProgress(login.loginDiv, update);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.userGUID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+
+  }
+
+  deleteFavorite(element) { // element may be the TD cell itself or the delete button. It needs to be the TD cell.
+    while (element.parentElement && element.tagName !== "TD") {
+      element = element.parentElement;
+    }
+
+    let obj = {};
+    obj.from = {"id":this.userID};
+    obj.to = {"properties":{"M_GUID":element.getAttribute("GUID")}};
+    obj.rel = {"type":"Favorite"};
+
+    const xhttp = new XMLHttpRequest();
+    const login = this;
+    const update = app.startProgress(this.loginDiv, "Deleting favorite");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        app.stopProgress(login.loginDiv, update);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": "setup"};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+  }
+
   // Logs the user out: resets login information to null, resets the info paragraph to say "not logged in",
   // then hides/reveals items and calls methods as appropriate on logout.
   logout(button) {
@@ -386,41 +542,51 @@ class widgetLogin {
 
     // Remove the last option, which should be "myTrash", from metadata options
     const dropDown = document.getElementById("metaData");
-     dropDown.remove(dropDown.length-1);
+    dropDown.remove(dropDown.length-1);
 
-     this.loginButton.setAttribute("value", "Log In");
-     this.loginButton.setAttribute("onclick", "app.widget('login', this)");
+    // Clear favorites
+    const faveRow = document.getElementById("faveNodes");
+    faveRow.innerHTML = `
+            <td id="faveNodes">Favorite Nodes (Shortcuts):</td>
+            <td id="faveNode0"
+              ondragover = "event.preventDefault()"
+              ondrop = "app.dropLink(this, event); app.widget('saveFavorite', this)">
+            </td>`;
+    app.faveNode = 1;
 
-     this.userID = null; // Log the user out
-     this.userGUID = null;
-     this.userName = null;
-     this.permissions = null;
-     this.info.textContent = `Not Logged In`;
-     this.info.classList.remove("loggedIn");
+    this.loginButton.setAttribute("value", "Log In");
+    this.loginButton.setAttribute("onclick", "app.widget('login', this)");
 
-     this.nameInput.value = "";
-     this.passwordInput.value = "";
+    this.userID = null; // Log the user out
+    this.userGUID = null;
+    this.userName = null;
+    this.permissions = null;
+    this.info.textContent = `Not Logged In`;
+    this.info.classList.remove("loggedIn");
 
-     const obj = {};
-     obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
-     obj.changes = [{"item":"node", "property":"endTime", "value":Date.now()},];
+    this.nameInput.value = "";
+    this.passwordInput.value = "";
 
-     const xhttp = new XMLHttpRequest();
+    const obj = {};
+    obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
+    obj.changes = [{"item":"node", "property":"endTime", "value":Date.now()},];
 
-     xhttp.open("POST","");
-     const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "upkeep"};
-     xhttp.send(JSON.stringify(queryObject));         // send request to server
+    const xhttp = new XMLHttpRequest();
 
-     this.sessionGUID = null;
-     this.browserGUID = null;
-     this.requestCount = 0;
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "upkeep"};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
 
-     // Log
-     const obj2 = {};
-     obj2.id = "loginDiv";
-     obj2.idr = "loginButton";
-     obj2.action = "click";
-     app.regression.log(JSON.stringify(obj2));
-     app.regression.record(obj2);
+    this.sessionGUID = null;
+    this.browserGUID = null;
+    this.requestCount = 0;
+
+    // Log
+    const obj2 = {};
+    obj2.id = "loginDiv";
+    obj2.idr = "loginButton";
+    obj2.action = "click";
+    app.regression.log(JSON.stringify(obj2));
+    app.regression.record(obj2);
   }
 }

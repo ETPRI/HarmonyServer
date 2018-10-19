@@ -28,11 +28,11 @@ module.exports = class CRUD {
       strings.ret = `return ${strings.ret}`;
     }
 
-    let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
-                       action:'create', label:'${dataObj.type}', M_GUID:'${this.uuid()}'}), ${changeLogData.changeLogs}`;
+    let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:"${uuid}", user_GUID:"${obj.GUID}",
+                       action:"create", label:"${dataObj.type}", M_GUID:"${this.uuid()}"}), ${changeLogData.changeLogs}`;
     changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
-    const query = `create (${node}), ${changeLogs} set node.M_GUID = '${uuid}' ${strings.ret}`;
+    const query = `create (${node}), ${changeLogs} set node.M_GUID = "${uuid}" ${strings.ret}`;
 
     console.log(query);
     this.sendQuery(query, response);
@@ -45,7 +45,7 @@ module.exports = class CRUD {
     const node = this.buildSearchString(dataObj, strings, "where", "node");
 
     const query = `match (${node}) with node, node.M_GUID as id detach delete node
-                   create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${this.uuid()}'})`;
+                   create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})`;
     this.sendQuery(query, response);
   }
 
@@ -170,9 +170,9 @@ module.exports = class CRUD {
 
     // finish the string to generate changeLogs
     const changeUUID = this.uuid();
-    let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:'${uuid}', user_GUID:'${obj.GUID}',
-                       to_GUID:to.M_GUID, from_GUID:from.M_GUID, label:'${dataObj.rel.type}',
-                       action:'create', M_GUID:'${changeUUID}'}), ${changeLogData.changeLogs}`;
+    let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:"${uuid}", user_GUID:"${obj.GUID}",
+                       to_GUID:to.M_GUID, from_GUID:from.M_GUID, label:"${dataObj.rel.type}",
+                       action:"create", M_GUID:"${changeUUID}"}), ${changeLogData.changeLogs}`;
     changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
     if (strings.ret != "" && dataObj.distinct) {
@@ -183,7 +183,7 @@ module.exports = class CRUD {
     }
 
     const query = `match (${from}), (${to}) ${strings.where}
-                   create (from)-[${rel}]->(to), ${changeLogs} set rel.M_GUID = '${uuid}' ${strings.ret}`;
+                   create (from)-[${rel}]->(to), ${changeLogs} set rel.M_GUID = "${uuid}" ${strings.ret}`;
     this.sendQuery(query, response);
   }
 
@@ -227,7 +227,7 @@ module.exports = class CRUD {
     }
 
     const query = `match (${from})-[${rel}]->(${to}) ${strings.where} with to, from, rel, rel.M_GUID as id
-                   delete rel create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:'delete', item_GUID:id, user_GUID:'${obj.GUID}', M_GUID:'${this.uuid()}'})
+                   delete rel create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})
                    ${strings.ret}`;
     this.sendQuery(query, response);
   }
@@ -493,7 +493,7 @@ module.exports = class CRUD {
     // Regexes apparently have to be in a where clause, not in curly braces, so for simplicity, put all criteria in where clause.
 
     // Build the where clause, starting with requirement that current user has not trashed this node
-    let where = `where a.M_GUID='${GUID}' and not (a)-[:Trash]->(${dataObj.name}) and `;
+    let where = `where a.M_GUID="${GUID}" and not (a)-[:Trash]->(${dataObj.name}) and `;
     if (dataObj.type === "all") {
       where += `not labels(${dataObj.name})[0] starts with "M_" and `; // Screen out metadata nodes
     }
@@ -507,18 +507,18 @@ module.exports = class CRUD {
         switch(dataObj.where[field].searchType) {
           case "S":    // start
             // Anything can come AFTER the specified value, but nothing BEFORE it (it starts the desired string)
-            w1 = w.replace('#s#',"").replace('#E#','.*');    break;
+            w1 = w.replace("#s#","").replace("#E#",".*");    break;
           case "M":    // middle
             // Anything can come before or after the specified value (as long as it appears anywhere in the string)
-            w1 = w.replace('#s#',".*").replace('#E#','.*');  break;
+            w1 = w.replace("#s#",".*").replace("#E#",".*");  break;
           case "E":    // end
             // Anything can come BEFORE the specified value, but nothing AFTER it (it ends the desired string)
-            w1 = w.replace('#s#',".*").replace('#E#','');    break;
+            w1 = w.replace("#s#",".*").replace("#E#","");    break;
           case "=":    // equal to
             // NOTHING can come before OR after the specified value (string must match it exactly)
-            w1 = w.replace('#s#',"").replace('#E#','');      break;
+            w1 = w.replace("#s#","").replace("#E#","");      break;
           default:
-            console.log("Error: search type for a string field is not 'S', 'M', 'E' or '='.");
+            console.log(`Error: search type for a string field is not "S", "M", "E" or "=".`);
         }
         where += w1;
       }
@@ -533,18 +533,18 @@ module.exports = class CRUD {
       switch(dataObj.owner.searchType) {
         case "S":    // start
           // Anything can come AFTER the specified value, but nothing BEFORE it (it starts the desired string)
-          w1 = w.replace('#s#',"").replace('#E#','.*');    break;
+          w1 = w.replace("#s#","").replace("#E#",".*");    break;
         case "M":    // middle
           // Anything can come before or after the specified value (as long as it appears anywhere in the string)
-          w1 = w.replace('#s#',".*").replace('#E#','.*');  break;
+          w1 = w.replace("#s#",".*").replace("#E#",".*");  break;
         case "E":    // end
           // Anything can come BEFORE the specified value, but nothing AFTER it (it ends the desired string)
-          w1 = w.replace('#s#',".*").replace('#E#','');    break;
+          w1 = w.replace("#s#",".*").replace("#E#","");    break;
         case "=":    // equal to
           // NOTHING can come before OR after the specified value (string must match it exactly)
-          w1 = w.replace('#s#',"").replace('#E#','');      break;
+          w1 = w.replace("#s#","").replace("#E#","");      break;
         default:
-          console.log("Error: search type for a string field is not 'S', 'M', 'E' or '='.");
+          console.log(`Error: search type for a string field is not "S", "M", "E" or "=".`);
       }
       where += w1;
     }
@@ -552,10 +552,10 @@ module.exports = class CRUD {
     if (dataObj.permissions) {
       switch (dataObj.permissions) {
         case "users":
-          where += `t.name = 'User' and `;
+          where += `t.name = "User" and `;
           break;
         case "admins":
-          where += `t.name = 'Admin' and `;
+          where += `t.name = "Admin" and `;
           break;
         case "allUsers": // These do nothing - they're only here so that a REAL default can produce an error message
         case "all":
@@ -603,8 +603,8 @@ module.exports = class CRUD {
 
     let linkCheck = "";
     for (let i = 0; i < dataObj.links.length; i++) {
-      match += `, (link${i} {M_GUID:'${dataObj.links[i]}'})`;
-      linkCheck += `match (${dataObj.name})-[:directLink]-(link${i}) `;
+      match += `, (link${i} {M_GUID:"${dataObj.links[i]}"})`;
+      linkCheck += `match (${dataObj.name})-[:ViewLink]-(link${i}) `;
       withClause += `, link${i}`;
     }
 
@@ -627,7 +627,7 @@ module.exports = class CRUD {
       ,keysNode: "MATCH (p) unwind keys(p) as key RETURN  distinct key, labels(p) as label,  count(key) as count  order by key"
       ,relations: "MATCH (a)-[r]->(b) return distinct labels(a), type(r), labels(b), count(r) as count  order by type(r)"
       ,keysRelation: "match ()-[r]->() unwind keys(r) as key return distinct key, type(r), count(key) as count"
-      ,myTrash: `match (user)-[rel:Trash]->(node) where user.M_GUID = '${GUID}' return node.name as name, node.M_GUID as GUID, labels(node) as labels, rel.reason as reason, node`
+      ,myTrash: `match (user)-[rel:Trash]->(node) where user.M_GUID = "${GUID}" return node.name as name, node.M_GUID as GUID, labels(node) as labels, rel.reason as reason, node`
       ,allTrash: `match ()-[rel:Trash]->(node) return node.M_GUID as GUID, node.name as name, count(rel) as count`
     }
 
@@ -659,8 +659,8 @@ module.exports = class CRUD {
         // add to the changeLog string if necessary...
         if (changeLogData) {
           changeLogData.changeLogs += `(change${this.integrity.changeCount++}:M_ChangeLog {number:${this.integrity.changeCount},
-                                       item_GUID:'${changeLogData.itemGUID}', user_GUID:'${changeLogData.userGUID}',
-                                       action:'change', attribute:'${prop}', value:'${obj.properties[prop]}', M_GUID:'${this.uuid()}'}), `;
+                                       item_GUID:"${changeLogData.itemGUID}", user_GUID:"${changeLogData.userGUID}",
+                                       action:"change", attribute:"${prop}", value:"${obj.properties[prop]}", M_GUID:"${this.uuid()}"}), `;
         }
         if (props == "") { // and add each one to the props string.
           props = `${prop}: "${obj.properties[prop]}"`;
@@ -696,8 +696,8 @@ module.exports = class CRUD {
 
       // add to the changeLog string
       changeLogData.changeLogs += `(change${this.integrity.changeCount++}:M_ChangeLog {number:${this.integrity.changeCount},
-                                   item_GUID:${item}.M_GUID, user_GUID:'${changeLogData.userGUID}', M_GUID:'${this.uuid()}',
-                                   action:'change', attribute:'${changeArray[i].property}', value:'${value}'}), `;
+                                   item_GUID:${item}.M_GUID, user_GUID:"${changeLogData.userGUID}", M_GUID:"${this.uuid()}",
+                                   action:"change", attribute:"${changeArray[i].property}", value:${value}}), `;
 
       if (changes == "") {
         changes = `set ${item}.${changeArray[i].property} = ${value}`; // add to the string that implements changes

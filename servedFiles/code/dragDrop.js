@@ -1,11 +1,11 @@
 // This class handles basic dragging and dropping.
 class dragDrop {
-  // containerIDR: The idr of the element which will contain the rows
+  // containerIDR: The idr of the element which will contain the draggable items
   // buttonIDR: // The idr of the show/hide button
-  // row: // The number of rows that already exist (start numbering from here)
-  // content: The number of existing items that can be interacted with and need idrs
-  // (start numbering them from here)
-  constructor(containerIDR, buttonIDR, row, content) {
+  // row: // The number of draggable items that already exist (start numbering from here)
+  // content: The number of existing items that can be interacted with and need idrs (start numbering them from here)
+  // id: The ID for the widget (use app.idCounter if not specified)
+  constructor(containerIDR, buttonIDR, row, content, id) {
 
     this.activeNode = null; // node which is being dragged
     this.showHide = null;
@@ -29,8 +29,14 @@ class dragDrop {
     }
 
     // add to app.widgets
-    this.id = app.idCounter;
-    app.widgets[app.idCounter++] = this;
+    if (id) {
+      this.id = id;
+      app.widgets[id] = this;
+    }
+    else {
+      this.id = app.idCounter;
+      app.widgets[app.idCounter++] = this;
+    }
 
     this.domElement = document.getElementById(this.id);
 
@@ -117,16 +123,17 @@ class dragDrop {
     const dataText = evnt.dataTransfer.getData("text/plain");
     const data = JSON.parse(dataText);
 
-    if (data.sourceType == "dragDrop" && data.sourceTag == "TR" && data.sourceID == this.id) { // Make sure the data comes from this table
+    if (data.sourceType == "dragDrop" && data.sourceID == this.id) { // Make sure the data comes from this table
       let target = evnt.target;
       while (target.draggable == false) { // Also for nested tags
         target = target.parentNode;
       }
       if (this.activeNode) { // If activeNode exists
-      	if (this.activeNode.offsetTop < target.offsetTop) {  // drag down
+      	if (this.activeNode.offsetTop < target.offsetTop || // drag down
+          this.activeNode.offsetTop == target.offsetTop && this.activeNode.offsetLeft < target.offsetLeft) { // drag left
       		target.parentNode.insertBefore(this.activeNode, target.nextSibling); // Insert after target
       	}
-        else { // drag up
+        else { // drag up or right
       		target.parentNode.insertBefore(this.activeNode, target); // Insert before target
       	}
       }
@@ -264,50 +271,52 @@ class dragDrop {
   }
 
   edit(input, evnt) { // edit an existing node
-    this.activeNode = evnt.target;  // remember item that we are editing
-    let closeButton;
-    let hasClose = false;
+    if (evnt.target.tagName !== "TEXTAREA" && evnt.target.tagName !== "INPUT") { // Dblclicking on a text box is more likely meant to select text
+      this.activeNode = evnt.target;  // remember item that we are editing
+      let closeButton;
+      let hasClose = false;
 
-    // NOTE: This is a kludge! Fix if possible
-    if (this.activeNode.children.length > 0) { // since only leaves are editable, this.activeNode has no children other than possibly a close button.
-      closeButton = this.activeNode.firstElementChild;
-      this.activeNode.removeChild(closeButton); // Temporarily remove the close button so it won't get caught up in textContent.
-      closeButton.hidden = true;  // Also, hide it because clicking it while editing doesn't work
-      hasClose = true;
+      // NOTE: This is a kludge! Fix if possible
+      if (this.activeNode.children.length > 0) { // since only leaves are editable, this.activeNode has no children other than possibly a close button.
+        closeButton = this.activeNode.firstElementChild;
+        this.activeNode.removeChild(closeButton); // Temporarily remove the close button so it won't get caught up in textContent.
+        closeButton.hidden = true;  // Also, hide it because clicking it while editing doesn't work
+        hasClose = true;
+      }
+
+      // make input element visible
+      const el = this.domFunctions.getChildByIdr(this.domElement, "edit");
+      el.value = evnt.target.textContent;  // init value of input
+      el.hidden = false;      // make input visible
+
+      // Erase the text from the target (it will show up in ed instead)
+      evnt.target.textContent = "";
+
+      // Add the input element to the target
+      evnt.target.appendChild(el);
+      el.select();
+
+      // Put the close button back
+      if (hasClose) {
+        evnt.target.appendChild(closeButton);
+      }
+
+      // Log
+      const obj = {};
+      obj.id = this.domFunctions.widgetGetId(evnt.target);
+      obj.idr = event.target.getAttribute("idr");
+      obj.action = "dblclick";
+      this.log(JSON.stringify(obj));
+      app.regression.log(JSON.stringify(obj));
+      app.regression.record(obj);
     }
-
-    // make input element visible
-    const el = this.domFunctions.getChildByIdr(this.domElement, "edit");
-    el.value = evnt.target.textContent;  // init value of input
-    el.hidden = false;      // make input visible
-
-    // Erase the text from the target (it will show up in ed instead)
-    evnt.target.textContent = "";
-
-    // Add the input element to the target
-    evnt.target.appendChild(el);
-    el.select();
-
-    // Put the close button back
-    if (hasClose) {
-      evnt.target.appendChild(closeButton);
-    }
-
-    // Log
-    const obj = {};
-    obj.id = this.domFunctions.widgetGetId(evnt.target);
-    obj.idr = event.target.getAttribute("idr");
-    obj.action = "dblclick";
-    this.log(JSON.stringify(obj));
-    app.regression.log(JSON.stringify(obj));
-    app.regression.record(obj);
   }
 
   save(){ // Save changes to a node
     const el = this.domFunctions.getChildByIdr(this.domElement, "edit");
     el.hidden=true; 		 // hide input element
     const text = document.createTextNode(el.value);
-    this.activeNode.insertBefore(text, el); // Add the input text to the selected node
+    el.parentElement.insertBefore(text, el); // Add the input text to the selected node
     this.domElement.appendChild(el);           // move input field to end of DOM element representing the table
     if (this.activeNode.children.length > 0) { // since only leaves are editable, this should be true ONLY if there's a close button attached
       const closeButton = this.activeNode.firstElementChild;
