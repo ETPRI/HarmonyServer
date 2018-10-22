@@ -81,12 +81,12 @@ class widgetView {
     const tableCell = document.createElement('td'); // This cell will contain the list of views
 
     // Build the toggle and refresh buttons (they go in the table cell with the list of views)
-    const toggle = document.createElement('input');
-    toggle.setAttribute("type", "button");
-    toggle.setAttribute("idr", "toggle");
-    toggle.setAttribute("value", "__");
-    toggle.setAttribute("onclick", "app.widget('toggle', this)");
-    tableCell.appendChild(toggle);
+    this.toggleButton = document.createElement('input');
+    this.toggleButton.setAttribute("type", "button");
+    this.toggleButton.setAttribute("idr", "toggle");
+    this.toggleButton.setAttribute("value", "__");
+    this.toggleButton.setAttribute("onclick", "app.widget('toggle', this)");
+    tableCell.appendChild(this.toggleButton);
 
     const refresh = document.createElement('input');
     refresh.setAttribute("type", "button");
@@ -198,6 +198,9 @@ class widgetView {
       this.rows++; // update the number of rows shown in the table
     } // end for (building table one row at a time)
 
+    if (this.relationType === "end") {
+      this.toggle(); // Default is to hide end relations
+    }
     if (this.object && this.objectMethod) { // If an object and object method were passed in, run them, then delete them so they don't run a second time.
       this.object[this.objectMethod]();
       this.object = null;
@@ -298,6 +301,10 @@ class widgetView {
 
   // Expands or collapses the whole widget.
   toggle (button) {
+    if (!button) { // Defaults to assuming the toggle button for the widget was clicked
+      button = this.toggleButton;
+    }
+
     if (button.value ==="+") { // If we're expanding
       button.value = "__";
 

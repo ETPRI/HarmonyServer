@@ -26,6 +26,7 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
 
     this.name                 = name;
     this.id                   = null; // will be filled in later
+    this.GUID                 = GUID; // can't hurt to have this separate - makes it more consistent with mindmap and calendar
     this.callerID             = callerID;
     this.queryObject          = app.metaData.getNode(label);
     this.queryObjectName      = label;
@@ -37,12 +38,16 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
     this.orderBy              = this.queryObject.orderBy;
     this.newFields            = 0;
     this.hiddenFields         = 0;
-    this.dataNode             = null;
+    this.currentData          = null;
+    this.savedData            = null;
     this.showHideFieldsButton = null;
 
     this.idWidget = app.idCounter;
     app.widgets[app.idCounter++] = this; // Add to app.widgets
     this.containedWidgets = [];
+
+    // create popup
+    this.fieldPopup = app.setUpPopup(this);
 
     // If we're editing, then the ID for the node was passed in.
     if (GUID) {
@@ -75,7 +80,9 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
 finishConstructor(data) {
   if (data) { // If data were passed in, add them to the table, and set this.id
     this.id = data[0].n.id;
-    this.dataNode = data[0].n;
+    this.GUID = data[0].n.properties.M_GUID;
+    this.savedData = data[0].n;
+    this.currentData = JSON.parse(JSON.stringify(this.savedData)); // makes a copy
 
     const obj = {};
     obj.data = JSON.parse(JSON.stringify(data));
@@ -84,16 +91,17 @@ finishConstructor(data) {
     app.regression.record(obj);
   }
 
-  else {
+  else if (this.name) { // if no actual node was opened, but a name was specified, then at least store that.
+    this.currentData = {"properties":{"name":this.name}};
   }
 
   this.buildWidget();
-  this.buildDataNode();
+  this.refresh();
 
-  if (data) { // I hate to do this twice, but I have to create dataNode before I can call buildWidget or buildDataNode, and I have to call buildWidget before changing and using DOM elements.
+  if (data) { // I hate to do this twice, but I have to create currentData and savedData before I can call buildWidget or refresh, and I have to call buildWidget before changing and using DOM elements.
     if (data[0].r) { // If a trash relation was returned (meaning that the node was already trashed by this user)...
-      this.dataNode.properties._trash=true;
-      this.dataNode.properties.reason = data[0].r.properties.reason; // Record in the dataNode that it was trashed already...
+      this.savedData.properties._trash=true;
+      this.savedData.properties.reason = data[0].r.properties.reason; // Record in savedData that it was trashed already...
       const trashCheck = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
       trashCheck.checked=true;
 
@@ -103,6 +111,32 @@ finishConstructor(data) {
       reasonText.removeAttribute("hidden");
       reason.setAttribute("value", data[0].r.properties.reason); // And prefill that textbox with the reason.
     }
+    this.currentData = JSON.parse(JSON.stringify(this.savedData));
+
+    // Check for an owner relation
+    const obj = {};
+    obj.from = {"id":this.id, "return":"false"};
+    obj.rel = {"type":"Owner", "return":"false"};
+    obj.to = {};
+
+    const xhttp = new XMLHttpRequest();
+    const details = this;
+    const update = app.startProgress(this.widgetDOM, "Searching for owner");
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        app.stopProgress(details.widgetDOM, update);
+        if (data.length == 1) {
+          details.owner = {"name":data[0].to.properties.name, "id":data[0].to.id};
+        }
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+
   }
 }
 
@@ -110,9 +144,9 @@ buildWidget() { // public - build table header
   // let id=null;  // assume add mode
   let name = "New Node";
 
-  if (this.dataNode) {
+  if (this.currentData) {
     // we are edit mode
-    name = this.dataNode.properties.name;
+    name = this.currentData.properties.name;
   }
 
   // Make the container a widget
@@ -130,134 +164,7 @@ buildWidget() { // public - build table header
   this.tBodyDOM.setAttribute("idr", "nodeTBody");
   this.tableDOM.appendChild(this.tBodyDOM);
 
-  // create popup
-  this.fieldPopup = document.createElement("div");
-  this.fieldPopup.setAttribute("hidden", "true");
-  this.fieldPopup.setAttribute('class', 'fieldPopup')
-  this.fieldPopup.innerHTML =
-  `<div class="popupHeader" idr="popupHeader"></div>
-  <div>
-    <p>Display Name: <input idr="labelInput" type="text"></p>
-    <p><input idr="showTable" type="checkbox"> Show this field in the table</p>
-    <p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
-    <p><input type="button" idr="restoreSizeButton" value="Restore textarea to default size"
-      onclick="app.widget('restoreSize', this)"></p>
-    <p><input type="button" value="OK" onclick = "app.widget('popupOK', this)">
-    <input type="button" value="Cancel" onclick="app.widget('popupCancel', this)"></p>
-  </div>
-  `
-
-  this.fieldPopup.setAttribute("idr", "fieldPopup");
   this.widgetDOM.appendChild(this.fieldPopup);
-
-}
-
-showPopup(label) {
-  this.fieldPopup.hidden = false;
-  const bounds = label.getBoundingClientRect();
-  this.fieldPopup.setAttribute("style", `left:${bounds.left + window.scrollX}px; top:${bounds.top + window.scrollY}px`);
-  // set text in popup header to "actual" field name (stored as db of label)
-  const fieldName = label.getAttribute('db');
-  const header = app.domFunctions.getChildByIdr(this.fieldPopup, 'popupHeader');
-  header.innerHTML = fieldName;
-  // set text in label textbox to "label" field name (stored as text of label)
-  const labelInput = app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
-  labelInput.value = label.textContent;
-
-  // Show or hide restore size button
-  const restoreSize = app.domFunctions.getChildByIdr(this.fieldPopup, 'restoreSizeButton');
-  if (this.fields[fieldName].input && this.fields[fieldName].input.name === "textarea") {
-    restoreSize.classList.remove("hidden");
-  }
-  else {
-    restoreSize.classList.add("hidden");
-  }
-
-  const tableCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
-  if (this.fieldsDisplayed.indexOf(fieldName) != -1) {
-    tableCheck.checked = true;
-  }
-  else {
-    tableCheck.checked = false;
-  }
-  const formCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
-  if (this.formFieldsDisplayed.indexOf(fieldName) != -1) {
-    formCheck.checked = true;
-  }
-  else {
-    formCheck.checked = false;
-  }
-}
-
-popupCancel() {
-  this.fieldPopup.hidden = true;
-}
-
-popupOK(button) {
-  // Get the DOM elements and the db name of the field being edited
-  const header = app.domFunctions.getChildByIdr(this.fieldPopup, 'popupHeader');
-  const label = app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
-  const tableCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
-  const formCheck = app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
-  const db = header.textContent;
-  const formLabel = app.domFunctions.getChildByIdr(this.widgetDOM, `th${db}`, true);
-  const row = formLabel.parentElement;
-  formLabel.innerText = label.value;
-
-  // update metadata class
-  if (tableCheck.checked && this.fieldsDisplayed.indexOf(db) == -1) { // If the field should be displayed and currently isn't
-    this.fieldsDisplayed.push(db);
-  }
-
-  else if (!(tableCheck.checked) && this.fieldsDisplayed.indexOf(db) != -1) { // If the field shouldn't be displayed and is
-    this.fieldsDisplayed.splice(this.fieldsDisplayed.indexOf(db), 1);
-  }
-
-  if (formCheck.checked && this.formFieldsDisplayed.indexOf(db) == -1) { // If the field should be displayed and currently isn't
-    this.formFieldsDisplayed.push(db);
-    row.hidden = false;
-    row.classList.remove("notShown");
-    this.hiddenFields--;
-  }
-
-  else if (!(formCheck.checked) && this.formFieldsDisplayed.indexOf(db) != -1) { // If the field shouldn't be displayed and is
-    this.formFieldsDisplayed.splice(this.formFieldsDisplayed.indexOf(db), 1);
-    row.hidden = true;
-    row.classList.add("notShown");
-    this.hiddenFields++;
-    this.showHideFieldsButton.disabled = false;
-    if (this.showHideFieldsButton.value.slice(0, 6) === "Show A") {
-      this.showHideFieldsButton.value = `Show All (${this.hiddenFields})`;
-    }
-  }
-
-  this.fields[db].label = label.value;
-
-  // create or update link
-  const obj = {};
-  obj.from = {"id":app.login.userID};
-  obj.rel = {"type":"Settings", "merge":true};
-  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
-  obj.changes = [{"item":"rel", "property":"fields", "value":app.stringEscape(JSON.stringify(this.fields))},
-                 {"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
-                 {"item":"rel", "property":"formFieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
-
-  const xhttp = new XMLHttpRequest();
-  const update = app.startProgress(this.widgetDOM, "Updating metadata");
-  const details = this;
-
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      app.stopProgress(details.widgetDOM, update);
-    }
-  };
-
-  xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
-
-  // close popup
-  this.fieldPopup.hidden = true;
 }
 
 restoreSize(button) {
@@ -280,13 +187,22 @@ restoreSize(button) {
   }
 }
 
-buildDataNode() {   // put in one field label and input row for each field - includes creating dragdrop table
+refresh() {   // put in one field label and input row for each field - includes creating dragdrop table
   let fieldCount = 0;
   this.hiddenFields = 0;
+  const newFields = [];
 
-  // Clear any existing data
+  // Clear any existing data. Also, if there are any new fields, check whether they've been saved
+  // and store them as new fields if not (that is, if we're refreshing without saving)
   while (this.tBodyDOM.hasChildNodes()) {
-    this.tBodyDOM.removeChild(this.tBodyDOM.firstChild);
+    const row = this.tBodyDOM.removeChild(this.tBodyDOM.firstChild);
+    const idr = row.getAttribute('idr');
+    if (idr && idr.slice(0,11) === 'newFieldRow') { // If this row is a new field...
+      const name = row.firstElementChild.firstElementChild.value; // and its name...
+      if (name && !(name in this.fields)) { // isn't in fields (meaning it hasn't been saved)...
+        newFields[name] = row.lastElementChild.firstElementChild.value; // store it in newFields.
+      }
+    }
   }
 
   let table = this.tBodyDOM.parentElement;
@@ -307,6 +223,10 @@ buildDataNode() {   // put in one field label and input row for each field - inc
       this.hiddenFields++;
     }
   } // end for (every field in this.fields)
+
+  for (let fieldName in newFields) {
+    this.addField(fieldName, newFields[fieldName]);
+  }
 
   this.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetNode contains"
   // Create the new dragDrop table
@@ -359,19 +279,19 @@ buildDataNode() {   // put in one field label and input row for each field - inc
   mainCell.appendChild(this.trashRow);
   this.trashRow.innerHTML = trashHTML;
 
-  if (this.dataNode && this.dataNode.properties._trash) {
+  if (this.currentData && this.currentData.properties._trash) {
     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
     const reason = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
     const reasonText = app.domFunctions.getChildByIdr(this.widgetDOM, 'reasonText');
     checkbox.checked = true; // Check the box...
     reason.removeAttribute("hidden"); // Show the reason prompt and textbox...
     reasonText.removeAttribute("hidden");
-    reason.setAttribute("value", this.dataNode.properties.reason); // And prefill that textbox with the reason.
+    reason.setAttribute("value", this.currentData.properties.reason); // And prefill that textbox with the reason.
   }
 
   // set the button to be save or added
   if (this.addSaveDOM) {
-    if (this.dataNode) {
+    if (this.savedData) {
       this.addSaveDOM.value = "Save";
     }
     else {
@@ -386,7 +306,7 @@ buildDataNode() {   // put in one field label and input row for each field - inc
 addRow(fieldName, fieldCount) {
   let value = "";
 
-  // Create a table row (in dragDrop table - all "this" references are to dragDrop)
+  // Create a table row (in dragDrop table - all "this" references in HTML are to dragDrop)
   const row = document.createElement('tr');
   row.setAttribute('ondrop', "app.widget('drop', this, event)");
   row.setAttribute("ondragover", "event.preventDefault()");
@@ -406,8 +326,8 @@ addRow(fieldName, fieldCount) {
   header.setAttribute('idr', `th${fieldName}`);
 
   // Create the second cell, a td cell containing an input which has an idr, an onChange event, and a value which may be an empty string
-  if (this.dataNode) {
-    const d=this.dataNode.properties;
+  if (this.currentData) {
+    const d=this.currentData.properties;
     value = d[fieldName];
     if (typeof value === "string") { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
       value = value.replace(/"/g, "&quot;");
@@ -443,7 +363,6 @@ addRow(fieldName, fieldCount) {
     if (!pixSize && this.fields[fieldName].input && this.fields[fieldName].input.cols) {
       input.cols = this.fields[fieldName].input.cols;
     }
-
   }
 
   dataField.appendChild(input);
@@ -454,6 +373,8 @@ addRow(fieldName, fieldCount) {
   input.value = value;
   input.setAttribute("onfocus", "this.parentNode.parentNode.draggable = false;");
   input.setAttribute("onblur", "this.parentNode.parentNode.draggable = true;");
+
+  this.changed(input); // Check whether the input is different from the saved version; highlight it if so
 
   return row;
 }
@@ -479,11 +400,15 @@ showHideAllFields(button) {
 checkDuplicateField(input) {
   let name = input.value;
   let label = "";
-  const dupName = (name in this.fields);
+  // fieldName is the existing field name, if any, which is equal to the proposed name except for case
+  const fieldName = Object.keys(this.fields).find(key => key.toLowerCase() === name.toLowerCase());
+  const dupName = (fieldName !== undefined);
   if (dupName) {
-    label = this.fields[name].label;
+    label = this.fields[fieldName].label;
+    name = fieldName;
   }
-  const dbName = Object.keys(this.fields).find(key => this.fields[key].label === name);
+  // dbName is the existing field name, if any, whose LABEL is equal to the proposed name except for case
+  const dbName = Object.keys(this.fields).find(key => this.fields[key].label.toLowerCase() === name.toLowerCase());
   const dupLabel = (dbName !== undefined);
   if (dupLabel) {
     label = name;
@@ -544,7 +469,13 @@ checkNewField() {
   }
 }
 
-addField() {
+addField(name, value) { // If name and value don't exist, we're adding a blank row - if they do, we're adding one with values
+  if (!name) {
+    name = "";
+  }
+  if (!value) {
+    value = "";
+  }
   const row = document.createElement('tr');
   row.setAttribute('idr', `newFieldRow${this.newFields}`);
   this.tBodyDOM.append(row);
@@ -553,38 +484,50 @@ addField() {
   row.appendChild(nameCell);
   const nameIn = document.createElement('input');
   nameCell.appendChild(nameIn);
-  nameIn.outerHTML = `<input type = "text" idr = "newFieldName${this.newFields}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkDuplicateField', this); app.widget('checkNewField', this)" value = "">`
+  nameIn.outerHTML = `<input type = "text" idr = "newFieldName${this.newFields}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkDuplicateField', this); app.widget('checkNewField', this)" value = "${name}">`
 
   const valueCell = document.createElement('td');
   row.appendChild(valueCell);
   const valueIn = document.createElement('input');
   valueCell.appendChild(valueIn);
-  valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkNewField', this)" value = "">`
+  valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkNewField', this)" value = "${value}">`
 }
 
 saveAdd(widgetElement) { // Saves changes or adds a new node
-  // director function
-  if (widgetElement == null || widgetElement.value === "Save") {
-    const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
-    if (this.dataNode && this.dataNode.properties._trash === true && checkbox.checked === false) { // If the node was trashed and now shouldn't be
-      this.untrashNode();
-    }                         // I used negation here, rather than checking for === false, because _trash could be undefined.
-    else if (this.dataNode && !(this.dataNode.properties._trash === true) && checkbox.checked === true) { // If the node was not trashed and now should be
-      this.trashNode();
-    }
-    else if (this.dataNode && this.dataNode.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData")) { // If the node was and should stay trashed, but the reason has changed
-      this.updateReason();
-    }
-    else { // If the node's trash status isn't changing, only the data, go straight to save().
-      this.save(null, "Save");
-    }
-  } else { // If we're adding a new node
+  // If the node didn't exist (so there was an Add button) or was owned by someone else, create a new node
+  if ((widgetElement && widgetElement.value === "Add") || (this.owner && this.owner.id !== app.login.userID)) {
     this.save(null, "Add");
   }
+
+  // If the node existed but had no owner, make this user its owner, then call saveAdd again to save it
+  else if (!(this.owner)) {
+    app.setOwner(this.widgetDOM, this, 'saveAdd');
+  }
+
+  // If the node existed, had an owner but was not owned by someone else, then it was already owned by this user - just keep moving.
+  else {
+    const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
+    // If the node was trashed and now shouldn't be
+    if (this.savedData && this.savedData.properties._trash === true && checkbox.checked === false) {
+      this.untrashNode();
+    }
+    // If the node was not trashed and now should be. I used negation here, rather than checking for === false, because _trash could be undefined.
+    else if (this.savedData && !(this.savedData.properties._trash === true) && checkbox.checked === true) {
+      this.trashNode();
+    }
+    // If the node was and should stay trashed, but the reason has changed
+    else if (this.savedData && this.savedData.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData")) {
+      this.updateReason();
+    }
+    // If the node's trash status isn't changing, only the data, go straight to save();
+    else {
+      this.save(null, "Save");
+    }
+  } // end else (the node was already owned by this user)
 }
 
 trashNode() {
-  this.dataNode.properties._trash = true;
+  this.savedData.properties._trash = true;
   const user = app.login.userID;
   const node = this.id;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
@@ -618,7 +561,7 @@ updateReason() {
   const node = this.id;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const reason = reasonInp.value;
-  this.dataNode.properties.reason = reason;
+  this.savedData.properties.reason = reason;
   reasonInp.setAttribute("class","");
 
   const obj = {};
@@ -645,7 +588,7 @@ updateReason() {
 }
 
 untrashNode() {
-  this.dataNode.properties._trash = false;
+  this.savedData.properties._trash = false;
   const user = app.login.userID;
   const node = this.id;
 
@@ -732,10 +675,11 @@ updateFields(data, newFields) { // should contain only the metadata node, under 
 }
 
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
-  this.dataNode = data[0].n; // takes single nodes
-  this.id = this.dataNode.id;
+  this.savedData = data[0].n; // takes single nodes
+  this.currentData = JSON.parse(JSON.stringify(this.savedData));
+  this.id = this.savedData.id;
   const id = this.id;
-  const name = this.dataNode.properties.name;
+  const name = this.savedData.properties.name;
   const nodeLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeLabel");
   nodeLabel.textContent=`${this.nodeLabel}#${id}: ${name}`;
 
@@ -748,12 +692,17 @@ addComplete(data) { // Refreshes the node table and logs that addSave was clicke
   app.regression.log(JSON.stringify(obj));
   app.regression.record(obj);
 
-  this.buildDataNode();
+  app.setOwner(this.widgetDOM, this); // I don't mind this running asynchronously because I don't think it's needed for refresh or buildStart.
+  this.refresh();
   this.buildStart();
 }
 
 changed(input) { // Logs changes to fields, and highlights when they are different from saved fields
-  if (!this.dataNode) {
+  if (this.currentData && this.currentData.properties) { // assuming this.currentData exists
+    this.currentData.properties[input.getAttribute('db')] = input.value; // update current data
+  }
+
+  if (!this.savedData) {
     const obj = {};
     obj.id = app.domFunctions.widgetGetId(input);
     obj.idr = input.getAttribute("idr");
@@ -764,10 +713,10 @@ changed(input) { // Logs changes to fields, and highlights when they are differe
     return;  // no feedback in add mode, but do log the change
   }
   // give visual feedback if edit data is different than db data
-  if (input.value === this.dataNode.properties[input.getAttribute('db')]) {
-    input.setAttribute("class","");
+  if (input.value === this.savedData.properties[input.getAttribute('db')]) {
+    input.classList.remove('changedData');
   } else {
-    input.setAttribute("class","changedData");
+    input.classList.add('changedData');
   }
 
   // log
@@ -952,18 +901,19 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
 
 saveData(data) { // Refreshes the node table and logs that addSave was clicked
   // redo from as edit now that data is saved
-  this.dataNode = data[0].n;
+  this.savedData = data[0].n;
   // Keep the trash relation shown in the table
   const text = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
   const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
   if (checkbox.checked) {
-    this.dataNode.properties._trash = true;
-    this.dataNode.properties.reason = text.value;
+    this.savedData.properties._trash = true;
+    this.savedData.properties.reason = text.value;
   }
   else {
-    this.dataNode.properties._trash = false;
+    this.savedData.properties._trash = false;
   }
-  this.buildDataNode();
+  this.currentData = JSON.parse(JSON.stringify(this.savedData));
+  this.refresh();
 
   // log
   const obj = {};
@@ -983,10 +933,59 @@ toggleReason(checkBox) {
   if (checkBox.checked) {
     reason.removeAttribute("hidden");
     reasonText.removeAttribute("hidden");
+    this.currentData.properties._trash = true;
+    if (this.savedData.properties._trash) {
+      checkBox.classList.remove('changedData');
+    }
+    else {
+      checkBox.classList.add('changedData');
+    }
   }
   else {
     reason.setAttribute("hidden", true);
     reasonText.setAttribute("hidden", true);
+    this.currentData.properties._trash = false;
+    if (this.savedData.properties._trash) {
+      checkBox.classList.add('changedData');
+    }
+    else {
+      checkBox.classList.remove('changedData');
+    }
   }
 }
+
+drag(button, evnt) {
+  let name = "";
+  const nameNum = this.formFieldsDisplayed.indexOf('name');
+  if (nameNum > -1) {
+    const nameRow = this.tBodyDOM.children[nameNum];
+    const nameCell = nameRow.children[1];
+    const input = nameCell.children[0];
+    name = input.value;
+  }
+
+  const data = {};
+  data.name = name;
+  data.type = this.nodeLabel;
+  data.DBType = this.queryObjectName;
+  data.nodeID = this.currentData.properties.M_GUID;
+
+  data.details = [];
+  for (let i = 0; i< this.formFieldsDisplayed.length; i++) { // For every displayed field...
+    const input = this.tBodyDOM.children[i].children[1].children[0];
+    const fieldName = this.formFieldsDisplayed[i];
+    if (fieldName != "name") { // skip the name...
+      const detailObj = {};
+      detailObj.field = fieldName;
+      detailObj.value = input.value;
+      data.details.push(detailObj);
+    }
+  }
+
+  data.sourceID = app.domFunctions.widgetGetId(button);
+  data.sourceType = "widgetNode";
+  data.sourceTag = button.tagName;
+  evnt.dataTransfer.setData("text/plain", JSON.stringify(data));
+}
+
 } ///////////////////// endclass

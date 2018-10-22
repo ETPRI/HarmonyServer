@@ -70,7 +70,8 @@ class dataBrowser {
         data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
         data.sourceType == "widgetRelations" && data.sourceTag == "TR" ||
         data.sourceType == "widgetNode" && data.sourceTag == "B" ||
-        data.sourceType == "dragDrop" && data.sourceTag == "TR"
+        data.sourceType == "dragDrop" && data.sourceTag == "TR" ||
+        data.sourceType == "widgetSVG" && data.sourceTag == "B"
       )) {
       return;
     }

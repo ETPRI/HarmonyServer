@@ -13,7 +13,8 @@ class widgetLogin {
     this.requestCount = 0;
     this.userID = null;
     this.userGUID = null;
-    this.userName = null;
+    this.userName = null; // the user's name in the DB
+    this.userHandle = null; // the username the user chose for themselves
     this.permissions = null;
 
     this.viewLoggedIn = []; // Arrays of DOM elements that should be visible only when logged in...
@@ -64,6 +65,8 @@ class widgetLogin {
         app.regression.buildRegressionHeader();
         app.login.viewAdmin.push(document.getElementById("debugButton"));
         app.login.viewAdmin.push(document.getElementById("regressionButton"));
+
+        app.login.viewLoggedIn.push(document.getElementById('changeProfileButton'));
       }
 
       // The <p> containing the login fields is only visible when logged out
@@ -71,7 +74,7 @@ class widgetLogin {
       }
     };
 
-    xhttp.open("GET", "widgetLogin.html");
+    xhttp.open("GET", "view/widgetLogin.html");
     xhttp.send();
   }
 
@@ -138,6 +141,7 @@ class widgetLogin {
   // Does NOT currently encrypt the password - need to fix before going public. Sends results to this.loginComplete().
   login() {
   	const name = this.nameInput.value;
+    this.userHandle = name;
     const password = this.passwordInput.value;
 
     if (name == "" || password == "") { // If the user didn't enter a name and password, don't even bother trying to log in.
@@ -174,6 +178,7 @@ class widgetLogin {
   loginComplete(data) {
   	if (data.length == 0) {
   		alert ("No such node found");
+      this.userHandle = null;
   	}
 
   	else if (data.length == 1) { // Can actually log in
@@ -243,6 +248,7 @@ class widgetLogin {
 
   	 // end elseif (can log in)
     } else {
+      this.userHandle = null;
   		alert ("Multiple such nodes found");
   	}
 
@@ -387,8 +393,8 @@ class widgetLogin {
 
   loadFavorites(data) {
     let GUIDs = null;
-    if (data[0] && data[0].from.properties.favoriteGUIDs) {
-     GUIDs = JSON.parse(data[0].from.properties.favoriteGUIDs);
+    if (data[0] && data[0].from.properties.M_favoriteGUIDs) {
+     GUIDs = JSON.parse(data[0].from.properties.M_favoriteGUIDs);
     }
     const row = document.getElementById("faveNodes");
     if (GUIDs) { // Assuming the user has any ordered favorites stored
@@ -475,7 +481,7 @@ class widgetLogin {
     }
     const obj = {};
     obj.node = {"id":this.userID};
-    obj.changes = [{"property": "favoriteGUIDs", "value":app.stringEscape(JSON.stringify(GUIDs))}];
+    obj.changes = [{"property": "M_favoriteGUIDs", "value":app.stringEscape(JSON.stringify(GUIDs))}];
 
     const xhttp = new XMLHttpRequest();
     const login = this;
@@ -516,6 +522,86 @@ class widgetLogin {
     xhttp.open("POST","");
     const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": "setup"};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
+  }
+
+  checkUserName(input) {
+    const obj = {};
+    obj.rel = {"type":"Permissions", "properties":{"username":input.value}};
+
+    const xhttp = new XMLHttpRequest();
+    const update = app.startProgress(this.loginDiv, "Updating profile");
+    const login = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        app.stopProgress(login.loginDiv, update);
+        const data = JSON.parse(this.responseText);
+        if (data.length > 0) {
+          alert ("That username is taken; please choose another.");
+          input.value = "";
+        }
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+
+  }
+
+  checkPassword(input) {
+    return; // for now, no restrictions on passwords - will add later
+  }
+
+  changeProfile(button) {
+    const popup = document.getElementById('profilePopup');
+    popup.hidden = false;
+    const bounds = button.getBoundingClientRect();
+    popup.setAttribute("style", `left:${bounds.left + window.scrollX}px; top:${bounds.top + window.scrollY}px`);
+    const nameInput = app.domFunctions.getChildByIdr(popup, 'name');
+    nameInput.value = this.userHandle;
+    const pwInput = app.domFunctions.getChildByIdr(popup, 'password');
+    pwInput.value = ""; // For now, NOT going to show the original password, even masked
+  }
+
+  profilePopupOK(button) {
+    const popup = document.getElementById('profilePopup');
+    const nameInput = app.domFunctions.getChildByIdr(popup, 'name');
+    const pwInput = app.domFunctions.getChildByIdr(popup, 'password');
+
+    const obj = {};
+    obj.from = {"id":app.login.userID};
+    obj.rel = {"type":"Permissions"};
+    obj.to = {"type":"M_LoginTable", "properties":{"name":this.permissions}};
+    obj.changes = [];
+    if (nameInput.value) {
+      this.userHandle = nameInput.value;
+      obj.changes.push({"item":"rel", "property":"username", "value":app.stringEscape(nameInput.value)});
+    }
+    if (pwInput.value) {
+      obj.changes.push({"item":"rel", "property":"password", "value":app.stringEscape(pwInput.value)});
+    }
+
+    const xhttp = new XMLHttpRequest();
+    const update = app.startProgress(this.loginDiv, "Updating profile");
+    const login = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        app.stopProgress(login.loginDiv, update);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+
+    popup.hidden = true;
+  }
+
+  profilePopupCancel(button) {
+    const popup = document.getElementById('profilePopup');
+    popup.hidden = true;
   }
 
   // Logs the user out: resets login information to null, resets the info paragraph to say "not logged in",

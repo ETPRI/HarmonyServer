@@ -1,7 +1,8 @@
 class widgetCalendar {
   constructor(callerID, GUID, name) {
     this.name = name;
-    this.calendarGUID = GUID;
+    this.GUID = GUID;
+    this.id = null; // may use this later
     this.widgetID = app.idCounter;
     app.widgets[app.idCounter] = this;
     this.containedWidgets = [];
@@ -49,7 +50,7 @@ class widgetCalendar {
       <td id="calendar${this.widgetID}"></td>
       <td id = "detailsPane" class="hidden">
         <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
-        <b idr="nodeLabel">#${this.calendarGUID}: ${this.name}</b>
+        <b idr="nodeLabel">#${this.GUID}: ${this.name}</b>
       </td>
     </tr></table></div></div>`;
 
@@ -87,7 +88,7 @@ class widgetCalendar {
 
     this.detailsPane = document.getElementById('detailsPane');
     this.containedWidgets.push(app.idCounter);
-    this.details = new widgetDetails('calendar', this.detailsPane, this.calendarGUID);
+    this.details = new widgetDetails('calendar', this.detailsPane, this.GUID);
 
     this.buildDay(this.day);
   }

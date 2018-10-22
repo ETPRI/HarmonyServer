@@ -5,7 +5,7 @@
 </div>
 <div class="widgetBody">
   <div class="statusBar">
-    <p id="available">Available</p>
+    <p id="available">Server Requests</p>
     <ul style="list-style-type:none" id="ongoing" hidden></ul>
   </div>
   <p>Username: <input id="userName" onblur="app.regression.logText(this)">
@@ -13,6 +13,18 @@
                      onkeydown="app.widget('loginOnEnter', this, event)">
   </p>
   <input id="loginButton" type="button" value="Log In" onclick="app.widget('createSession', this)">
+  <input id="changeProfileButton" type="button" value="My Profile" onclick="app.widget('changeProfile', this)" hidden="true">
+
+  <div hidden="true" class="popup" id="profilePopup">
+    <div class="popupHeader" idr="popupHeader"></div>
+    <div>
+      <p>Name: <input idr="name" onblur="app.widget('checkUserName', this)"></p>
+      <p>Password: <input type="password" idr="password" onblur="app.widget('checkPassword', this)"></p>
+      <p><input type="button" value="OK" onclick = "app.widget('profilePopupOK', this)">
+      <input type="button" value="Cancel" onclick="app.widget('profilePopupCancel', this)"></p>
+    </div>
+  </div>
+
   <input id="debugButton" type="button" value="Show Debug Menu" onclick="app.showDebug(this)" hidden="true">
   <input id="regressionButton" type="button" value="Show Regression Menu" onclick="app.showRegression(this)" hidden="true">
   <table>

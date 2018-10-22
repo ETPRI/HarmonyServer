@@ -18,10 +18,10 @@ buildWidget() { // public - build table header
     name = `New ${this.nodeLabel} Node`;
   }
 
-  if (this.dataNode) {
+  if (this.currentData) {
     // we are edit mode
-    id = this.dataNode.id;
-    name = this.dataNode.properties.name;
+    id = this.currentData.id;
+    name = this.currentData.properties.name;
   }
 
   let addSave = `<input idr = "addSaveButton" type="button" onclick="app.widget('saveAdd',this)">`;
@@ -33,7 +33,7 @@ buildWidget() { // public - build table header
   const html = app.widgetHeader('widgetNode') + `<b idr= "nodeTypeLabel" contentEditable="true"
                                         onfocus="this.parentNode.draggable = false;"
                                         onblur="this.parentNode.draggable = true;">${this.nodeLabel}</b>
-                                        <b idr="nodeLabel">#${id}: ${name}</b></div><table class="widgetBody"><tbody><tr>
+                                        <b idr="nodeLabel">: ${name}</b></div><table class="widgetBody"><tbody><tr>
   <td idr="end"></td>
   <td idr="main">
     ${addSave}
@@ -107,46 +107,14 @@ buildWidget() { // public - build table header
 }
 
 buildStart() {
+  this.startDOM.innerHTML = "";
   this.containedWidgets.push(app.idCounter);
   new widgetView(this.startDOM, this.id, "start", this, 'buildEnd');
 }
 
 buildEnd() {
+  this.endDOM.innerHTML = "";
   this.containedWidgets.push(app.idCounter);
   new widgetView(this.endDOM, this.id, "end");
-}
-
-drag(button, evnt) {
-  let name = "";
-  const nameNum = this.formFieldsDisplayed.indexOf('name');
-  if (nameNum > -1) {
-    const nameRow = this.tBodyDOM.children[nameNum];
-    const nameCell = nameRow.children[1];
-    const input = nameCell.children[0];
-    name = input.value;
-  }
-
-  const data = {};
-  data.name = name;
-  data.type = this.nodeLabel;
-  data.DBType = this.queryObjectName;
-  data.nodeID = this.dataNode.properties.M_GUID;
-
-  data.details = [];
-  for (let i = 0; i< this.formFieldsDisplayed.length; i++) { // For every displayed field...
-    const input = this.tBodyDOM.children[i].children[1].children[0];
-    const fieldName = this.formFieldsDisplayed[i];
-    if (fieldName != "name") { // skip the name...
-      const detailObj = {};
-      detailObj.field = fieldName;
-      detailObj.value = input.value;
-      data.details.push(detailObj);
-    }
-  }
-
-  data.sourceID = app.domFunctions.widgetGetId(button);
-  data.sourceType = "widgetNode";
-  data.sourceTag = button.tagName;
-  evnt.dataTransfer.setData("text/plain", JSON.stringify(data));
 }
 }

@@ -64,10 +64,8 @@ class mindmapClick {
   // When a rectangle is clicked, records the current mouse position and the group's transformation,
   // sets onmousemove, onmouseup and onmouseout methods for dragging, and shows its details (if any).
   selectNode(element, evnt) {
-    if (element.__data__.data.type !== "") {
-      this.parent.mindmapDetails.classList.add('hidden');
-      this.d3Functions.objects[element.__data__.data.id].DOMelements.detailsTable.classList.remove('hidden');
-    }
+    this.parent.mindmapDetails.classList.add('hidden');
+    this.d3Functions.objects[element.__data__.data.id].DOMelements.detailsTable.classList.remove('hidden');
     evnt.preventDefault();
 
     this.currentX = evnt.clientX; // get mouse position
@@ -86,7 +84,7 @@ class mindmapClick {
 
       const ID = group.getAttribute("idr").slice(5); // the IDR will be like groupxxx
 
-      const prefixes = ["toggle", "note", "edit"];
+      const prefixes = ["toggle", "edit"];
       for (let i = 0; i < prefixes.length; i++) {
         const idr = prefixes[i] + ID;
         const element = this.d3Functions.objects[ID].DOMelements[prefixes[i]];

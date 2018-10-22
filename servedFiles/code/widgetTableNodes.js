@@ -1,4 +1,4 @@
-/*
+this.widgetDOM/*
 widgetTableNodes
 
 display, search, add/edit on nodes ******************
@@ -10,37 +10,65 @@ class widgetTableNodes {
   // tableName
   // id - for document.getElementById(id)
   constructor (queryObjectName, controlId) { // name of a query Object, and ID of the control that requested it
-    this.queryObjectName = queryObjectName;
-    this.queryObject     = app.metaData.getNode(queryObjectName);
-    this.fields          = this.queryObject.fields;
-    this.fieldsDisplayed = this.queryObject.fieldsDisplayed;
+    this.queryObjectName      = queryObjectName;
+    this.queryObject          = app.metaData.getNode(queryObjectName);
+    this.fields               = this.queryObject.fields;
+    this.fieldsDisplayed      = this.queryObject.fieldsDisplayed;
+    this.formFieldsDisplayed  = this.queryObject.formFieldsDisplayed;
+    this.limitDefault         = 9;
+    this.widgetDOM            = null;
 
     this.idWidget = app.idCounter;   // strings
     this.searchTrigger = controlId;
+    this.fieldPopup = app.setUpPopup(this);
 
     this.buildHeader();  //  show table header on screen
-    this.widget = document.getElementById(this.idWidget);
+    this.widgetDOM.appendChild(this.fieldPopup);
 
     if (app.activeWidget) {
       app.activeWidget.classList.remove("activeWidget");
     }
-    app.activeWidget = this.widget;
-    this.widget.classList.add("activeWidget");
+    app.activeWidget = this.widgetDOM;
+    this.widgetDOM.classList.add("activeWidget");
+
+    this.data = null;
 
     this.search();       // do search with no criteria
   }
 
   ////////////////////////////////////////////////////////////////////
-  search() { // public - call when data changes
+  search(criteria) { // public - call when data changes
+    // if (criteria && criteria.length > 0) { // if search criteria were passed in, process them first
+    //   this.reset(); // clear all existing search criteria
+    //   for (let i = 0; i < criteria.length; i++) {
+    //     const name = criteria[i].name;
+    //     const value = criteria[i].value;
+    //     const ddValue = criteria[i].dropDownValue;
+    //     if (name && value && name in this.fields) { // If this criterion has a valid name and value
+    //       if (!(name in this.fieldsDisplayed)) { // If the given field was hidden
+    //         this.fieldsDisplayed.push(name); // show it
+    //         this.updateFields();
+    //       }
+    //       const cell = app.domFunctions.getChildByIdr(this.widgetDOM, `searchCell${name}`);
+    //       const inp = cell.firstElementChild;
+    //       const drop = cell.lastElementChild;
+    //       inp.value = value;
+    //       if (ddValue) {
+    //
+    //       }
+    //     }
+    //   }
+    // }
+    
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress(this.widget, `Searching for ${this.queryObject.nodeLabel}`);
+    const update = app.startProgress(this.widgetDOM, `Searching for ${this.queryObject.nodeLabel}`);
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(nodes.widget, update);
-        nodes.buildData(data);
+        nodes.data = JSON.parse(this.responseText);
+        app.stopProgress(nodes.widgetDOM, update);
+        nodes.refresh();
       }
     };
 
@@ -55,13 +83,39 @@ class widgetTableNodes {
     }
   }
 
+  reset(element) {
+    const widget = document.getElementById(app.domFunctions.widgetGetId(element)); // Get the widget to clear
+    const inputs = widget.getElementsByTagName('input'); // Get all inputs (text boxes and buttons)
+    for (let i = 0; i < inputs.length; i++) { // Go through them all...
+      if (inputs[i].type !== "button") { // ignoring the buttons...
+        inputs[i].value = ""; // and clear the text boxes
+      }
+    }
+    app.domFunctions.getChildByIdr(this.widgetDOM, "limit").value = this.limitDefault; // reset limit
+    app.domFunctions.getChildByIdr(this.widgetDOM, "ownerText").value = app.login.userName; // reset owner
+
+    const dropdowns = widget.getElementsByTagName('select');
+    for (let i = 0; i < dropdowns.length; i++) {
+      dropdowns[i].selectedIndex = 0;
+    }
+
+    // Clear required links
+    const row = document.getElementById('dropNodes');
+    row.innerHTML = `<td>Required Links:</td><td id="dropNode0" ondragover="event.preventDefault()" ondrop="app.dropLink(this, event)"></td>`;
+  }
+
+  refresh() {
+    this.updateFields();
+    this.buildData();
+  }
+
   buildQuery() { // public - called when search criteria change
     const obj = {};
     obj.name = "n";
     obj.type = this.queryObjectName;
     obj.where = this.buildWhere();
     obj.orderBy = this.queryObject.orderBy;
-    obj.limit = app.domFunctions.getChildByIdr(this.widget, "limit").value;
+    obj.limit = app.domFunctions.getChildByIdr(this.widgetDOM, "limit").value;
     obj.links = [];
 
     const row = document.getElementById('dropNodes');
@@ -73,12 +127,10 @@ class widgetTableNodes {
       }
     }
 
-    if (obj.type == 'mindmap') {
-      obj.owner = this.buildOwner();
-    }
+    obj.owner = this.buildOwner();
 
     if (obj.type == "people") {
-      const dropDown = app.domFunctions.getChildByIdr(this.widget, "permissionsDropdown");
+      const dropDown = app.domFunctions.getChildByIdr(this.widgetDOM, "permissionsDropdown");
       obj.permissions = dropDown.options[dropDown.selectedIndex].value;
     }
     return obj;
@@ -87,7 +139,7 @@ class widgetTableNodes {
   buildWhere() {
     /*   output - nameLast =~"(?i)Bol.*"
     */  // <tr><th><input>  must go up 2 levels to get to tr
-    const th  = app.domFunctions.getChildByIdr(this.widget, "headerRow").firstElementChild.children; // get collection of th
+    const th  = app.domFunctions.getChildByIdr(this.widgetDOM, "headerRow").firstElementChild.children; // get collection of th
 
     let where = {};
     // iterate siblings of input
@@ -99,7 +151,7 @@ class widgetTableNodes {
         // get value of search type
         const searchType = dropDown.options[dropDown.selectedIndex].value;
 
-        const field = this.getAtt(inputDOM,"fieldName");
+        const field = inputDOM.getAttribute('db');
         where[field] = {};
         where[field].value = inputDOM.value;
         where[field].searchType = searchType;
@@ -113,16 +165,6 @@ class widgetTableNodes {
       }
     }
     return where;
-  }
-
-  getAtt(element,attName) { // private -----------
-  	/*
-    input - element - is DOM input Object
-            attName - name of attribute in db
-    return - attribute value from db
-  	*/
-    const ret = element.getAttribute("db").split(attName+":")[1].split(";")[0].trim();
-  	return ret;
   }
 
   buildOwner() {
@@ -147,15 +189,16 @@ class widgetTableNodes {
     }
     const html = `${app.widgetHeader('widgetTableNodes')}
     <b>${this.queryObject.nodeLabel}:${this.queryObjectName}</b>${addText}
-    <input type="button" value="Search" idr = "searchButton" onclick="app.widgetSearch(this)">
-    limit <input value ="9" idr = "limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
+    <input type="button" value="Search" idr="searchButton" onclick="app.widgetSearch(this)">
+    <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
+    limit <input value ="${this.limitDefault}" idr = "limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
     </div>
 
     <div class="widgetBody">
       <table>
         <thead idr = "headerRow">
-        <tr><th></th><th hidden></th>#headerSearch#</tr>
-        <tr><th>#</th><th hidden>ID</th>#header#</tr>
+        <tr idr="headerSearch"></tr>
+        <tr idr="header"></tr>
         </thead>
         <tbody idr = "data"> </tbody>
       </table>
@@ -166,13 +209,105 @@ class widgetTableNodes {
 
     const html2 = html.replace('ondrop="app.drop(this, event)" ondragover="event.preventDefault()"', ""); // Disable ondrop - can't rearrange search tables anymore
 
+    /*
+    Create new element and append to tableHeader widget
+    */
+    const parent = document.getElementById('tableHeader');
+    let newWidget = document.createElement('div'); // create placeholder div
+    parent.append(newWidget); // Insert the new div before the first existing one
+    newWidget.outerHTML = html2; // replace placeholder with the div that was just written
+
+    // make the new widget hidden, and give it a descriptive ID and special class
+    this.widgetDOM = document.getElementById(this.idWidget);
+    this.widgetDOM.classList.add("hidden");
+    this.widgetDOM.setAttribute('id', this.queryObjectName);
+    this.idWidget = this.queryObjectName;
+    this.widgetDOM.classList.add('tableWidget');
+
+    this.fieldSelectPopup = document.createElement("div");
+    this.fieldSelectPopup.setAttribute("hidden", "true");
+    this.fieldSelectPopup.setAttribute('class', 'fieldPopup');
+    this.fieldSelectPopup.setAttribute('idr', 'fieldSelect');
+    this.fieldSelectPopup.innerHTML =
+    `<div class="popupHeader" idr="popupHeader">Select fields to show:</div>
+    <div>
+      <div idr="fieldList"></div>
+      <p>
+        <input type="button" value="OK" onclick = "app.widget('fieldSelectOK', this)">
+    		<input type="button" value="Cancel" onclick="app.widget('fieldSelectCancel', this)">
+      </p>
+    </div>`;
+    this.widgetDOM.appendChild(this.fieldSelectPopup);
+
+    this.updateFields();
+  }
+
+  fieldSelect(button) {
+    this.fieldSelectPopup.hidden = false;
+    const bounds = button.parentElement.getBoundingClientRect();
+    this.fieldSelectPopup.setAttribute("style", `left:${bounds.left + window.scrollX}px; top:${bounds.top + window.scrollY}px`);
+
+    let list = app.domFunctions.getChildByIdr(this.fieldSelectPopup, 'fieldList');
+    list.innerHTML = "";
+
+    for (let prop in this.fields) {
+      let classText = "listField";
+      if (this.fieldsDisplayed.indexOf(prop) >= 0) { // If this property is shown on the table
+        classText += " selectedField";
+      }
+      list.innerHTML += `<p idr=${prop} onclick="this.classList.toggle('selectedField')" class="${classText}">${this.fields[prop].label}</p>`;
+    }
+  }
+
+  fieldSelectCancel() {
+    this.fieldSelectPopup.hidden = true;
+  }
+
+  fieldSelectOK() {
+    let list = app.domFunctions.getChildByIdr(this.fieldSelectPopup, 'fieldList');
+    let fields = list.children;
+    for (let i = 0; i < fields.length; i++) {
+      const name = fields[i].getAttribute('idr'); // The idr is the DB name of the field
+      if (fields[i].classList.contains('selectedField') && this.fieldsDisplayed.indexOf(name) < 0) { // if this field wasn't shown but now should be
+        this.fieldsDisplayed.push(name); // add to end of fieldsDisplayed
+      }
+      else if (!(fields[i].classList.contains('selectedField')) && this.fieldsDisplayed.indexOf(name) >= 0) { // if this field was shown but shouldn't be
+        this.fieldsDisplayed.splice(this.fieldsDisplayed.indexOf(name), 1); // remove from fieldsDisplayed
+      }
+    }
+
+    const obj = {};
+	  obj.from = {"id":app.login.userID};
+	  obj.rel = {"type":"Settings", "merge":true};
+	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
+
+    const xhttp = new XMLHttpRequest();
+    const update = app.startProgress(this.widgetDOM, "Updating metadata");
+    const table = this;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        app.stopProgress(table.widgetDOM, update);
+      }
+    };
+
+    xhttp.open("POST","");
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    xhttp.send(JSON.stringify(queryObject));         // send request to server
+
+    this.fieldSelectPopup.hidden = true;
+    this.refresh();
+  }
+
+  updateFields() {
     const strSearch = `
     <select idr = "dropdown#x#", onclick = "app.regression.logSearchChange(this)">
     <option value="S">S</option>
     <option value="M">M</option>
     <option value="E">E</option>
     <option value="=">=</option>
-    </select></th>`
+    </select></th>`;
 
     const numSearch = `
     <select idr = "dropdown#x#" onclick = "app.regression.logSearchChange(this)">
@@ -181,28 +316,54 @@ class widgetTableNodes {
     <option value="=">=</option>
     <option value="<=">&lt;=</option>
     <option value="<">&lt;</option>
-    </select></th>`
+    </select></th>`;
+
+    let buttonHTML = '';
+    if (this.queryObjectName != 'all') {
+      buttonHTML = `<input type="button" value="Field Select" onclick="app.widget('fieldSelect', this)">`;
+    }
+
+    let headerSearch = app.domFunctions.getChildByIdr(this.widgetDOM, 'headerSearch');
+    let searchCells = Array.from(headerSearch.children);
 
     // build search part of buildHeader
-    let s="";
+    let s=`<th>${buttonHTML}</th><th hidden></th>`;
     for (let i=0; i<this.fieldsDisplayed.length; i++ ) {
         const fieldName =this.fieldsDisplayed[i];
-        let s1 = `<th><input idr = "text${i}" db="fieldName: #1" size="7" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
-        if (this.fields[fieldName].type === "number") {
+        const cell = searchCells.find(x=>x.getAttribute('db') === fieldName);
+        let text = "";
+        let select = "";
+        if (cell) { // if the cell exists, its first child is a text input and its second is a dropdown
+          text = cell.firstElementChild.value;
+          const dropDown = cell.lastElementChild;
+          select = dropDown.options[dropDown.selectedIndex].value; // get their values and plug them into the new HTML
+        }
+
+        let s1 = `<th db="${fieldName}" idr="searchCell${fieldName}" ondragstart="app.widget('dragHeader', this, event)"
+                  ondragover="event.preventDefault()" ondrop="app.widget('dropHeader', this, event)" draggable="true">
+                    <input idr = "text${i}" db="#1" size="7" onblur="app.regression.logText(this)"
+                    onkeydown="app.widget('searchOnEnter', this, event)" value="${text}">`;
+        if (this.fields && this.fields[fieldName] && this.fields[fieldName].type === "number") {
           // number search
           s1 += numSearch.replace('#x#', i);
         } else {
           // assume string search
           s1 += strSearch.replace('#x#', i);
         }
-        s += s1.replace('#1',fieldName)
+        s += s1.replace('#1',fieldName).replace(`<option value="${select}">`, `<option selected value="${select}">`);
     }
-    if (this.queryObjectName == 'mindmap') {
-      s += `<th idr = "ownerSearch">`;
-      s += `<input idr = "ownerText" size="7" value = "${app.login.userName}" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
-      s += strSearch.replace('#x#', 'owner');
-      s += `</th>`;
+
+    let ownerInput = app.domFunctions.getChildByIdr(this.widgetDOM, 'ownerText');
+    let ownerValue = app.login.userName;
+    if (ownerInput) { // If the owner field existed already, don't reset it
+      ownerValue = ownerInput.value;
     }
+
+    s += `<th idr = "ownerSearch">`;
+    s += `<input idr = "ownerText" size="7" value = "${ownerValue}" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
+    s += strSearch.replace('#x#', 'owner');
+    s += `</th>`;
+
     if (this.queryObjectName == 'people') {
       s += `<th colspan = "3">
             <select idr="permissionsDropdown">
@@ -214,49 +375,33 @@ class widgetTableNodes {
           </th>`;
     }
 
-    const html3 = html2.replace('#headerSearch#',s)
+    headerSearch.innerHTML = s;
 
     // build field name part of header
-    let f="";
+    let f="<th>#</th><th hidden>ID</th>";
     for (let i=0; i<this.fieldsDisplayed.length; i++ ) {
         const fieldName =this.fieldsDisplayed[i];
-        //f += "<th onClick='app.widgetSort(this)'>"+ this.fields[fieldName].label + "</th>" ;
-        // The original version of this line called a method that doesn't exist yet.
-        // If we build that method eventually, we can put the old version of the line back.
-        f += "<th>"+ this.fields[fieldName].label + "</th>" ;
+        f += `<th db="${fieldName}" oncontextmenu= "event.preventDefault(); app.widget('showPopup', this)" draggable="true"
+        ondragstart="app.widget('dragHeader', this, event)" ondragover="event.preventDefault()" ondrop="app.widget('dropHeader', this, event)">
+        ${this.fields[fieldName].label}</th>`;
     }
-    if (this.queryObjectName == 'mindmap') {
-      f += '<th>Owner</th>';
-    }
+    f += '<th>Owner</th>';
     if (this.queryObjectName == 'people') {
       f += '<th colspan = "3">Permissions</th>'
     }
-    const html4 = html3.replace('#header#',f);
 
-    /*
-    Create new element and append to tableHeader widget
-    */
-    const parent = document.getElementById('tableHeader');
-    let newWidget = document.createElement('div'); // create placeholder div
-    parent.append(newWidget); // Insert the new div before the first existing one
-    newWidget.outerHTML = html4; // replace placeholder with the div that was just written
-
-    // make the new widget hidden, and give it a descriptive ID and special class
-    newWidget = document.getElementById(this.idWidget);
-    newWidget.hidden = true;
-    newWidget.setAttribute('id', this.queryObjectName);
-    this.idWidget = this.queryObjectName;
-    newWidget.classList.add('tableWidget');
+    let header = app.domFunctions.getChildByIdr(this.widgetDOM, 'header');
+    header.innerHTML = f;
   }
 
-  buildData(data) {  // build dynamic part of table
+  buildData() {  // build dynamic part of table
     let html = "";
-    const r = data;
+    const r = this.data;
     let rowCount = 1;
     let cell; // the cell currently being built
     let row; // the row currently being built
     let text; // the text to go in the cell
-    const table = app.domFunctions.getChildByIdr(this.widget, "data");
+    const table = app.domFunctions.getChildByIdr(this.widgetDOM, "data");
 
     // Delete what's already in the table
     while (table.hasChildNodes()) {
@@ -296,16 +441,14 @@ class widgetTableNodes {
       }
 
       // If this is a mindmap table
-      if (this.queryObjectName == 'mindmap') {
-        let owner = "None";
-        if (r[i].owner) {
-          owner = r[i].owner;
-        }
-        cell = document.createElement('td');          // Make a cell showing their permissions...
-        text = document.createTextNode(owner);
-        cell.appendChild(text);
-        row.appendChild(cell);
+      let owner = "None";
+      if (r[i].owner) {
+        owner = r[i].owner;
       }
+      cell = document.createElement('td');          // Make a cell showing its owner...
+      text = document.createTextNode(owner);
+      cell.appendChild(text);
+      row.appendChild(cell);
 
       // If this is a people table...
       if (this.queryObjectName == "people") {
@@ -385,7 +528,7 @@ class widgetTableNodes {
       obj.action = "click";
     }
 
-    obj.data = JSON.parse(JSON.stringify(data)); // This should make a COPY of data, so deleting its identity won't affect the original.
+    obj.data = JSON.parse(JSON.stringify(this.data)); // This should make a COPY of data, so deleting its identity won't affect the original.
     for (let i = 0; i< obj.data.length; i++) { // Trying to remove the IDs from the log - they're not particularly useful, and can cause problems because they rarely match
       delete obj.data[i].n.identity;
     }
@@ -443,6 +586,48 @@ class widgetTableNodes {
     obj.action = "dragstart";
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
+  }
+
+  dragHeader(input, evnt) {
+    const data = {};
+    data.name = input.getAttribute('db');
+    data.sourceID = app.domFunctions.widgetGetId(input);
+    data.sourceTag = input.tagName;
+    evnt.dataTransfer.setData("text/plain", JSON.stringify(data));
+  }
+
+  dropHeader(target, evnt) {
+    const data = JSON.parse(evnt.dataTransfer.getData("text/plain"));
+    if (data.sourceID === this.idWidget && data.sourceTag === "TH") { // we are rearranging columns
+      const sourceIndex = this.fieldsDisplayed.indexOf(data.name);
+      const targetIndex = this.fieldsDisplayed.indexOf(target.getAttribute('db'));
+      if (sourceIndex >=0 && targetIndex >= 0) { // both items are in fieldsDisplayed -- SHOULD always be the case
+        this.fieldsDisplayed.splice(sourceIndex, 1); // remove from old location
+        // NOTE: If source was before target, will splice in after target because removing source moved target to left
+        this.fieldsDisplayed.splice(targetIndex, 0, data.name); // put back just before original target location
+
+        const obj = {};
+    	  obj.from = {"id":app.login.userID};
+    	  obj.rel = {"type":"Settings", "merge":true};
+    	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+    	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
+
+        const xhttp = new XMLHttpRequest();
+        const update = app.startProgress(this.widgetDOM, "Updating metadata");
+        const table = this;
+
+        xhttp.onreadystatechange = function() {
+          if (this.readyState == 4 && this.status == 200) {
+            app.stopProgress(table.widgetDOM, update);
+          }
+        };
+
+        xhttp.open("POST","");
+        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+        xhttp.send(JSON.stringify(queryObject));         // send request to server
+        this.refresh();
+      }
+    }
   }
 
   edit(element){
@@ -530,12 +715,12 @@ class widgetTableNodes {
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress(this.widget, "Checking permissions");
+    const update = app.startProgress(this.widgetDOM, "Checking permissions");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(nodes.widget, update);
+        app.stopProgress(nodes.widgetDOM, update);
         nodes.checkPermission(data, GUID, button, toAdd);
       }
     };
@@ -552,11 +737,11 @@ class widgetTableNodes {
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
-      const update = app.startProgress(this.widget, "Deleting old permissions");
+      const update = app.startProgress(this.widgetDOM, "Deleting old permissions");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          app.stopProgress(nodes.widget, update);
+          app.stopProgress(nodes.widgetDOM, update);
           nodes.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
         }
       };
@@ -604,12 +789,12 @@ class widgetTableNodes {
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
-      const update = app.startProgress(this.widget, "Setting permissions");
+      const update = app.startProgress(this.widgetDOM, "Setting permissions");
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(nodes.widget, update);
+          app.stopProgress(nodes.widgetDOM, update);
           nodes.search(data);
         }
       };
@@ -631,11 +816,11 @@ class widgetTableNodes {
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress(this.widget, "Removing permissions");
+    const update = app.startProgress(this.widgetDOM, "Removing permissions");
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(nodes.widget, update);
+        app.stopProgress(nodes.widgetDOM, update);
         nodes.search();
       }
     };

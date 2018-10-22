@@ -578,24 +578,23 @@ module.exports = class CRUD {
       withClause += `, perm`;
     }
 
-    let ownerCheck = "";
-    if (dataObj.type == "mindmap") {
-      ownerCheck = `optional match (${dataObj.name})-[:Owner]->(owner:people)`;
-      ret += `, owner.name as owner`;
-      withClause += `, owner`;
-    }
+    let ownerCheck = `optional match (${dataObj.name})-[:Owner]->(owner:people)`;
+    ret += `, owner.name as owner`;
+    withClause += `, owner`;
 
     let type = "";
     if (dataObj.type !== "all") {
       type = `:${dataObj.type}`;
     }
 
-    let match = `match (${dataObj.name}${type})`;
+    // structure: match (owner)<-[:Owner]-(mainNode)->[:Permissions]->(loginTable)
+    let match = `match `;
 
-    // NOTE: These next two won't work together - if I ever hit a situation where a person can have an owner, I'll have to rewrite.
     if (dataObj.owner) {
-      match += `-[:Owner]->(o:people)`;
+      match += `(o:people)<-[:Owner]-`;
     }
+
+    match += `(${dataObj.name}${type})`;
 
     if (dataObj.permissions && dataObj.permissions != "all") {
       match += `-[:Permissions]->(t:M_LoginTable)`; // require a permissions link
@@ -613,8 +612,13 @@ module.exports = class CRUD {
       orderBy = this.buildOrderString(dataObj.orderBy, dataObj.name, `order by labels(${dataObj.name})[0], `);
     }
 
+    let limit = "";
+    if (parseInt(dataObj.limit) > 0) { // If the limit exists and is a positive number
+      limit = `limit ${parseInt(dataObj.limit)}`;
+    }
+
     const query = `${match}, (a) ${where} ${permCheck} ${ownerCheck} ${withClause} ${linkCheck}
-                   ${ret} ${orderBy} limit ${dataObj.limit}`;
+                   ${ret} ${orderBy} ${limit}`;
     this.sendQuery(query, response);
   }
 

@@ -228,15 +228,20 @@ hideRegression(button) {
 
 // Removes all widgets other than the login div and regression header from both the screen and the widgets array
 clearWidgets() {
+	const login = document.getElementById('loginDiv');
+	const regHeader = document.getElementById('regressionHeader');
 	for (let id in this.widgets) { // For every widget...
 		if (id != "loginDiv" && id != "regressionHeader") { // (except for the login div and regression header)...
-			// Remove widget objects
-			delete this.widgets[id];
 
 			// delete  html2 from page
 			const widget = document.getElementById(id);
-			if (widget) {
+			if (widget && !(login.contains(widget)) && !(regHeader.contains(widget))) {
 				widget.parentElement.removeChild(widget);
+			}
+
+			// Remove widget objects
+			if (!widget || (!(login.contains(widget)) && !(regHeader.contains(widget)))) {
+				delete this.widgets[id];
 			}
 		}
 	}
@@ -299,13 +304,13 @@ createDebug() {
 // Runs when a search button is clicked. Shows the table associated with that search button.
 menuNodes(name) {
 	if (this.shownTable) {
-		this.shownTable.hidden = true;
+		this.shownTable.classList.add("hidden");
 		this.shownTable = null;
 	}
 
 	let newTable = document.getElementById(name);
 	if (newTable) {
-		newTable.hidden = false;
+		newTable.classList.remove("hidden");
 		this.shownTable = newTable;
 		let newTableJS = this.widgets[name];
 		newTableJS.search();
@@ -418,7 +423,7 @@ widgetClose(widgetElement) {
 
 	// If the widget to "close" is a table widget, just hide it.
 	if (widget.classList.contains('tableWidget')) {
-		widget.hidden = true;
+		widget.classList.add('hidden');
 		this.shownTable = null;
 	}
 
@@ -475,6 +480,17 @@ widgetFullScreen(widgetElement) {
 		} // end while (an ancestor was found)
 
 		widget.classList.add("fullScreen");
+
+		const id = widget.id;
+		const JSwidget = this.widgets[id];
+		if (JSwidget.constructor === widgetSVG) { // If this is a mindmap
+			let element = JSwidget.SVG_DOM;
+			while (!(element.classList.contains('fullScreen'))) {
+				element.classList.add('fullHeight'); // make the SVG and all its ancestors full height
+				element = element.parentElement;
+			}
+		}
+
 		widgetElement.value = "><";
 	}
 	else if (widgetElement.value === "><") {
@@ -484,7 +500,18 @@ widgetFullScreen(widgetElement) {
 			hidden[0].classList.remove("hiddenForFS");
 		}
 
+		const id = widget.id;
+		const JSwidget = this.widgets[id];
+		if (JSwidget.constructor === widgetSVG) { // If this is a mindmap
+			let element = JSwidget.SVG_DOM;
+			while (!(element.classList.contains('fullScreen'))) {
+				element.classList.remove('fullHeight'); // make the SVG and all its ancestors full height
+				element = element.parentElement;
+			}
+		}
+
 		widget.classList.remove("fullScreen");
+
 		widgetElement.value = "<>";
 	}
 	else {
@@ -611,7 +638,8 @@ dropLink(input, evnt) {
 			data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
 			data.sourceType == "widgetRelations" && data.sourceTag == "TR" ||
 			data.sourceType == "widgetNode" && data.sourceTag == "B" ||
-			data.sourceType == "dragDrop" && data.sourceTag == "TR"
+			data.sourceType == "dragDrop" && data.sourceTag == "TR" ||
+			data.sourceType == "widgetSVG" && data.sourceTag == "B"
 		)) {
 		return;
 	}
@@ -671,6 +699,69 @@ deleteLink(input) {
 	let cell = input.parentElement;
 	let row = cell.parentElement;
 	row.removeChild(cell);
+}
+
+checkOwner(type, newItem, domElement, object, method, name) {
+	if (newItem || (object.owner && object.owner.id !== this.login.userID)) { // If the user asked for a new item, or the node is owned by someone else
+		const obj = {"type":type, "properties":{"name":name}};
+
+		const xhttp = new XMLHttpRequest();
+		const app = this;
+		const update = this.startProgress(domElement, "Creating node");
+
+		xhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				const data = JSON.parse(this.responseText);
+				app.stopProgress(domElement, update);
+				app.setOwner(domElement, object, method, data); // If this is a new item or a new copy, it belongs to the user who made it
+			}
+		};
+
+		xhttp.open("POST","");
+		const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": this.login.userGUID};
+		xhttp.send(JSON.stringify(queryObject));         // send request to server
+	}
+	else {
+		if (object.owner) { // If the node already has an owner (which should be the user at this point), it still belongs to them - no need to update
+			object[method]();
+		}
+		else {
+			this.setOwner(domElement, object, method); // This should rarely happen - but if the node already existed and DIDN'T have an owner, it belongs to this user (for now).
+		}
+	}
+}
+
+// Make the logged-in user the owner of this node
+setOwner(domElement, object, method, data) { // If there is data, this was called after creating a new node. Set the ID accordingly.
+	if (data) {
+		object.id = data[0].node.id;
+		object.GUID = data[0].node.properties.M_GUID;
+	}
+
+	object.owner = {"name":this.login.userName, "id":this.login.userID};
+
+	const obj = {};
+	obj.from = {"id":object.id};
+	obj.to = {"id":this.login.userID};
+	obj.rel = {"type":"Owner"};
+
+	const xhttp = new XMLHttpRequest();
+	const app = this;
+	const update = this.startProgress(domElement, "Setting owner");
+
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			const data = JSON.parse(this.responseText);
+			app.stopProgress(domElement, update);
+			if (object && method) {
+				object[method](data);
+			}
+		}
+	};
+
+	xhttp.open("POST","");
+	const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+	xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 error(message) {
@@ -927,6 +1018,130 @@ createLIS(dataArray, compFunction) {
 	 return sequence; // Returns the LIS array, which is a subset of elements from the original dataArray
 }
 
+setUpPopup(JSobj) {
+	// create popup
+	const fieldPopup = document.createElement("div");
+	fieldPopup.setAttribute("hidden", "true");
+	fieldPopup.setAttribute('class', 'fieldPopup')
+	fieldPopup.innerHTML =
+	`<div class="popupHeader" idr="popupHeader"></div>
+	<div>
+		<p>Display Name: <input idr="labelInput" type="text"></p>
+		<p><input idr="showTable" type="checkbox"> Show this field in the table</p>
+		<p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
+		<p><input type="button" idr="restoreSizeButton" value="Restore textarea in form to default size"
+			onclick="app.widget('restoreSize', this)"></p>
+		<p><input type="button" value="OK" onclick = "app.widget('popupOK', this)">
+		<input type="button" value="Cancel" onclick="app.widget('popupCancel', this)"></p>
+	</div>`;
+
+	fieldPopup.setAttribute("idr", "fieldPopup");
+
+	if (!JSobj.app) {
+		JSobj.app = this;
+	}
+
+	JSobj.showPopup = function(label) {
+	  this.fieldPopup.hidden = false;
+	  const bounds = label.getBoundingClientRect();
+	  this.fieldPopup.setAttribute("style", `left:${bounds.left + window.scrollX}px; top:${bounds.top + window.scrollY}px`);
+	  // set text in popup header to "actual" field name (stored as db of label)
+	  const fieldName = label.getAttribute('db');
+	  const header = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'popupHeader');
+	  header.innerHTML = fieldName;
+	  // set text in label textbox to "label" field name (stored as text of label)
+	  const labelInput = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
+	  labelInput.value = label.textContent;
+
+	  // Show or hide restore size button
+	  const restoreSize = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'restoreSizeButton');
+	  if (this.fields[fieldName].input && this.fields[fieldName].input.name === "textarea") {
+	    restoreSize.classList.remove("hidden");
+	  }
+	  else {
+	    restoreSize.classList.add("hidden");
+	  }
+
+	  const tableCheck = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
+	  if (this.fieldsDisplayed.indexOf(fieldName) != -1) {
+	    tableCheck.checked = true;
+	  }
+	  else {
+	    tableCheck.checked = false;
+	  }
+	  const formCheck = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
+	  if (this.formFieldsDisplayed.indexOf(fieldName) != -1) {
+	    formCheck.checked = true;
+	  }
+	  else {
+	    formCheck.checked = false;
+	  }
+	}
+
+	JSobj.popupCancel = function() {
+	  this.fieldPopup.hidden = true;
+	}
+
+	JSobj.popupOK = function(button) {
+	  // Get the DOM elements and the db name of the field being edited
+	  const header = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'popupHeader');
+	  const label = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
+	  const tableCheck = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'showTable');
+	  const formCheck = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'showForm');
+	  const db = header.textContent;
+
+	  // update metadata class
+	  if (tableCheck.checked && this.fieldsDisplayed.indexOf(db) == -1) { // If the field should be displayed and currently isn't
+	    this.fieldsDisplayed.push(db);
+	  }
+
+	  else if (!(tableCheck.checked) && this.fieldsDisplayed.indexOf(db) != -1) { // If the field shouldn't be displayed and is
+	    this.fieldsDisplayed.splice(this.fieldsDisplayed.indexOf(db), 1);
+	  }
+
+	  if (formCheck.checked && this.formFieldsDisplayed.indexOf(db) == -1) { // If the field should be displayed and currently isn't
+	    this.formFieldsDisplayed.push(db);
+	  }
+
+	  else if (!(formCheck.checked) && this.formFieldsDisplayed.indexOf(db) != -1) { // If the field shouldn't be displayed and is
+	    this.formFieldsDisplayed.splice(this.formFieldsDisplayed.indexOf(db), 1);
+	  }
+
+	  this.fields[db].label = label.value;
+
+		// update widget
+		this.refresh();
+
+	  // create or update link
+	  const obj = {};
+	  obj.from = {"id":this.app.login.userID};
+	  obj.rel = {"type":"Settings", "merge":true};
+	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+	  obj.changes = [{"item":"rel", "property":"fields", "value":this.app.stringEscape(JSON.stringify(this.fields))},
+	                 {"item":"rel", "property":"fieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
+	                 {"item":"rel", "property":"formFieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
+
+	  const xhttp = new XMLHttpRequest();
+	  const update = this.app.startProgress(this.widgetDOM, "Updating metadata");
+	  const details = this;
+
+	  xhttp.onreadystatechange = function() {
+	    if (this.readyState == 4 && this.status == 200) {
+	      details.app.stopProgress(details.widgetDOM, update);
+	    }
+	  };
+
+	  xhttp.open("POST","");
+	  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.app.login.userGUID};
+	  xhttp.send(JSON.stringify(queryObject));         // send request to server
+
+	  // close popup
+	  this.fieldPopup.hidden = true;
+	}
+
+	return fieldPopup;
+}
+
 resize() {
 	for (let i in this.doOnResize) { // Run all methods that run when a user logs in
 		const object = this.doOnResize[i].object;
@@ -937,6 +1152,7 @@ resize() {
 		}
 	}
 }
+
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.
 // Can be called directly by app.html, or by clicking a single button. Currently empty.
 test() {}

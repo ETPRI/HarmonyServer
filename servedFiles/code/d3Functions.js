@@ -223,6 +223,7 @@ class d3Functions {
       table.appendChild(header);
       let showButton = "";
       let disassociateButton = `<input type="button" value="Disassociate" idr="disassociate${datum.data.id}" onclick="app.widget('disassociate', this)">`;
+      let dragText = "";
       if (d.type === "link") { // URLs get an Open Link button
         showButton = `<input type="button" value="Open link" onclick="app.widget('showNode', this)"
         GUID="${d.nodeID}" DBType="link" link="${d.details[0].value}">`;// For now, assume the uri is the first (and only) detail
@@ -232,11 +233,12 @@ class d3Functions {
         GUID="${d.nodeID}" DBType="${d.DBType}">
         <input type="button" value="Open as node" onclick="app.widget('showNode', this)"
         GUID="${d.nodeID}" DBType="${d.DBType}">`;
-
+        dragText = `<b idr = "dragButton${d.id}" draggable=true ondragstart="app.widget('dragNode', this, event)">Drag To View</b>`;
       }
       else if (d.type !== "" && d.type !== "file") { // Files and plain text get no button; everything else gets "Open Node"
         showButton = `<input type="button" value="Open node" onclick="app.widget('showNode', this)"
         GUID="${d.nodeID}" DBType="${d.DBType}">`;
+        dragText = `<b idr = "dragButton${d.id}" draggable=true ondragstart="app.widget('dragNode', this, event)">Drag To View</b>`;
       }
 
       else if (d.type === "") { // plain text also doesn't get a disassociate button. I may give it an Edit button later, though.
@@ -244,7 +246,7 @@ class d3Functions {
       }
       header.innerHTML =
         `<tr><th colspan="2">
-          ${d.name}: ${d.type} ${showButton} ${disassociateButton}
+          ${d.name}: ${d.type} ${showButton} ${disassociateButton} ${dragText}
         </tr></th>`;
       const body = document.createElement('tbody');
       table.appendChild(body);
@@ -253,17 +255,14 @@ class d3Functions {
 
       let heightString = "";
       let widthString = "";
-      // if (datum.data.notesHeight) { // If it has a notesHeight, it will also have a notesWidth
-      //   heightString = ` height:${datum.data.notesHeight}px;`;
-      //   widthString = ` width:${datum.data.notesWidth}px;`;
-      // }
 
       let notes="";
       if (d.notes) {
         notes = d.notes;
       }
 
-      row.innerHTML = `<th>Notes:</th><td><textarea onblur="app.widget('changeNotes', this)" labelID=${datum.data.id}>${notes}</textarea></td>`;
+      row.innerHTML = `<th>Notes:</th><td><textarea idr="notesText" onblur="app.widget('changeNotes', this)"
+                                          rows="8" labelID=${datum.data.id}>${notes}</textarea></td>`;
 
       for (let i = 0; i < d.details.length; i++) {
         const details = d.details[i];

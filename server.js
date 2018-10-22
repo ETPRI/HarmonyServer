@@ -71,7 +71,7 @@ http.createServer(function (request, response) {
     // serve static file
     var filePath = './servedFiles';  // default location of served files relative to where server is
     if (request.url == "/") {
-      filePath += "/index.html";
+      filePath += "/view/app.html";
   // filePath += "/admin/Neo4jRun.html";
   //filePath += "_app.html";
     } else {

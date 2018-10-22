@@ -1,8 +1,8 @@
 class widgetSVG {
   constructor (callerID, GUID, name) { // create variables, query for data if needed, then call buildWidget()
     this.widgetID = app.idCounter;
-    this.mapGUID = GUID;
-    this.mapID = null;
+    this.GUID = GUID;
+    this.id = null;
     this.SVG_DOM = null;
     this.widgetDOM = null;
     this.name = name;
@@ -21,7 +21,7 @@ class widgetSVG {
     this.nodeLabel = app.metaData.getNode('mindmap').nodeLabel;
 
     // constants for drawing
-    this.height = 600; // Height of the SVG element
+    this.height = 400; // Height of the SVG element
 
     // variables for dragging map and selecting nodes
     this.currentX=0;
@@ -34,9 +34,9 @@ class widgetSVG {
     this.notesText = null;
     this.notesLabel = null;
 
-    if (this.mapGUID) {
+    if (this.GUID) {
       const obj = {};
-      obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.mapGUID}};
+      obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.GUID}};
 
       const xhttp = new XMLHttpRequest();
       const SVG = this;
@@ -65,7 +65,7 @@ class widgetSVG {
       this.name = "Untitled mind map";  // The name starts off untitled; it can change later
     }
 
-    const html = app.widgetHeader('widgetSVG') + // I've hidden the show/hide details button for now, and shown the details pane.
+    const html = app.widgetHeader('widgetMindMap') + // I've hidden the show/hide details button for now, and shown the details pane.
       `<b idr="name" contenteditable="true"
                      onfocus="this.parentNode.draggable = false;"
                      onblur="this.parentNode.draggable = true;">${this.name}</b>
@@ -84,7 +84,7 @@ class widgetSVG {
     <td id = "detailsPane" class = "detailsPane">
       <div id="mindmapDetails">
         <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>
-        <b idr="nodeLabel">#${this.mapID}: ${this.name}</b>
+        <b idr="nodeLabel">#${this.id}: ${this.name}</b>
       </div>
     </td></tr></table></div></div>`;
 
@@ -137,13 +137,16 @@ class widgetSVG {
     this.detailsPane = document.getElementById('detailsPane');
     this.mindmapDetails = document.getElementById('mindmapDetails');
     this.containedWidgets.push(app.idCounter);
-    this.details = new widgetDetails('mindmap', this.mindmapDetails, this.mapGUID);
+    this.details = new widgetDetails('mindmap', this.mindmapDetails, this.GUID);
 
     const main = app.domFunctions.getChildByIdr(this.mindmapDetails, 'main');
     const button = document.createElement('input');
     this.mindmapDetails.insertBefore(button, main);
     button.outerHTML = `<input type="button" value="Open as node" onclick="app.widget('showNode', this)"
-    GUID="${this.mapGUID}" DBType="mindmap">`;
+    GUID="${this.GUID}" DBType="mindmap">`;
+    const drag = document.createElement('b');
+    this.mindmapDetails.insertBefore(drag, main);
+    drag.outerHTML = `<b idr = "dragButton" draggable=true ondragstart="app.widget('drag', this, event)">Drag To View</b>`;
     this.details.showNode = this.showNode.bind(this);
 
     if (data) {
@@ -162,7 +165,7 @@ class widgetSVG {
       alert ("Error: Mind map not found");
     }
     else { // If a result was returned - which should always happen
-      this.mapID = data[0].mindmap.id;
+      this.id = data[0].mindmap.id;
       if (data[0].mindmap.properties.M_roots) {
         this.d3Functions.roots = JSON.parse(data[0].mindmap.properties.M_roots);
 
@@ -220,7 +223,15 @@ class widgetSVG {
         const nameText = app.domFunctions.getChildByIdr(this.widgetDOM, 'name');
         nameText.textContent = this.name;
         const detailsName = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeLabel', true);
-        detailsName.textContent = `${this.mapID}: ${this.name}`;
+        detailsName.textContent = `${this.id}: ${this.name}`;
+      }
+
+      if (data[0].mindmap.properties.viewBox) {
+        let viewBox = data[0].mindmap.properties.viewBox.split(" ");
+        viewBox[0] = parseInt(viewBox[0]);
+        viewBox[1] = parseInt(viewBox[1]);
+        this.SVG_DOM.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${this.SVG_DOM.getBoundingClientRect().width - 10} ${this.height}`);
+
       }
 
       /*
@@ -505,10 +516,16 @@ class widgetSVG {
   }
 
   dragStart(SVG, evnt) {
-    // Show mindmap details in details pane
+    // Show mindmap details in details pane - blur the comment textbox to save any unsaved comments
     let details = this.detailsPane.children;
     for (let i = 0; i < details.length; i++) {
-      details[i].classList.add('hidden');
+      if (!(details[i].classList.contains('hidden'))) {
+        const textBox = app.domFunctions.getChildByIdr(details[i], 'notesText');
+        if (textBox) {
+          textBox.onblur();
+        }
+        details[i].classList.add('hidden');
+      }
     }
     this.mindmapDetails.classList.remove('hidden');
 
@@ -595,7 +612,41 @@ class widgetSVG {
     let viewBox = SVG.getAttribute("viewBox").split(" ");
     viewBox[0] = parseInt(viewBox[0]) - dx;
     viewBox[1] = parseInt(viewBox[1]) - dy;
-    SVG.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${SVG.getBoundingClientRect().width - 10} ${this.height}`);
+
+    let height = this.height;
+    if (this.widgetDOM.classList.contains('fullScreen')) {
+      height = this.SVG_DOM.getBoundingClientRect().height-13;
+    }
+
+    SVG.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${SVG.getBoundingClientRect().width - 10} ${height}`);
+  }
+
+  dragNode(text, evnt) {
+    let idr = text.getAttribute('idr');
+    let id = idr.slice(10); // idr is like 'dragButtonxxx'
+    let JSobj = this.d3Functions.objects[id].JSobj;
+
+      const data = {};
+      data.name = JSobj.name;
+      data.DBType = JSobj.type;
+      data.type = app.metaData.node[JSobj.type].nodeLabel;
+      data.nodeID = JSobj.nodeID;
+
+      data.details = [];
+
+      for (let i = 0; i < JSobj.details.length; i++) { // This is klunky, but should copy everything except instances
+        data.details[i] = {};
+        for (let prop in JSobj.details[i]) {
+          if (prop !== 'instance') {
+            data.details[i][prop] = JSON.parse(JSON.stringify(JSobj.details[i][prop]));
+          }
+        }
+      }
+
+      data.sourceID = app.domFunctions.widgetGetId(text);
+      data.sourceType = "widgetSVG";
+      data.sourceTag = text.tagName;
+      evnt.dataTransfer.setData("text/plain", JSON.stringify(data));
   }
 
   resize() {
@@ -606,7 +657,11 @@ class widgetSVG {
     if (width < 0) {
       width = 0;
     }
-    this.SVG_DOM.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${width} ${this.height}`);
+    let height = this.height;
+    if (this.widgetDOM.classList.contains('fullScreen')) {
+      height = this.SVG_DOM.getBoundingClientRect().height-13;
+    }
+    this.SVG_DOM.setAttribute("viewBox", `${viewBox[0]} ${viewBox[1]} ${width} ${height}`);
   }
 
   mouseup(SVG, evnt) {
@@ -701,7 +756,7 @@ class widgetSVG {
   // If so, create the new node and call setOwner. If not, call setOwner if the map has no owner, or startNodes if it has an owner.
   startSave(button) {
     let name = app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent;
-    const id = this.mapID;
+    const id = this.id;
     let newMap = false;
     // If the mind map doesn't have an ID (indicating that it hasn't been saved),
     // or if the user clicked the "Save As" button, indicating they want to make a copy with a new name:
@@ -733,7 +788,7 @@ class widgetSVG {
       }
     }
     else {
-      this.checkOwner(name, newMap);
+      app.checkOwner("mindmap", newMap, this.widgetDOM, this, 'startNodes', name);
     }
   }
 
@@ -764,69 +819,10 @@ class widgetSVG {
       }
     }
     else {
-      this.checkOwner(name, newMap);
+      // Update name in title
+      app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
+      app.checkOwner("mindmap", newMap, this.widgetDOM, this, 'startNodes', name);
     }
-  }
-
-  checkOwner(name, newMap) {
-    // Update name in title
-    app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
-
-    if (newMap) {
-      const obj = {"type":"mindmap", "properties":{"name":name}};
-
-      const xhttp = new XMLHttpRequest();
-      const SVG = this;
-      const update = app.startProgress(this.widgetDOM, "Creating mindmap");
-
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          const data = JSON.parse(this.responseText);
-          app.stopProgress(SVG.widgetDOM, update);
-          SVG.setOwner(data); // If this is a new map or a new copy, it belongs to the user who made it
-        }
-      };
-
-      xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
-    }
-    else {
-      if (this.owner) { // If the mindmap already has an owner, it still belongs to them
-        this.startNodes();
-      }
-      else {
-        this.setOwner(); // This should rarely happen - but if the mindmap already existed and DIDN'T have an owner, it belongs to this user (for now).
-      }
-    }
-  }
-
-  // Make the logged-in user the owner of this mindmap
-  setOwner(data) { // If there is data, this was called after creating a new mindmap node. Set the ID accordingly.
-    if (data) {
-      this.mapID = data[0].node.id;
-    }
-
-    const obj = {};
-    obj.from = {"id":this.mapID};
-    obj.to = {"id":app.login.userID};
-    obj.rel = {"type":"Owner"};
-
-    const xhttp = new XMLHttpRequest();
-    const SVG = this;
-    const update = app.startProgress(this.widgetDOM, "Setting owner");
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(SVG.widgetDOM, update);
-        SVG.startNodes(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 
   startNodes() {
@@ -877,7 +873,7 @@ class widgetSVG {
           // Now, remove the DB relation, if it exists
           if (saved && saved.inDB) {
             const obj = {};
-            obj.from = {"id":this.mapID};
+            obj.from = {"id":this.id};
             obj.to = {"properties":{"M_GUID":saved.nodeID}};
             obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
 
@@ -906,7 +902,7 @@ class widgetSVG {
               saved.inDB = false;
               labels.push(label); // Prepare to process the label a second time WITHOUT the relation, to check for a new relation...
               const obj = {};
-              obj.from = {"id":this.mapID};
+              obj.from = {"id":this.id};
               obj.to = {"properties":{"M_GUID":saved.nodeID}};
               obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
 
@@ -932,7 +928,7 @@ class widgetSVG {
           else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
             if (label.nodeID != null) { // If there is a node associated with this label, merge in a relation to it
               const obj = {};
-              obj.from = {"id":this.mapID};
+              obj.from = {"id":this.id};
               obj.to = {"properties":{"M_GUID":label.nodeID}};
               obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "merge":true};
 
@@ -967,7 +963,7 @@ class widgetSVG {
   }
 
   setAttributes() {
-    const id = this.mapID;  // This should definitely exist by now, because if it didn't exist when startSave was called, it was created then.
+    const id = this.id;  // This should definitely exist by now, because if it didn't exist when startSave was called, it was created then.
 
     // Create array of parents (starts empty)
     const parents = [];
@@ -1042,9 +1038,10 @@ class widgetSVG {
 
     // Run the actual query and callback to update
     const obj = {};
-    obj.node = {"id":this.mapID};
+    obj.node = {"id":this.id};
     obj.changes = [{"property":"M_roots", "value":app.stringEscape(JSON.stringify(rootsCopy))},
-                   {"property":"M_count", "value":this.d3Functions.count}];
+                   {"property":"M_count", "value":this.d3Functions.count},
+                   {"property":"viewBox", "value":this.SVG_DOM.getAttribute("viewBox")}];
 
     const xhttp = new XMLHttpRequest();
     const SVG = this;
@@ -1063,7 +1060,7 @@ class widgetSVG {
   	xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Meanwhile, save information from the details pane.
-    this.details.id = this.mapID;
+    this.details.id = this.id;
     this.details.saveAdd();
   }
 
@@ -1211,10 +1208,8 @@ class widgetSVG {
     if (this.selectedNodes.size === 1) { // If that leaves a single item in the set
       const elements = this.selectedNodes.entries(); // element is the first (and only) item in the set
       for (let element of elements) {
-        if (element[0].__data__.data.type !== "") {
-          this.mindmapDetails.classList.add('hidden');
-          this.d3Functions.objects[element[0].__data__.data.id].DOMelements.detailsTable.classList.remove('hidden');
-        }
+        this.mindmapDetails.classList.add('hidden');
+        this.d3Functions.objects[element[0].__data__.data.id].DOMelements.detailsTable.classList.remove('hidden');
       }
     }
   }
@@ -1300,12 +1295,13 @@ class widgetSVG {
 
     if (id !== null) {
       objs[id].JSobj.notes = textarea.value;
-      if (saved[id].notes === textarea.value) {
+      if (saved[id] && (saved[id].notes === textarea.value)) {
         textarea.classList.remove('changedData');
       }
       else {
         textarea.classList.add('changedData');
       }
     }
+    this.d3Functions.update();
   }
 }

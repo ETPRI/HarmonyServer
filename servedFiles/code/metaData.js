@@ -54,7 +54,9 @@ initNodeData() { // move to DB in the future
     ,"email":      {label: "Email"     }
     ,"state":      {label: "State"     }
     ,"comment":    {label: "Comment", input:{name:"textarea"}}
-    }}
+    }
+    ,proposedFields:{}
+  }
 
   this.node.organization = {
      nodeLabel: "organization"
@@ -64,7 +66,9 @@ initNodeData() { // move to DB in the future
     ,fields: {"name":       {label: "Name" }
       ,"web":      {label: "Web"}
       ,"comment":    {label: "Comment", input:{name:"textarea"}}
-    }}
+    }
+    ,proposedFields:{}
+  }
 
   this.node.topic = {
      nodeLabel: "topic"
@@ -73,7 +77,9 @@ initNodeData() { // move to DB in the future
     ,formFieldsDisplayed: ["name", "comment"]
     ,fields: {"name":       {label: "Name", input:{name:"input"} }
       ,"comment":    {label: "Comment", input:{name:"textarea"}}
-    }}
+    }
+    ,proposedFields:{}
+  }
 
 
   this.node.address = {
@@ -89,7 +95,9 @@ initNodeData() { // move to DB in the future
     ,"postalCode": {label: "Zip"  }
     ,"country":    {label: "Country"  }
     ,"comment":    {label: "Comment", input:{name:"textarea"}}
-    }}
+    }
+    ,proposedFields:{}
+  }
 
   this.node.mindmap = {
     nodeLabel: "mindmap"
@@ -103,124 +111,115 @@ initNodeData() { // move to DB in the future
       // ,"created":     {label: "Created on", type: "date"}
       // ,"lastEditor":  {label: "Last edited by"}
       // ,"lastEdited":  {label: "Last edited on", type: "date"}
-    }}
-
-    this.node.calendar = {
-      nodeLabel: "calendar"
-      ,orderBy: [{"name":"name"}, {"name":"description"}]
-      ,fieldsDisplayed: ["name", "description"]
-      ,formFieldsDisplayed: ["name", "description"]
-      ,fields: {
-        "name": {label: "Name"}
-        ,"description": {label: "Description"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-        // Add more here later - probably search criteria (each calendar is like a different search for events)
-      }
     }
+    ,proposedFields:{}
+  }
 
-    this.node.all = {
-      nodeLabel:"All Nodes"
-      ,orderBy: [{"name":"name"}, {"name":"comment"}]
-      ,fieldsDisplayed:["type", "name", "comment"]
-      ,fields: {
-        "type": {label:"Type"}
-        ,"name": {label:"Name"}
-        ,"comment": {label:"Comment", input:{name:"textarea"}}
-      }
+  this.node.calendar = {
+    nodeLabel: "calendar"
+    ,orderBy: [{"name":"name"}, {"name":"description"}]
+    ,fieldsDisplayed: ["name", "description"]
+    ,formFieldsDisplayed: ["name", "description"]
+    ,fields: {
+      "name": {label: "Name"}
+      ,"description": {label: "Description"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
+      // Add more here later - probably search criteria (each calendar is like a different search for events)
     }
+    ,proposedFields:{}
+  }
 
-    this.node.M_View = {
-      nodeLabel: "M_View"
-      ,orderBy: [{"name":"direction"}, {"name":"order"}]
-      ,fieldsDisplayed: ["direction", "order"]
-      ,formFieldsDisplayed: ["direction", "order"]
-      ,fields: {
-        "direction": {label:"direction"}
-        ,"order": {label:"order"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-      }
+  this.node.all = {
+    nodeLabel:"All Nodes"
+    ,orderBy: [{"name":"name"}, {"name":"comment"}]
+    ,fieldsDisplayed:["type", "name", "comment"]
+    ,fields: {
+      "type": {label:"Type"}
+      ,"name": {label:"Name"}
+      ,"comment": {label:"Comment", input:{name:"textarea"}}
     }
+  }
 
-    this.node.M_LoginTable = {
-      nodeLabel: "M_Login Table"
-      ,orderBy: [{"name":"name"}]
-      ,fieldsDisplayed: ["name"]
-      ,formFieldsDisplayed: ["name"]
-      ,fields: {
-        "name": {label:"name"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-      }
+  this.node.M_LoginTable = {
+    nodeLabel: "M_Login Table"
+    ,orderBy: [{"name":"name"}]
+    ,fieldsDisplayed: ["name"]
+    ,formFieldsDisplayed: ["name"]
+    ,fields: {
+      "name": {label:"name"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
+  }
 
-    this.node.M_ChangeLog = {
-      nodeLabel: "M_ChangeLog"
-      ,orderBy: [{"name":"number", "direction": "D"}] // Descending. Shouldn't need anything else - numbers should be unique
-      ,fieldsDisplayed: ["number", "action", "label", "attribute", "value"]
-      ,formFieldsDisplayed: ["number", "action", "label", "attribute", "value", "from_GUID", "to_GUID", "item_GUID", "user_GUID"]
-      ,fields: {
-        "number": {label:"number"}
-        ,"action": {label:"action"}
-        ,"label": {label:"label"}
-        ,"attribute": {label:"attribute"}
-        ,"value": {label:"value"}
-        ,"from_GUID": {label: "from_GUID"}
-        ,"to_GUID": {label: "to_GUID"}
-        ,"item_GUID": {label: "item_GUID"}
-        ,"user_GUID": {label: "user_GUID"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-      }
+  this.node.M_ChangeLog = {
+    nodeLabel: "M_ChangeLog"
+    ,orderBy: [{"name":"number", "direction": "D"}] // Descending. Shouldn't need anything else - numbers should be unique
+    ,fieldsDisplayed: ["number", "action", "label", "attribute", "value"]
+    ,formFieldsDisplayed: ["number", "action", "label", "attribute", "value", "from_GUID", "to_GUID", "item_GUID", "user_GUID"]
+    ,fields: {
+      "number": {label:"number"}
+      ,"action": {label:"action"}
+      ,"label": {label:"label"}
+      ,"attribute": {label:"attribute"}
+      ,"value": {label:"value"}
+      ,"from_GUID": {label: "from_GUID"}
+      ,"to_GUID": {label: "to_GUID"}
+      ,"item_GUID": {label: "item_GUID"}
+      ,"user_GUID": {label: "user_GUID"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
+  }
 
-    this.node.M_MetaData = {
-      nodeLabel:"M_MetaData"
-      ,orderBy:[{"name":"name"}]
-      ,fieldsDisplayed: ["name", "nodeLabel", "fields"]
-      ,formFieldsDisplayed: ["name", "nodeLabel", "fields", "fieldsDisplayed", "formFieldsDisplayed"]
-      ,fields: {
-        "name": {label: "DB name"}
-        ,"nodeLabel": {label: "Display name"}
-        ,"fields": {label: "All fields"}
-        ,"fieldsDisplayed": {label: "Table fields"}
-        ,"formFieldsDisplayed": {label: "Form fields"}
-        ,"orderBy": {label: "Order by"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-      }
+  this.node.M_MetaData = {
+    nodeLabel:"M_MetaData"
+    ,orderBy:[{"name":"name"}]
+    ,fieldsDisplayed: ["name", "nodeLabel", "fields"]
+    ,formFieldsDisplayed: ["name", "nodeLabel", "fields", "fieldsDisplayed", "formFieldsDisplayed"]
+    ,fields: {
+      "name": {label: "DB name"}
+      ,"nodeLabel": {label: "Display name"}
+      ,"fields": {label: "All fields"}
+      ,"fieldsDisplayed": {label: "Table fields"}
+      ,"formFieldsDisplayed": {label: "Form fields"}
+      ,"orderBy": {label: "Order by"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
+  }
 
-    this.node.M_Session = {
-      nodeLabel:"M_Session"
-      ,orderBy:[{"name":"startTime"}, {"name":"endTime"}]
-      ,fieldsDisplayed: ["startTime", "endTime"]
-      ,formFieldsDisplayed: ["startTime", "endTime"]
-      ,fields: {
-        "startTime": {label: "Start time"}
-        ,"endTime": {label: "End time"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-      }
+  this.node.M_Session = {
+    nodeLabel:"M_Session"
+    ,orderBy:[{"name":"startTime"}, {"name":"endTime"}]
+    ,fieldsDisplayed: ["startTime", "endTime"]
+    ,formFieldsDisplayed: ["startTime", "endTime"]
+    ,fields: {
+      "startTime": {label: "Start time"}
+      ,"endTime": {label: "End time"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
+  }
 
-    this.node.M_Browser = {
-      nodeLabel:"M_Browser"
-      ,orderBy:[{"name":"name"}]
-      ,fieldsDisplayed: ["name"]
-      ,formFieldsDisplayed: ["name"]
-      ,fields: {
-        "name": {label:"name"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-      }
+  this.node.M_Browser = {
+    nodeLabel:"M_Browser"
+    ,orderBy:[{"name":"name"}]
+    ,fieldsDisplayed: ["name"]
+    ,formFieldsDisplayed: ["name"]
+    ,fields: {
+      "name": {label:"name"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
+  }
 
-    this.node.M_Widget = {
-      nodeLabel:"M_Widget"
-      ,orderBy: [{"name":"name"}, {"name":"help"}]
-      ,fieldsDisplayed: ["name", "help"]
-      ,formFieldsDisplayed: ["name", "help"]
-      ,fields: {
-        "name": {label:"Name"}
-        ,"help": {label:"Help"}
-        ,"comment":    {label: "Comment", input:{name:"textarea"}}
-      }
+  this.node.M_Widget = {
+    nodeLabel:"M_Widget"
+    ,orderBy: [{"name":"name"}, {"name":"help"}]
+    ,fieldsDisplayed: ["name", "help"]
+    ,formFieldsDisplayed: ["name", "help"]
+    ,fields: {
+      "name": {label:"Name"}
+      ,"help": {label:"Help"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
+  }
 } ////// end method
 
 } ////////////////////////////////////////////////////// end class
