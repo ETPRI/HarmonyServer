@@ -1,10 +1,11 @@
 <div class="widgetHeader">
     <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
     <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Harmony, Active Dev', this, 'topic')">
-    <span id="userInfo">Not Logged In</span>
+    <span id="userInfo">Not Logged In</span> <span id="sessionInfo"></span>
 </div>
 <div class="widgetBody">
   <div class="statusBar">
+    <input type="button" id="clearRequests" value="Clear" onclick="app.clearRequests()">
     <p id="available">Server Requests</p>
     <ul style="list-style-type:none" id="ongoing" hidden></ul>
   </div>

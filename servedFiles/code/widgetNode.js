@@ -80,23 +80,24 @@ buildWidget() { // public - build table header
   app.activeWidget = this.widgetDOM;
   this.widgetDOM.classList.add("activeWidget");
 
-  this.fieldPopup = document.createElement("div");
-  this.fieldPopup.setAttribute("hidden", "true");
-  this.fieldPopup.setAttribute('class', 'fieldPopup')
-  this.fieldPopup.innerHTML =
-  `<div class="popupHeader" idr="popupHeader"></div>
-  <div>
-    <p>Display Name: <input idr="labelInput" type="text"></p>
-    <p><input idr="showTable" type="checkbox"> Show this field in the table</p>
-    <p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
-    <p><input type="button" idr="restoreSizeButton" value="Restore textarea to default size"
-      onclick="app.widget('restoreSize', this)"></p>
-    <p><input type="button" value="OK" onclick = "app.widget('popupOK', this)">
-    <input type="button" value="Cancel" onclick="app.widget('popupCancel', this)"></p>
-  </div>
-  `
+  this.fieldPopup = app.setUpPopup(this);
 
-  this.fieldPopup.setAttribute("idr", "fieldPopup");
+  // this.fieldPopup = document.createElement("div");
+  // this.fieldPopup.setAttribute("hidden", "true");
+  // this.fieldPopup.setAttribute('class', 'fieldPopup')
+  // this.fieldPopup.innerHTML =
+  // `<div class="popupHeader" idr="popupHeader"></div>
+  // <div>
+  //   <p>Display Name: <input idr="labelInput" type="text"></p>
+  //   <p><input idr="showTable" type="checkbox"> Show this field in the table</p>
+  //   <p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
+  //   <p><input type="button" idr="restoreSizeButton" value="Restore textarea to default size"
+  //     onclick="app.widget('restoreSize', this)"></p>
+  //   <p><input type="button" value="OK" onclick = "app.widget('popupOK', this)">
+  //   <input type="button" value="Cancel" onclick="app.widget('popupCancel', this)"></p>
+  // </div>
+  // `
+  // this.fieldPopup.setAttribute("idr", "fieldPopup");
   this.widgetDOM.appendChild(this.fieldPopup);
 
   this.addSaveDOM = app.domFunctions.getChildByIdr(widget, "addSaveButton");

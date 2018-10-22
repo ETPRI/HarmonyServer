@@ -32,12 +32,14 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
     this.queryObjectName      = label;
     this.nodeLabel            = this.queryObject.nodeLabel;
     this.fields               = this.queryObject.fields;
+    this.proposedFields       = this.queryObject.proposedFields;
     this.fieldsDisplayed      = this.queryObject.fieldsDisplayed;
     this.formFieldsDisplayed  = this.queryObject.formFieldsDisplayed;
     this.lastSaveFFD          = this.formFieldsDisplayed;
     this.orderBy              = this.queryObject.orderBy;
     this.newFields            = 0;
     this.hiddenFields         = 0;
+    this.propFieldsNum        = 0;
     this.currentData          = null;
     this.savedData            = null;
     this.showHideFieldsButton = null;
@@ -190,6 +192,7 @@ restoreSize(button) {
 refresh() {   // put in one field label and input row for each field - includes creating dragdrop table
   let fieldCount = 0;
   this.hiddenFields = 0;
+  this.propFieldsNum = 0;
   const newFields = [];
 
   // Clear any existing data. Also, if there are any new fields, check whether they've been saved
@@ -199,7 +202,7 @@ refresh() {   // put in one field label and input row for each field - includes 
     const idr = row.getAttribute('idr');
     if (idr && idr.slice(0,11) === 'newFieldRow') { // If this row is a new field...
       const name = row.firstElementChild.firstElementChild.value; // and its name...
-      if (name && !(name in this.fields)) { // isn't in fields (meaning it hasn't been saved)...
+      if (name && !(name in this.fields) && !(name in this.proposedFields)) { // isn't in fields or proposedFields (meaning it hasn't been saved)...
         newFields[name] = row.lastElementChild.firstElementChild.value; // store it in newFields.
       }
     }
@@ -217,23 +220,22 @@ refresh() {   // put in one field label and input row for each field - includes 
 
   for (let fieldName in this.fields) {
     if (this.formFieldsDisplayed.indexOf(fieldName) == -1) { // For every hidden field
-      const row = this.addRow(fieldName, fieldCount);
+      const row = this.addRow(fieldName, fieldCount++);
       row.setAttribute('class', 'notShown');
       row.hidden = true;
       this.hiddenFields++;
     }
   } // end for (every field in this.fields)
 
-  for (let fieldName in newFields) {
-    this.addField(fieldName, newFields[fieldName]);
-  }
-
+  const lastRow = this.tBodyDOM.lastElementChild;
+  const lastIDR = lastRow.getAttribute('idr');
   this.containedWidgets.push(app.idCounter); // The dragDrop table will be a widget, so add it to the list of "widgets the widgetNode contains"
   // Create the new dragDrop table
   const dragDrop = new dragDropTable(null, "nodeTBody", this.widgetDOM, 0, 0);
 
   // NOTE: Can't stop dragDrop from creating inputs, so instead I'll reset the th idr at the end for now. Feels kludgy, though.
-  const lastRow = app.domFunctions.getChildByIdr(this.tableDOM, 'insertContainer', true);
+  // const lastRow = app.domFunctions.getChildByIdr(this.tableDOM, 'insertContainer', true);
+  lastRow.setAttribute('idr', lastIDR);
   const th = lastRow.firstElementChild;
   th.setAttribute('idr', `th${th.getAttribute('db')}`);
 
@@ -242,6 +244,31 @@ refresh() {   // put in one field label and input row for each field - includes 
   dragDrop.checkNewField = this.checkNewField.bind(this);
   dragDrop.checkDuplicateField = this.checkDuplicateField.bind(this);
   dragDrop.addField = this.addField.bind(this);
+
+  // This stuff shouldn't be draggable, so put it in AFTER the dragdrop table is created
+
+  const explnRow = document.createElement('tr');
+  let newField = "Proposed";
+  if (app.login.permissions === "Admin") {
+    newField = "New";
+  }
+  explnRow.innerHTML = `<th><p>${newField} Fields</p></th><th><p>${newField} Field Descriptions</p></th>`;
+  explnRow.setAttribute('idr', 'explnRow');
+  this.tBodyDOM.appendChild(explnRow);
+
+  for (let fieldName in newFields) {
+    this.addField(fieldName, newFields[fieldName]);
+  }
+
+  if (this.proposedFields) {
+    for (let fieldName in this.proposedFields) {
+      const row = this.addRow(fieldName, fieldCount++, true);
+      row.setAttribute('class', 'proposed');
+      row.hidden = true;
+      this.propFieldsNum++;
+    }
+  }
+
 
   // NOTE: Update the dragdrop drop method to include checking for reordering
   // const oldDrop = dragDrop.drop;
@@ -261,14 +288,28 @@ refresh() {   // put in one field label and input row for each field - includes 
   const mainCell = app.domFunctions.getChildByIdr(this.widgetDOM, 'main');
   mainCell.appendChild(this.showHideFieldsButton);
   if (this.hiddenFields == 0) {
-    this.showHideFieldsButton.value = "Show All (0)";
+    this.showHideFieldsButton.value = "Show Hidden Fields (0)";
     this.showHideFieldsButton.disabled = true;
   }
   else {
-    this.showHideFieldsButton.value = `Show All (${this.hiddenFields})`;
+    this.showHideFieldsButton.value = `Show Hidden Fields (${this.hiddenFields})`;
     this.showHideFieldsButton.setAttribute('onclick', "app.widget('showHideAllFields', this)");
   }
   this.showHideFieldsButton.setAttribute('style', 'text-align:center');
+
+  // Create "Show proposed fields" button
+  this.showPropFieldsButton = document.createElement("input");
+  this.showPropFieldsButton.setAttribute('type', 'button');
+  mainCell.appendChild(this.showPropFieldsButton);
+  if (this.propFieldsNum ==0) {
+    this.showPropFieldsButton.value = "Show Proposed Fields (0)";
+    this.showPropFieldsButton.disabled = true;
+  }
+  else {
+    this.showPropFieldsButton.value = `Show Proposed Fields (${this.propFieldsNum})`;
+    this.showPropFieldsButton.setAttribute('onclick', "app.widget('showHideProposedFields', this)");
+  }
+  this.showPropFieldsButton.setAttribute('style', 'text-align:center');
 
   const trashHTML = `<b>Trash Node</b>
                 <input type="checkbox" onclick="app.widget('toggleReason', this)" idr="trashCheck">
@@ -303,96 +344,147 @@ refresh() {   // put in one field label and input row for each field - includes 
   this.addField();
 }
 
-addRow(fieldName, fieldCount) {
+addRow(fieldName, fieldCount, proposed) {
   let value = "";
 
   // Create a table row (in dragDrop table - all "this" references in HTML are to dragDrop)
   const row = document.createElement('tr');
-  row.setAttribute('ondrop', "app.widget('drop', this, event)");
-  row.setAttribute("ondragover", "event.preventDefault()");
-  row.setAttribute('ondragstart', "app.widget('drag', this, event)");
-  row.setAttribute('draggable', "true");
-  row.setAttribute('idr', `tr${fieldName}`);
+  if (!proposed) {
+    row.setAttribute('ondrop', "app.widget('drop', this, event)");
+    row.setAttribute("ondragover", "event.preventDefault()");
+    row.setAttribute('ondragstart', "app.widget('drag', this, event)");
+    row.setAttribute('draggable', "true");
+    row.setAttribute('idr', `tr${fieldName}`);
+  }
+  else {
+    row.setAttribute('idr', `propRow${fieldName}`);
+  }
 
   this.tBodyDOM.appendChild(row);
 
-  // Create the first cell, a th cell containing the label as text
+  // Create the first cell, a th cell containing the label as text. IF this is a proposed field AND the user is an admin, also show a checkbox.
   const header = document.createElement('th');
   row.appendChild(header);
-  const labelText = document.createTextNode(this.fields[fieldName].label);
+
+  let label = "";
+  let data = "";
+  if (!proposed) {
+    label = this.fields[fieldName].label;
+    if (this.currentData) {
+      const d=this.currentData.properties;
+      data = d[fieldName];
+      if (typeof data === "string") { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
+        data = data.replace(/"/g, "&quot;");
+      }
+      else {
+        data = "";
+      }
+    }
+  } // end if (not a proposed field)
+  else {
+    label = this.proposedFields[fieldName].label;
+    data = this.proposedFields[fieldName].description;
+  }
+
+  if (proposed && app.login.permissions === "Admin") {
+    const approve = document.createElement('input');
+    header.appendChild(approve);
+    approve.outerHTML = `<input type="checkbox" idr="approve_${fieldName}">`;
+  }
+
+  const labelText = document.createTextNode(label);
   header.appendChild(labelText);
-  header.setAttribute('oncontextmenu', "event.preventDefault(); app.widget('showPopup', this)");
+  if (!proposed) { // proposed fields shouldn't get popups
+    header.setAttribute('oncontextmenu', "event.preventDefault(); app.widget('showPopup', this)");
+  }
   header.setAttribute('db', fieldName);
   header.setAttribute('idr', `th${fieldName}`);
 
-  // Create the second cell, a td cell containing an input which has an idr, an onChange event, and a value which may be an empty string
-  if (this.currentData) {
-    const d=this.currentData.properties;
-    value = d[fieldName];
-    if (typeof value === "string") { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
-      value = value.replace(/"/g, "&quot;");
-    }
-    else {
-      value = "";
-    }
-  }
-
+  // Create the second cell, a td cell which will normally contain
+  // an input which has an idr, an onChange event, and a value which may be an empty string
+  // If this is a proposed field, the cell will just contain text instead.
   const dataField = document.createElement('td');
   row.appendChild(dataField);
 
-  let inputType = "input";
-  if (this.fields[fieldName].input && this.fields[fieldName].input.name) {
-    inputType = this.fields[fieldName].input.name;
-  }
-  const input = document.createElement(inputType);
+  if (!proposed) {
+    let inputType = "input";
+    if (this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.name) {
+      inputType = this.fields[fieldName].input.name;
+    }
+    const input = document.createElement(inputType);
 
-  if (inputType == "input" && this.fields[fieldName].input && this.fields[fieldName].input.size) {
-    input.setAttribute("size", this.fields[fieldName].input.size);
-  }
-  else if (inputType == "textarea") {
-    let pixSize = false; // Pixel sizes, set by the user, overrule rows and columns set by default
+    if (inputType == "input" && this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.size) {
+      input.setAttribute("size", this.fields[fieldName].input.size);
+    }
+    else if (inputType == "textarea") {
+      let pixSize = false; // Pixel sizes, set by the user, overrule rows and columns set by default
 
-    if (this.fields[fieldName].input && this.fields[fieldName].input.height) {
-      input.setAttribute("style", `height:${this.fields[fieldName].input.height}px; width:${this.fields[fieldName].input.width}px;`);
-      pixSize = true;
+      if (this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.height) {
+        input.setAttribute("style", `height:${this.fields[fieldName].input.height}px; width:${this.fields[fieldName].input.width}px;`);
+        pixSize = true;
+      }
+
+      if (!pixSize && this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.rows) {
+        input.rows = this.fields[fieldName].input.rows;
+      }
+      if (!pixSize && this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.cols) {
+        input.cols = this.fields[fieldName].input.cols;
+      }
     }
 
-    if (!pixSize && this.fields[fieldName].input && this.fields[fieldName].input.rows) {
-      input.rows = this.fields[fieldName].input.rows;
-    }
-    if (!pixSize && this.fields[fieldName].input && this.fields[fieldName].input.cols) {
-      input.cols = this.fields[fieldName].input.cols;
-    }
+    dataField.appendChild(input);
+
+    input.setAttribute("db", fieldName);
+    input.setAttribute("idr", `input${fieldCount}`);
+    input.setAttribute("onchange", "app.widget('changed',this)");
+    input.value = data;
+    input.setAttribute("onfocus", "this.parentNode.parentNode.draggable = false;");
+    input.setAttribute("onblur", "this.parentNode.parentNode.draggable = true;");
+
+    this.changed(input); // Check whether the input is different from the saved version; highlight it if so
+  } // end if (not a proposed field)
+  else {
+    const descPar = document.createElement('p');
+    const desc = document.createTextNode(data);
+    descPar.appendChild(desc);
+    dataField.appendChild(descPar);
   }
-
-  dataField.appendChild(input);
-
-  input.setAttribute("db", fieldName);
-  input.setAttribute("idr", `input${fieldCount}`);
-  input.setAttribute("onchange", "app.widget('changed',this)");
-  input.value = value;
-  input.setAttribute("onfocus", "this.parentNode.parentNode.draggable = false;");
-  input.setAttribute("onblur", "this.parentNode.parentNode.draggable = true;");
-
-  this.changed(input); // Check whether the input is different from the saved version; highlight it if so
 
   return row;
 }
 
 showHideAllFields(button) {
   const hiddenFields = this.tBodyDOM.getElementsByClassName('notShown');
-  switch(button.value.slice(0,9)) {
-    case 'Show All ':
+  switch(button.value.slice(0,6)) {
+    case 'Show H': // 'Show Hidden'
       for (let i = 0; i < hiddenFields.length; i++) {
         hiddenFields[i].hidden = false;
       }
       button.value = "Show Less";
       break;
-    case 'Show Less':
+    case 'Show L': // 'Show Less'
     for (let i = 0; i < hiddenFields.length; i++) {
       hiddenFields[i].hidden = true;
     }
-    button.value = `Show All (${hiddenFields.length})`;
+    button.value = `Show Hidden Fields (${hiddenFields.length})`;
+    break;
+  }
+}
+
+showHideProposedFields(button) {
+  const hiddenFields = this.tBodyDOM.getElementsByClassName('proposed');
+  switch(button.value.slice(0,4)) {
+    case 'Show':
+      for (let i = 0; i < hiddenFields.length; i++) {
+        hiddenFields[i].hidden = false;
+      }
+      button.value = "Hide Proposed Fields";
+      break;
+    case 'Hide':
+    for (let i = 0; i < hiddenFields.length; i++) {
+      hiddenFields[i].hidden = true;
+    }
+    button.value = `Show Proposed Fields (${hiddenFields.length})`;
     break;
   }
 }
@@ -414,11 +506,28 @@ checkDuplicateField(input) {
     label = name;
     name = dbName;
   }
+
+  // Now do the same thing for PROPOSED fields
+  const propFieldName = Object.keys(this.proposedFields).find(key => key.toLowerCase() === name.toLowerCase());
+  const dupPropName = (propFieldName !== undefined);
+  if (dupPropName) {
+    label = this.proposedFields[propFieldName].label;
+    name = propFieldName;
+  }
+
+  const propDBName = Object.keys(this.proposedFields).find(key => this.proposedFields[key].label.toLowerCase() === name.toLowerCase());
+  const dupPropLabel = (propDBName !== undefined);
+  if (dupPropLabel) {
+    label = name;
+    name = propDBName;
+  }
+
   // At this point, if the field exists, name is the DB name and label is the label
 
-  if (dupName || dupLabel) { // If this is a duplicate fieldname or label
-    // If this field is not currently displayed (because it's not in formFieldsDisplayed and hidden fields are hidden)
-    if (this.formFieldsDisplayed.indexOf(name) === -1 && this.showHideFieldsButton.value.slice(0,6) === "Show A") {
+  if (dupName || dupLabel || dupPropName || dupPropLabel) { // If this is a duplicate fieldname or label
+    // If this field is not currently displayed (because it's not in formFieldsDisplayed and hidden fields are hidden),
+    // and the field is an existing field (not a proposed field)
+    if (this.formFieldsDisplayed.indexOf(name) === -1 && this.showHideFieldsButton.value.slice(0,6) === "Show A" && (dupName || dupLabel)) {
       let text = "This field already exists, but is not displayed. Do you want to display it?";
       if (dupName && name !== label) {
         text = `This field already exists with the label ${label}, but is not displayed. Do you want to display it?`;
@@ -437,13 +546,20 @@ checkDuplicateField(input) {
         }
       } // end if (the user agrees to display the hidden field)
     } // end if (the field exists, but is hidden)
-    else {
+    else if (dupName || dupLabel) { // If the field is an existing (not proposed) field and is not hidden
       let text = "This field already exists. Please use the existing field or choose a new name.";
       if (dupName && name !== label) {
         text = `This field already exists with the label ${label}. Please use the existing field or choose a new name.`;
       }
       alert (text);
-    } // end else (the field is NOT hidden)
+    } // end else if (the field exists and is NOT hidden)
+    else { // If the field is a proposed field
+      let text = "This field has already been proposed. Please wait for the existing field to be approved or choose a new name.";
+      if (dupPropName && name !== label) {
+        text = `This field has already been proposed with the label ${label}. Please wait for the existing field to be approved or choose a new name.`;
+      }
+      alert (text);
+    }
     // Whether the field was hidden or not, whether the user agreed to display it or not, delete the text in this textbox
     input.value = "";
   } // end if (the fieldname exists)
@@ -615,7 +731,7 @@ untrashNode() {
 }
 
 ////////////////////////////////////////////////////////////////////
-updateMetaData(newFields) {
+updateMetaData(newFields, propFieldsChanged) {
   const metadataObj = {};
   metadataObj.from = {"id":app.login.userID, "return":false};
   metadataObj.rel = {"type":"Settings", "merge":true, "return":false};
@@ -639,7 +755,7 @@ updateMetaData(newFields) {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
       app.stopProgress(details.widgetDOM, update);
-      details.updateFields(data, newFields);
+      details.updateFields(data, newFields, propFieldsChanged);
     }
   };
 
@@ -648,15 +764,32 @@ updateMetaData(newFields) {
   xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
-updateFields(data, newFields) { // should contain only the metadata node, under the name "metadata"
-  if (Object.keys(newFields).length > 0) {
+updateFields(data, newFields, propFieldsChanged) { // should contain only the metadata node, under the name "metadata"
+  // Need to update fields if there are any new fields.
+  // Need to update proposedFields if the list of proposed fields has changed.
+  if (Object.keys(newFields).length > 0 || propFieldsChanged) {
     let fields = JSON.parse(data[0].metadata.properties.fields);
     for (let fieldName in newFields) { // Add all new fields to the fields object
       fields[fieldName] = newFields[fieldName];
     }
+
+    let propFields = JSON.parse(data[0].metadata.properties.proposedFields);
+    // Remove old proposed fields
+    for (let fieldName in propFields) {
+      if (fieldName in fields) {
+        delete propFields[fieldName]; // If it's in fields, it's an official field now, not just a proposed field
+      }
+    }
+
+    // Add new proposed fields
+    for (let fieldName in this.proposedFields) {
+      propFields[fieldName] = this.proposedFields[fieldName];
+    }
+
     const obj = {};
     obj.node = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
-    obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}];
+    obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}
+                  ,{"property":"proposedFields", "value":app.stringEscape(JSON.stringify(propFields))}];
 
     const xhttp = new XMLHttpRequest();
     const update = app.startProgress(this.widgetDOM, "Updating metadata");
@@ -730,6 +863,7 @@ changed(input) { // Logs changes to fields, and highlights when they are differe
 }
 
 save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs it and passes the results to saveData() or addComplete()
+  let propFieldsChanged = false;
   let tr = this.tBodyDOM.firstElementChild;
 
   let data = {}; // Data can be an object representing properties (for a new node) or an array of changes (for an existing one)
@@ -749,40 +883,46 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     this.queryObject.nodeLabel = labelText;
   }
 
-  while (tr) { // goes through all rows - that is, all fields
+  /* goes through all rows - that is, all fields.
+  If a row is new and the user is an admin, adds its name and description to fields and formFieldsDisplayed,
+  and adds it to newFields and currentFields.
+  If a row is new and the user is NOT an admin, just adds the name and description to proposedFields.
+  If a row already existed, adds it to currentFields, saves the size if it's a textbox,
+  and adds it to data if it's changed or the node is new.
+  If a row is an existing proposed field, and the user is an admin, looks at whether the checkbox is checked.
+  If so, adds to fields, formFieldsDisplayed, newFields and currentFields, just as if the admin added it.
+  Also removes that field from proposedFields since it will now be an official field.
+  */
+  while (tr) {
     const inp = tr.lastElementChild.firstElementChild;  // find <input> element
 
     // process new fields
     const idr = tr.getAttribute('idr');
-    if (idr && idr.slice(0,11) == "newFieldRow") {
-
+    if (idr && idr.slice(0,11) === "newFieldRow") {
       const nameCell = tr.firstElementChild;
       const name = nameCell.firstElementChild.value;
-      const valueCell = nameCell.nextElementSibling;
-      const value = valueCell.firstElementChild.value;
+      const descCell = nameCell.nextElementSibling;
+      const desc = descCell.firstElementChild.value;
       if (name != "" && currentFields.indexOf(name) == -1) { // If the field has been filled in, and that name didn't already exist
         const fieldName = name.replace(/\s/g, "").replace(/\(/g, "").replace(/\)/g, "");
-        // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
-        this.fields[fieldName] = {label: name};
-        newFields[fieldName] = {label: name};
-        this.formFieldsDisplayed.push(fieldName);
-        currentFields.push(fieldName);
 
-        // Add field name and value to list of changes
-        if (buttonValue === "Save") { // If saving, data is an array of change objects, to pass into CRUD as "obj.changes"
-          const change = {};
-          change.property = fieldName;
-          change.value = app.stringEscape(inp.value);  // assume string
-          data.push(change);
+        if (app.login.permissions === "Admin") {
+          // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
+          this.fields[fieldName] = {"label": name, "description":desc};
+          newFields[fieldName] = {"label": name, "description":desc};
+          this.formFieldsDisplayed.push(fieldName);
+          currentFields.push(fieldName);
         }
-        else { // If adding, data is an object where keys are field names and values are field values, to pass into CRUD as "obj.properties"
-          data[fieldName] = value;
+        else {
+          // Add new proposed fields to object. No other changes at this time.
+          this.proposedFields[fieldName] = {"label": name, "description":desc};
+          propFieldsChanged = true;
         }
       }
     }
 
     // process existing fields
-    else {
+    else if (idr && idr.slice(0,2) === 'tr') {
       currentFields.push(inp.getAttribute("db"));
       const fieldName = inp.getAttribute("db");
       if (this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.name === "textarea") {
@@ -806,6 +946,27 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       }
       else if (buttonValue == "Add") {
         data[inp.getAttribute("db")] = app.stringEscape(inp.value);
+      }
+    }
+
+    // process proposed rows if the user is an admin (and may have approved some)
+    else if (idr && idr.slice(0,7) === 'propRow' && app.login.permissions === "Admin") {
+      const checkBox = tr.getElementsByTagName('input')[0]; // should be the only input in the row
+      if (checkBox.checked) {
+        const nameCell = tr.firstElementChild;
+        const name = nameCell.textContent;
+        const descCell = nameCell.nextElementSibling;
+        const desc = descCell.textContent;
+        if (name != "" && currentFields.indexOf(name) == -1) { // If the field has been filled in, and that name didn't already exist
+          const fieldName = name.replace(/\s/g, "").replace(/\(/g, "").replace(/\)/g, "");
+
+          this.fields[fieldName] = {"label": name, "description":desc};
+          newFields[fieldName] = {"label": name, "description":desc};
+          this.formFieldsDisplayed.push(fieldName);
+          currentFields.push(fieldName);
+          delete this.proposedFields[fieldName];
+          propFieldsChanged = true;
+        }
       }
     }
 
@@ -846,7 +1007,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   // but as more and more possible changes appear, that gets less practical.
   // I think I'll just go ahead and update the settings every time.
   this.lastSaveFFD = this.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save
-  this.updateMetaData(newFields);
+  this.updateMetaData(newFields, propFieldsChanged);
 
   if (data.length == 0) { //This should only ever come up when saving - both because adding uses an object, not an array, for data and because adding should add every field to data every time.
     if (trashUntrash) { // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
@@ -856,12 +1017,9 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       obj.action = "click";
       app.regression.log(JSON.stringify(obj));
       app.regression.record(obj);
-    // If the node was NOT trashed or untrashed AND there were no changes to fields, AND this is a standalone node
-    // (because if it's a calendar or mindmap, the user may be saving changes other than the ones shown by details),
-    // then just alert that there were no changes. No need to log in this case.
-  } else if (this.widgetDOM.parentElement === document.getElementById("widgets")) {
-    alert("No changes to save");
     }
+    // refresh on save no matter what
+    this.refresh();
   }
   else {
     const xhttp = new XMLHttpRequest();
@@ -987,5 +1145,4 @@ drag(button, evnt) {
   data.sourceTag = button.tagName;
   evnt.dataTransfer.setData("text/plain", JSON.stringify(data));
 }
-
 } ///////////////////// endclass

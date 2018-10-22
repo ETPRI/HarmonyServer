@@ -189,12 +189,13 @@ initNodeData() { // move to DB in the future
   this.node.M_Session = {
     nodeLabel:"M_Session"
     ,orderBy:[{"name":"startTime"}, {"name":"endTime"}]
-    ,fieldsDisplayed: ["startTime", "endTime"]
-    ,formFieldsDisplayed: ["startTime", "endTime"]
+    ,fieldsDisplayed: ["startTime", "endTime", "GUID"]
+    ,formFieldsDisplayed: ["startTime", "endTime", "GUID"]
     ,fields: {
       "startTime": {label: "Start time"}
       ,"endTime": {label: "End time"}
-      ,"comment":    {label: "Comment", input:{name:"textarea"}}
+      ,"comment": {label: "Comment", input:{name:"textarea"}}
+      ,"M_GUID": {label: "GUID"}
     }
   }
 

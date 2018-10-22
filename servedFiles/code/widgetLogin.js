@@ -3,6 +3,7 @@ class widgetLogin {
   constructor() {
     // DOM elements to be filled in later
     this.info = null; // Will show whether the user is logged in, and if so, their name and role
+    this.sessionInfo = null;
     this.nameInput = null;
     this.passwordInput = null; // Just what they spund like - the inputs for the user's name and password.
     this.loginButton = null; // Button to click to log in
@@ -57,6 +58,7 @@ class widgetLogin {
       app.login.passwordInput = document.getElementById("password");
       app.login.loginButton = document.getElementById("loginButton");
       app.login.info = document.getElementById("userInfo");
+      app.login.sessionInfo = document.getElementById("sessionInfo");
 
       // Create debug and regression headers and link to debug and regression buttons in login header
       app.createDebug();
@@ -188,6 +190,7 @@ class widgetLogin {
       this.permissions = data[0].table.properties.name;
   		this.info.textContent = `Logged in as ${this.userName} -- Role: ${this.permissions}`;
       this.info.classList.add('loggedIn');
+      this.sessionInfo.textContent = `Session GUID: ${this.sessionGUID}`;
 
       for (let i in this.viewLoggedIn) { // Show all items that are visible when logged in
         this.viewLoggedIn[i].removeAttribute("hidden");
@@ -649,6 +652,7 @@ class widgetLogin {
     this.permissions = null;
     this.info.textContent = `Not Logged In`;
     this.info.classList.remove("loggedIn");
+    this.sessionInfo.textContent = '';
 
     this.nameInput.value = "";
     this.passwordInput.value = "";

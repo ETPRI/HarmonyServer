@@ -121,11 +121,25 @@ class dataBrowser {
     if (this.toToggle == "left") {
       this.fillCell(this.leftCell, this.leftData, "Left");
       app.domFunctions.getChildByIdr(this.inCell, 'relDetails').innerHTML = this.updateDetails(this.inData);
+      const arrow = app.domFunctions.getChildByIdr(this.inCell, 'leftArrow');
+      if (this.leftData === null) {
+        arrow.disabled = true;
+      }
+      else {
+        arrow.disabled = false;
+      }
     }
 
     else if (this.toToggle == "right") {
       this.fillCell(this.rightCell, this.rightData, "Right");
       app.domFunctions.getChildByIdr(this.outCell, 'relDetails').innerHTML = this.updateDetails(this.outData);
+      const arrow = app.domFunctions.getChildByIdr(this.outCell, 'rightArrow');
+      if (this.rightData === null) {
+        arrow.disabled = true;
+      }
+      else {
+        arrow.disabled = false;
+      }
     }
 
     else {

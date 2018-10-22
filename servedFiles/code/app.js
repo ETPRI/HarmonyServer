@@ -803,6 +803,7 @@ startProgress(DOMelement, text) {
 	}
 	const status = document.createTextNode(text);
 	const cancel = document.createElement("INPUT");
+	cancel.setAttribute('idr', 'cancel');
 	cancel.setAttribute("type", "button");
 	cancel.setAttribute("value", "Cancel");
 	cancel.setAttribute("onclick", 'app.stopProgress(this)');
@@ -840,6 +841,7 @@ startProgress(DOMelement, text) {
 	  xhttp.send(JSON.stringify(queryObject));         // send request to server
 	}
 	row.setAttribute("count", count);
+	row.setAttribute("update", update);
 
 	return {"update":update, "row":row, "count":count}; // Info stopProgress will need later
 }
@@ -886,13 +888,9 @@ stopProgress(DOMelement, obj) {
 	}
 
 	clearInterval(update);
-	let list = document.getElementById("ongoing"); // list should be the parent of row
-	if(row && row.parentElement == list) {
-		list.removeChild(row);
-	}
-	else {
-		this.error("The row to be removed is not in the list of ongoing requests");
-	}
+
+	const cancel = this.domFunctions.getChildByIdr(row, 'cancel');
+	row.removeChild(cancel);
 
 	// If a session is running, and the count is non-null (meaning that this request was logged when it began),
 	// then update the record of that request now.
@@ -913,17 +911,41 @@ stopProgress(DOMelement, obj) {
 		xhttp.send(JSON.stringify(queryObject));         // send request to server
 	}
 
-	const box = list.parentElement;
+	const box = row.parentElement.parentElement;
 
 	// Repaint the box - there's a bug (NOT in my code - a known issue) that makes it disappear when the scrollbars disappear
 	box.parentElement.insertBefore(box, box.nextElementSibling);
 
-	if (list.children.length == 0) { // If there are no more items in the list of ongoing calls
-		const avail = document.getElementById("available");
-		avail.hidden = false;
-		const ongoing = document.getElementById("ongoing");
-		ongoing.hidden = true;
+	// if (list.children.length == 0) { // If there are no more items in the list of ongoing calls
+	// 	const avail = document.getElementById("available");
+	// 	avail.hidden = false;
+	// 	const ongoing = document.getElementById("ongoing");
+	// 	ongoing.hidden = true;
+	// }
+}
+
+clearRequests() {
+	// For each row, get the update and clear the interval (just in case it's still going)
+	const ongoing = document.getElementById("ongoing");
+	const rows = ongoing.children;
+	for (let i = 0; i < rows.length; i++) {
+		const row = rows[i];
+		const update = row.getAttribute('update');
+		clearInterval(update);
 	}
+
+	// Then remove all rows from the ongoing list, hide it and show the available text
+	ongoing.innerHTML = "";
+	ongoing.hidden = true;
+
+	const avail = document.getElementById("available");
+	avail.hidden = false;
+
+	const box = ongoing.parentElement;
+
+	// Repaint the box - there's a bug (NOT in my code - a known issue) that makes it disappear when the scrollbars disappear
+	box.parentElement.insertBefore(box, box.nextElementSibling);
+
 }
 
 showHelp(widgetType, button, nodeType) {
@@ -1027,6 +1049,7 @@ setUpPopup(JSobj) {
 	`<div class="popupHeader" idr="popupHeader"></div>
 	<div>
 		<p>Display Name: <input idr="labelInput" type="text"></p>
+		<p>Description: <span idr="description"></span></p>
 		<p><input idr="showTable" type="checkbox"> Show this field in the table</p>
 		<p><input idr="showForm" type="checkbox"> Show this field in the detailed form</p>
 		<p><input type="button" idr="restoreSizeButton" value="Restore textarea in form to default size"
@@ -1052,6 +1075,13 @@ setUpPopup(JSobj) {
 	  // set text in label textbox to "label" field name (stored as text of label)
 	  const labelInput = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'labelInput');
 	  labelInput.value = label.textContent;
+
+		let desc = "None";
+		if (this.fields[fieldName].description) {
+			desc = this.fields[fieldName].description;
+		}
+		const descText = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'description');
+		descText.innerHTML = desc;
 
 	  // Show or hide restore size button
 	  const restoreSize = this.app.domFunctions.getChildByIdr(this.fieldPopup, 'restoreSizeButton');
