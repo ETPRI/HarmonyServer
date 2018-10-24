@@ -98,22 +98,23 @@ class dataBrowser {
       obj.required = {"name":"n", "properties":{"M_GUID":data.nodeID}};
       obj.optional = {"name":"in"};
       obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+      const request = JSON.stringify(queryObject);
 
       const xhttp = new XMLHttpRequest();
       const dataBrowser = this;
-      const update = app.startProgress(this.widgetDOM, "Searching for node");
+      const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const newData = JSON.parse(this.responseText);
-          app.stopProgress(dataBrowser.widgetDOM, update);
+          app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
           dataBrowser.findOuts(newData, data.nodeID, "mainData");
         }
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
+      xhttp.send(request);         // send request to server
     }
   }
 
@@ -257,22 +258,23 @@ class dataBrowser {
     obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
     obj.optional = {"name":"out"};
     obj.rel = {"name":"outRel"};
+    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+    const request = JSON.stringify(queryObject);
 
     const xhttp = new XMLHttpRequest();
     const dataBrowser = this;
-    const update = app.startProgress(this.widgetDOM, "Searching for relations")
+    const update = app.startProgress(this.widgetDOM, "Searching for relations", request.length)
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const newData = JSON.parse(this.responseText);
-        app.stopProgress(dataBrowser.widgetDOM, update);
+        app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
         dataBrowser.processData(newData, data, dataName);
       }
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    xhttp.send(request);         // send request to server
   }
 
   processData(outData, inData, dataName) {
@@ -373,22 +375,23 @@ class dataBrowser {
         obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
         obj.optional = {"name":"in"};
         obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
+        const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+        const request = JSON.stringify(queryObject);
 
         const xhttp = new XMLHttpRequest();
         const dataBrowser = this;
-        const update = app.startProgress(this.widgetDOM, "Searching for node");
+        const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
 
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
             const newData = JSON.parse(this.responseText);
-            app.stopProgress(dataBrowser.widgetDOM, update);
+            app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
             dataBrowser.findOuts(newData, GUID, nodeName);
           }
         };
 
         xhttp.open("POST","");
-        const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-        xhttp.send(JSON.stringify(queryObject));         // send request to server
+        xhttp.send(request);         // send request to server
       }
     }
   }

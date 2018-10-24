@@ -301,8 +301,8 @@ createDebug() {
 	}
 }
 
-// Runs when a search button is clicked. Shows the table associated with that search button.
-menuNodes(name) {
+// Runs when a search button is clicked. Shows the table associated with that search button. Criteria is an array of objects representing search criteria.
+menuNodes(name, criteria) {
 	if (this.shownTable) {
 		this.shownTable.classList.add("hidden");
 		this.shownTable = null;
@@ -313,7 +313,7 @@ menuNodes(name) {
 		newTable.classList.remove("hidden");
 		this.shownTable = newTable;
 		let newTableJS = this.widgets[name];
-		newTableJS.search();
+		newTableJS.search(criteria);
 	}
 }
 
@@ -704,22 +704,23 @@ deleteLink(input) {
 checkOwner(type, newItem, domElement, object, method, name) {
 	if (newItem || (object.owner && object.owner.id !== this.login.userID)) { // If the user asked for a new item, or the node is owned by someone else
 		const obj = {"type":type, "properties":{"name":name}};
+		const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": this.login.userGUID};
+		const request = JSON.stringify(queryObject);
 
 		const xhttp = new XMLHttpRequest();
 		const app = this;
-		const update = this.startProgress(domElement, "Creating node");
+		const update = this.startProgress(domElement, "Creating node", request.length);
 
 		xhttp.onreadystatechange = function() {
 			if (this.readyState == 4 && this.status == 200) {
 				const data = JSON.parse(this.responseText);
-				app.stopProgress(domElement, update);
+				app.stopProgress(domElement, update, this.responseText.length);
 				app.setOwner(domElement, object, method, data); // If this is a new item or a new copy, it belongs to the user who made it
 			}
 		};
 
 		xhttp.open("POST","");
-		const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": this.login.userGUID};
-		xhttp.send(JSON.stringify(queryObject));         // send request to server
+		xhttp.send(request);         // send request to server
 	}
 	else {
 		if (object.owner) { // If the node already has an owner (which should be the user at this point), it still belongs to them - no need to update
@@ -744,15 +745,17 @@ setOwner(domElement, object, method, data) { // If there is data, this was calle
 	obj.from = {"id":object.id};
 	obj.to = {"id":this.login.userID};
 	obj.rel = {"type":"Owner"};
+	const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+	const request = JSON.stringify(queryObject);
 
 	const xhttp = new XMLHttpRequest();
 	const app = this;
-	const update = this.startProgress(domElement, "Setting owner");
+	const update = this.startProgress(domElement, "Setting owner", request.length);
 
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			const data = JSON.parse(this.responseText);
-			app.stopProgress(domElement, update);
+			app.stopProgress(domElement, update, this.responseText.length);
 			if (object && method) {
 				object[method](data);
 			}
@@ -760,8 +763,7 @@ setOwner(domElement, object, method, data) { // If there is data, this was calle
 	};
 
 	xhttp.open("POST","");
-	const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-	xhttp.send(JSON.stringify(queryObject));         // send request to server
+	xhttp.send(request);         // send request to server
 }
 
 error(message) {
@@ -777,8 +779,9 @@ error(message) {
 
 // DOMelement is usually the whole widget, but it will also work if it's an element from within the widget.
 // Use it to work up to the top-level widget, then give it a class of "requestRunning".
-startProgress(DOMelement, text) {
+startProgress(DOMelement, text, length) {
 	let topWidget = null;
+	let recordStartTime = null;
 
 	while (DOMelement) {
 		if (DOMelement.classList.contains("widget")) {
@@ -808,6 +811,7 @@ startProgress(DOMelement, text) {
 	cancel.setAttribute("value", "Cancel");
 	cancel.setAttribute("onclick", 'app.stopProgress(this)');
 	cancel.disabled = true;
+	cancel.classList.add('cancelButton');
 	const timer = document.createElement("SPAN");
 	timer.innerHTML = ":  0 ms";
 	row.appendChild(status);
@@ -829,9 +833,10 @@ startProgress(DOMelement, text) {
 	if (this.login.sessionGUID && this.login.browserGUID) { // if a session is ongoing, record the request
 	  count = this.login.requestCount++; // Will have to pass this around later, in order to track which request is which
 
+		recordStartTime = Date.now();
 	  const obj = {};
 	  obj.from = {"type":"M_Session", "properties":{"M_GUID":this.login.sessionGUID}};
-	  obj.rel = {"type":"Request", "properties":{"count":count, "description":text, "startTime":Date.now()}};
+	  obj.rel = {"type":"Request", "properties":{"count":count, "description":text, "startTime":recordStartTime, "requestLength":length}};
 	  obj.to = {"type":"M_Browser", "properties":{"M_GUID":this.login.browserGUID}};
 
 	  const xhttp = new XMLHttpRequest();
@@ -839,18 +844,20 @@ startProgress(DOMelement, text) {
 	  xhttp.open("POST","");
 	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep"};
 	  xhttp.send(JSON.stringify(queryObject));         // send request to server
-	}
+	} // end if (a session is ongoing)
 	row.setAttribute("count", count);
 	row.setAttribute("update", update);
+	row.setAttribute("startTime", recordStartTime);
 
-	return {"update":update, "row":row, "count":count}; // Info stopProgress will need later
+	return {"update":update, "row":row, "count":count, "startTime":recordStartTime}; // Info stopProgress will need later
 }
 
-stopProgress(DOMelement, obj) {
+stopProgress(DOMelement, obj, length) {
 	let row = null;
 	let update = null;
 	let topWidget = null;
 	let count = null;
+	let startTime = null;
 	let result = "Succeeded";
 
 	// If this was called by a cancel button (and the button was passed in)
@@ -860,6 +867,7 @@ stopProgress(DOMelement, obj) {
 		topWidget = document.getElementById(row.getAttribute("widget"));
 		count = row.getAttribute("count");
 		result = "Cancelled";
+		startTime = row.getAttribute("startTime");
 	}
 
 	// If this was called by a request finishing (and a widget element and update object were passed in)
@@ -868,6 +876,7 @@ stopProgress(DOMelement, obj) {
 			row = obj.row;
 			update = obj.update;
 			count = obj.count;
+			startTime = obj.startTime;
 		}
 
 		// Go to the top-level widget
@@ -890,19 +899,27 @@ stopProgress(DOMelement, obj) {
 	clearInterval(update);
 
 	const cancel = this.domFunctions.getChildByIdr(row, 'cancel');
-	row.removeChild(cancel);
+	if (cancel) {
+		row.removeChild(cancel);
+	}
 
 	// If a session is running, and the count is non-null (meaning that this request was logged when it began),
 	// then update the record of that request now.
 	if (this.login.sessionGUID && this.login.browserGUID && !(count == null)) {
+		const duration = Date.now() - startTime;
+
 		const obj = {};
 		obj.from = {"type":"M_Session", "properties":{"M_GUID":this.login.sessionGUID}};
 		obj.rel = {"type":"Request", "properties":{"count":count}};
 		obj.to = {"type":"M_Browser", "properties":{"M_GUID":this.login.browserGUID}};
 		obj.changes = [
-				{"item":"rel", "property":"endTime", "value":Date.now()},
-				{"item":"rel", "property":"endResult", "value":result}
+				{"item":"rel", "property":"duration", "value":duration},
+				{"item":"rel", "property":"endResult", "value":result},
 		];
+
+		if (length) { // if the length is not undefined - meaning if this was called after a response was received, not by a cancel button
+			obj.changes.push({"item":"rel", "property":"responseLength", "value":length});
+		}
 
 		const xhttp = new XMLHttpRequest();
 
@@ -954,14 +971,17 @@ showHelp(widgetType, button, nodeType) {
 	}
 	const obj = {};
 	obj.node = {"type":nodeType, "properties":{"name":widgetType}, "merge":true}; // If the help node doesn't exist, create it
+	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
+	const request = JSON.stringify(queryObject);
+
 	const xhttp = new XMLHttpRequest();
-	const update = this.startProgress(null, `Searching for help on ${widgetType}`);
+	const update = this.startProgress(null, `Searching for help on ${widgetType}`, request.length);
 	const app = this;
 
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			const data = JSON.parse(this.responseText);
-			app.stopProgress(null, update);
+			app.stopProgress(null, update, this.responseText.length);
 			if (data.length == 0) {
 				app.error("Help could not be found or created");
 			}
@@ -975,8 +995,7 @@ showHelp(widgetType, button, nodeType) {
 	};
 
 	xhttp.open("POST","");
-	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
-	xhttp.send(JSON.stringify(queryObject));         // send request to server
+	xhttp.send(request);         // send request to server
 }
 
 createLIS(dataArray, compFunction) {
@@ -1151,19 +1170,21 @@ setUpPopup(JSobj) {
 	                 {"item":"rel", "property":"fieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
 	                 {"item":"rel", "property":"formFieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
+		const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.app.login.userGUID};
+		const request = JSON.stringify(queryObject);
+
 	  const xhttp = new XMLHttpRequest();
-	  const update = this.app.startProgress(this.widgetDOM, "Updating metadata");
+	  const update = this.app.startProgress(this.widgetDOM, "Updating metadata", request.length);
 	  const details = this;
 
 	  xhttp.onreadystatechange = function() {
 	    if (this.readyState == 4 && this.status == 200) {
-	      details.app.stopProgress(details.widgetDOM, update);
+	      details.app.stopProgress(details.widgetDOM, update, this.responseText.length);
 	    }
 	  };
 
 	  xhttp.open("POST","");
-	  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.app.login.userGUID};
-	  xhttp.send(JSON.stringify(queryObject));         // send request to server
+	  xhttp.send(request);         // send request to server
 
 	  // close popup
 	  this.fieldPopup.hidden = true;

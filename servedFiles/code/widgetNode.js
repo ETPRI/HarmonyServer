@@ -29,6 +29,11 @@ buildWidget() { // public - build table header
     addSave = "";
   }
 
+  let changeLogHTML = "";
+  if (app.login.permissions === "Admin") { // Only admins can see metadata at all, so only they get the show change logs button
+    changeLogHTML = `<input type="button" value="Show Change Logs" onclick="app.menuNodes('M_ChangeLog', [{name:'item_GUID', value:'${this.GUID}', dropDownValue:'='}])">`;
+  }
+
   app.idCounter--; // decrement ID counter so that the widget header will end up with the right ID
   const html = app.widgetHeader('widgetNode') + `<b idr= "nodeTypeLabel" contentEditable="true"
                                         onfocus="this.parentNode.draggable = false;"
@@ -36,7 +41,7 @@ buildWidget() { // public - build table header
                                         <b idr="nodeLabel">: ${name}</b></div><table class="widgetBody"><tbody><tr>
   <td idr="end"></td>
   <td idr="main">
-    ${addSave}
+    ${addSave}${changeLogHTML}
     <b idr = "dragButton" draggable=true ondragstart="app.widget('drag', this, event)">Drag To View</b>
     <table idr = "nodeTable"><tbody idr = "nodeTBody"></tbody></table>
   </td>

@@ -57,22 +57,23 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
       obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
       obj.optional = {"id":app.login.userID, "return":false};
       obj.rel = {"name":"r", "type":"Trash", "direction":"left"};// (n)<-[rel]-(a)
+      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+      const request = JSON.stringify(queryObject);
 
       const xhttp = new XMLHttpRequest();
       const details = this;
-      const update = app.startProgress(this.widgetDOM, "Searching for node");
+      const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(details.widgetDOM, update);
+          app.stopProgress(details.widgetDOM, update, this.responseText.length);
           details.finishConstructor(data);
         }
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
+      xhttp.send(request);         // send request to server
     }
     else { // If no ID was passed in
        this.finishConstructor();
@@ -120,15 +121,17 @@ finishConstructor(data) {
     obj.from = {"id":this.id, "return":"false"};
     obj.rel = {"type":"Owner", "return":"false"};
     obj.to = {};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    const request = JSON.stringify(queryObject);
 
     const xhttp = new XMLHttpRequest();
     const details = this;
-    const update = app.startProgress(this.widgetDOM, "Searching for owner");
+    const update = app.startProgress(this.widgetDOM, "Searching for owner", request.length);
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(details.widgetDOM, update);
+        app.stopProgress(details.widgetDOM, update, this.responseText.length);
         if (data.length == 1) {
           details.owner = {"name":data[0].to.properties.name, "id":data[0].to.id};
         }
@@ -136,8 +139,7 @@ finishConstructor(data) {
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    xhttp.send(request);         // send request to server
 
   }
 }
@@ -167,6 +169,23 @@ buildWidget() { // public - build table header
   this.tableDOM.appendChild(this.tBodyDOM);
 
   this.widgetDOM.appendChild(this.fieldPopup);
+
+  const button = document.createElement('input');
+  this.widgetDOM.insertBefore(button, main);
+  button.outerHTML = `<input type="button" value="Open as node" onclick="app.widget('showNode', this)">`;
+  if (app.login.permissions === "Admin") { // Only admins can see metadata at all, so only they get the show change logs button
+    const changeLogButton = document.createElement('input');
+    this.widgetDOM.insertBefore(changeLogButton, main);
+    button.outerHTML = `<input type="button" value="Show Change Logs"
+                        onclick="app.menuNodes('M_ChangeLog', [{name:'item_GUID', value:'${this.GUID}', dropDownValue:'='}])">`;
+  }
+  const drag = document.createElement('b');
+  this.widgetDOM.insertBefore(drag, main);
+  drag.outerHTML = `<b idr = "dragButton" draggable=true ondragstart="app.widget('drag', this, event)">Drag To View</b>`;
+}
+
+showNode() {
+  new widgetNode(this.idWidget, this.queryObjectName, this.GUID);
 }
 
 restoreSize(button) {
@@ -654,22 +673,23 @@ trashNode() {
   obj.from = {"id":user, "return":false};
   obj.to = {"id":node, "return":false};
   obj.rel = {"type":"Trash", "merge":true, "properties":{"reason":app.stringEscape(reason)}, "return":false};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+  const request = JSon.stringify(queryObject);
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress(this.widgetDOM, "Trashing node");
+  const update = app.startProgress(this.widgetDOM, "Trashing node", request.length);
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(details.widgetDOM, update);
+      app.stopProgress(details.widgetDOM, update, this.responseText.length);
       details.save(data, "Save");
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
+  xhttp.send(request);         // send request to server
 }
 
 updateReason() {
@@ -685,22 +705,23 @@ updateReason() {
   obj.to = {"id":node, "return":false};
   obj.rel = {"type":"Trash", "return":false};
   obj.changes = [{"item":"rel", "property":"reason", "value":app.stringEscape(reason)}];
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+  const request = JSON.stringify(queryObject);
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress(this.widgetDOM, "Updating reason");
+  const update = app.startProgress(this.widgetDOM, "Updating reason", request.length);
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(details.widgetDOM, update);
+      app.stopProgress(details.widgetDOM, update, this.responseText.length);
       details.save(data, "Save");
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
+  xhttp.send(request);         // send request to server
 }
 
 untrashNode() {
@@ -712,22 +733,23 @@ untrashNode() {
   obj.from = {"id":user, "return":false};
   obj.to = {"id":node, "return":false};
   obj.rel = {"type":"Trash", "return":false};
+  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
+  const request = JSON.stringify(queryObject);
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress(this.widgetDOM, "Restoring node");
+  const update = app.startProgress(this.widgetDOM, "Restoring node", request.length);
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(details.widgetDOM, update);
+      app.stopProgress(details.widgetDOM, update, this.responseText.length);
       details.save(data, "Save");
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
+  xhttp.send(request);         // send request to server
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -746,22 +768,23 @@ updateMetaData(newFields, propFieldsChanged) {
     change.value = app.stringEscape(JSON.stringify(this[propertyNames[i]]));
     metadataObj.changes.push(change);
   }
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": metadataObj, "GUID": app.login.userGUID};
+  const request = JSON.stringify(queryObject);
 
   const xhttp = new XMLHttpRequest();
   const details = this;
-  const update = app.startProgress(this.widgetDOM, "Updating metadata");
+  const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(details.widgetDOM, update);
+      app.stopProgress(details.widgetDOM, update, this.responseText.length);
       details.updateFields(data, newFields, propFieldsChanged);
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": metadataObj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
+  xhttp.send(request);         // send request to server
 }
 
 updateFields(data, newFields, propFieldsChanged) { // should contain only the metadata node, under the name "metadata"
@@ -791,19 +814,21 @@ updateFields(data, newFields, propFieldsChanged) { // should contain only the me
     obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}
                   ,{"property":"proposedFields", "value":app.stringEscape(JSON.stringify(propFields))}];
 
+    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
+    const request = JSON.stringify(queryObject);
+
     const xhttp = new XMLHttpRequest();
-    const update = app.startProgress(this.widgetDOM, "Updating metadata");
+    const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
     const details = this;
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(details.widgetDOM, update);
+        app.stopProgress(details.widgetDOM, update, this.responseText.length);
       }
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    xhttp.send(request);         // send request to server
   }
 }
 
@@ -1024,20 +1049,6 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   else {
     const xhttp = new XMLHttpRequest();
     const details = this;
-    const update = app.startProgress(this.widgetDOM, "Saving node");
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(details.widgetDOM, update);
-        if (buttonValue === "Save") {
-          details.saveData(data);
-        }
-        else {
-          details.addComplete(data);
-        }
-      }
-    };
 
     let obj = {};
     let queryObject = {};
@@ -1051,9 +1062,25 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       obj = {"name":"n", "type":this.queryObjectName, "properties":data};
       queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
     }
+    const request = JSON.stringify(queryObject);
+
+    const update = app.startProgress(this.widgetDOM, "Saving node", request.length);
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        app.stopProgress(details.widgetDOM, update, this.responseText.length);
+        if (buttonValue === "Save") {
+          details.saveData(data);
+        }
+        else {
+          details.addComplete(data);
+        }
+      }
+    };
 
     xhttp.open("POST","");
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    xhttp.send(request);         // send request to server
   }
 }
 

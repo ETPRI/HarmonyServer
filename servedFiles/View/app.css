@@ -43,7 +43,7 @@
 	background-color: #999;
 }
 
-.requestRunning * {
+.requestRunning :not(.cancelButton) {
 	-webkit-touch-callout: none !important;
 	-webkit-user-select: none !important;
 	-khtml-user-select: none !important;
@@ -52,6 +52,7 @@
 	user-select: none !important;
 	pointer-events: none !important;
 }
+
 
 .requestRunning .widgetHeader {
 	background-color:lightgray;

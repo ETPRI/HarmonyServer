@@ -20,21 +20,23 @@ constructor (nameQueryObject, id) {
   this.widgetID = app.idCounter;
   this.widgetDOM = null;
 
+  const queryObject = {"server": "CRUD", "function": "getMetaData", "query": nameQueryObject, "GUID": app.login.userGUID};
+  const request = JSON.stringify(queryObject);
+
   const xhttp = new XMLHttpRequest();
   const table = this;
-  const update = app.startProgress(this.widgetDOM, "Searching for metadata");
+  const update = app.startProgress(this.widgetDOM, "Searching for metadata", request.length);
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(table.widgetDOM, update);
+      app.stopProgress(table.widgetDOM, update, this.responseText.length);
       table.queryComplete(data);
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "getMetaData", "query": nameQueryObject, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
+  xhttp.send(request);         // send request to server
 }
 
 queryComplete(data) {
@@ -203,22 +205,23 @@ showReasons(element) {
   obj.from = {"name":"user"};
   obj.to = {"name":"node", "properties":{"M_GUID":GUID}};
   obj.rel = {"type":"Trash"};
+  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+  const request = JSON.stringify(queryObject);
 
   const xhttp = new XMLHttpRequest();
   const table = this;
-  const update = app.startProgress(this.widgetDOM, "Searching for details");
+  const update = app.startProgress(this.widgetDOM, "Searching for details", request.length);
 
   xhttp.onreadystatechange = function() {
     if (this.readyState == 4 && this.status == 200) {
       const data = JSON.parse(this.responseText);
-      app.stopProgress(table.widgetDOM, update)
+      app.stopProgress(table.widgetDOM, update, this.responseText.length);
       table.buildReasons(data);
     }
   };
 
   xhttp.open("POST","");
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  xhttp.send(JSON.stringify(queryObject));         // send request to server
+  xhttp.send(request);         // send request to server
 }
 
 buildReasons(data) {

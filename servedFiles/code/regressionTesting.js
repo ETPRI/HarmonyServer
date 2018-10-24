@@ -282,19 +282,21 @@ class regressionTesting {
   		// Remove nodes and relationships
       const obj = {};
       obj.return = false;
-      const update = app.startProgress(null, "Clearing database");
+      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj, "GUID": app.login.userGUID};
+      const request = JSON.stringify(queryObject);
+
+      const update = app.startProgress(null, "Clearing database", request.length);
 
       const xhttp = new XMLHttpRequest();
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          app.stopProgress(null, update);
+          app.stopProgress(null, update, this.responseText.length);
         }
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj, "GUID": app.login.userGUID};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
+      xhttp.send(request);         // send request to server
 
   		// reset all variables to ensure same state every time "Clear All" is chosen
   		app.idCounter = 0; // reset ID counter

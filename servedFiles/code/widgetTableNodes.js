@@ -38,43 +38,44 @@ class widgetTableNodes {
 
   ////////////////////////////////////////////////////////////////////
   search(criteria) { // public - call when data changes
-    // if (criteria && criteria.length > 0) { // if search criteria were passed in, process them first
-    //   this.reset(); // clear all existing search criteria
-    //   for (let i = 0; i < criteria.length; i++) {
-    //     const name = criteria[i].name;
-    //     const value = criteria[i].value;
-    //     const ddValue = criteria[i].dropDownValue;
-    //     if (name && value && name in this.fields) { // If this criterion has a valid name and value
-    //       if (!(name in this.fieldsDisplayed)) { // If the given field was hidden
-    //         this.fieldsDisplayed.push(name); // show it
-    //         this.updateFields();
-    //       }
-    //       const cell = app.domFunctions.getChildByIdr(this.widgetDOM, `searchCell${name}`);
-    //       const inp = cell.firstElementChild;
-    //       const drop = cell.lastElementChild;
-    //       inp.value = value;
-    //       if (ddValue) {
-    //
-    //       }
-    //     }
-    //   }
-    // }
-    
+    if (criteria && criteria.length > 0) { // if search criteria were passed in, process them first
+      this.reset(); // clear all existing search criteria
+      for (let i = 0; i < criteria.length; i++) {
+        const name = criteria[i].name;
+        const value = criteria[i].value;
+        const ddValue = criteria[i].dropDownValue;
+        if ((value !== undefined) && name && name in this.fields) { // If this criterion has a valid name and value
+          if (this.fieldsDisplayed.indexOf(name) < 0) { // If the given field was hidden
+            this.fieldsDisplayed.push(name); // show it
+            this.updateFields(); // I don't THINK I need a whole refresh here - the search that's about to run will do the data
+          }
+          const cell = app.domFunctions.getChildByIdr(this.widgetDOM, `searchCell${name}`);
+          const inp = cell.firstElementChild;
+          const drop = cell.lastElementChild;
+          inp.value = value;
+          if (ddValue) { // If a dropdown value was given
+            drop.value = ddValue;
+          } // end if (a dropdown value was given)
+        } // end if (a valid name and value were given)
+      } // end for (every item in the criteria array)
+    } // end if (search criteria were passed in)
+
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress(this.widgetDOM, `Searching for ${this.queryObject.nodeLabel}`);
+    const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "GUID": app.login.userGUID};
+    const request = JSON.stringify(queryObject);
+    const update = app.startProgress(this.widgetDOM, `Searching for ${this.queryObject.nodeLabel}`, request.length);
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         nodes.data = JSON.parse(this.responseText);
-        app.stopProgress(nodes.widgetDOM, update);
+        app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
         nodes.refresh();
       }
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    xhttp.send(request);         // send request to server
   }
 
   searchOnEnter(input, evnt) { // Makes hitting enter run a search
@@ -83,8 +84,8 @@ class widgetTableNodes {
     }
   }
 
-  reset(element) {
-    const widget = document.getElementById(app.domFunctions.widgetGetId(element)); // Get the widget to clear
+  reset() {
+    const widget = document.getElementById(this.idWidget); // Get the widget to clear
     const inputs = widget.getElementsByTagName('input'); // Get all inputs (text boxes and buttons)
     for (let i = 0; i < inputs.length; i++) { // Go through them all...
       if (inputs[i].type !== "button") { // ignoring the buttons...
@@ -92,7 +93,10 @@ class widgetTableNodes {
       }
     }
     app.domFunctions.getChildByIdr(this.widgetDOM, "limit").value = this.limitDefault; // reset limit
-    app.domFunctions.getChildByIdr(this.widgetDOM, "ownerText").value = app.login.userName; // reset owner
+    const ownerBox = app.domFunctions.getChildByIdr(this.widgetDOM, "ownerText");
+    if (ownerBox) {
+      ownerBox.value = app.login.userName; // reset owner
+    }
 
     const dropdowns = widget.getElementsByTagName('select');
     for (let i = 0; i < dropdowns.length; i++) {
@@ -168,14 +172,16 @@ class widgetTableNodes {
   }
 
   buildOwner() {
-    const cell = app.domFunctions.getChildByIdr(document.getElementById(this.idWidget), 'ownerSearch');
-    const text = cell.firstElementChild;
-    const dropDown = text.nextElementSibling;
     let owner = null;
-    if (text.value.length > 0) {
-      owner = {};
-      owner.value = text.value;
-      owner.searchType = dropDown.options[dropDown.selectedIndex].value;
+    const cell = app.domFunctions.getChildByIdr(document.getElementById(this.idWidget), 'ownerSearch');
+    if (cell) {
+      const text = cell.firstElementChild;
+      const dropDown = text.nextElementSibling;
+      if (text.value.length > 0) {
+        owner = {};
+        owner.value = text.value;
+        owner.searchType = dropDown.options[dropDown.selectedIndex].value;
+      }
     }
     return owner;
   }
@@ -281,20 +287,21 @@ class widgetTableNodes {
 	  obj.rel = {"type":"Settings", "merge":true};
 	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
 	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    const request = JSON.stringify(queryObject);
 
     const xhttp = new XMLHttpRequest();
-    const update = app.startProgress(this.widgetDOM, "Updating metadata");
+    const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
     const table = this;
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(table.widgetDOM, update);
+        app.stopProgress(table.widgetDOM, update, this.responseText.length);
       }
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    xhttp.send(request);         // send request to server
 
     this.fieldSelectPopup.hidden = true;
     this.refresh();
@@ -353,16 +360,18 @@ class widgetTableNodes {
         s += s1.replace('#1',fieldName).replace(`<option value="${select}">`, `<option selected value="${select}">`);
     }
 
-    let ownerInput = app.domFunctions.getChildByIdr(this.widgetDOM, 'ownerText');
-    let ownerValue = app.login.userName;
-    if (ownerInput) { // If the owner field existed already, don't reset it
-      ownerValue = ownerInput.value;
-    }
+    if (this.queryObjectName.slice(0,2) !== 'M_') { // metadata nodes don't have owners
+      let ownerInput = app.domFunctions.getChildByIdr(this.widgetDOM, 'ownerText');
+      let ownerValue = app.login.userName;
+      if (ownerInput) { // If the owner field existed already, don't reset it
+        ownerValue = ownerInput.value;
+      }
 
-    s += `<th idr = "ownerSearch">`;
-    s += `<input idr = "ownerText" size="7" value = "${ownerValue}" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
-    s += strSearch.replace('#x#', 'owner');
-    s += `</th>`;
+      s += `<th idr = "ownerSearch">`;
+      s += `<input idr = "ownerText" size="7" value = "${ownerValue}" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
+      s += strSearch.replace('#x#', 'owner');
+      s += `</th>`;
+    }
 
     if (this.queryObjectName == 'people') {
       s += `<th colspan = "3">
@@ -385,7 +394,11 @@ class widgetTableNodes {
         ondragstart="app.widget('dragHeader', this, event)" ondragover="event.preventDefault()" ondrop="app.widget('dropHeader', this, event)">
         ${this.fields[fieldName].label}</th>`;
     }
-    f += '<th>Owner</th>';
+
+    if (this.queryObjectName.slice(0,2) !== 'M_') { // metadata nodes don't have owners
+      f += '<th>Owner</th>';
+    }
+
     if (this.queryObjectName == 'people') {
       f += '<th colspan = "3">Permissions</th>'
     }
@@ -440,15 +453,16 @@ class widgetTableNodes {
         row.appendChild(cell);
       }
 
-      // If this is a mindmap table
-      let owner = "None";
-      if (r[i].owner) {
-        owner = r[i].owner;
+      if (this.queryObjectName.slice(0,2) !== 'M_') { // If this is not a metadata node, it has (or may have) an owner
+        let owner = "None";
+        if (r[i].owner) {
+          owner = r[i].owner;
+        }
+        cell = document.createElement('td');          // Make a cell showing its owner...
+        text = document.createTextNode(owner);
+        cell.appendChild(text);
+        row.appendChild(cell);
       }
-      cell = document.createElement('td');          // Make a cell showing its owner...
-      text = document.createTextNode(owner);
-      cell.appendChild(text);
-      row.appendChild(cell);
 
       // If this is a people table...
       if (this.queryObjectName == "people") {
@@ -611,20 +625,21 @@ class widgetTableNodes {
     	  obj.rel = {"type":"Settings", "merge":true};
     	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
+        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+        const request = JSON.stringify(queryObject);
 
         const xhttp = new XMLHttpRequest();
-        const update = app.startProgress(this.widgetDOM, "Updating metadata");
+        const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
         const table = this;
 
         xhttp.onreadystatechange = function() {
           if (this.readyState == 4 && this.status == 200) {
-            app.stopProgress(table.widgetDOM, update);
+            app.stopProgress(table.widgetDOM, update, this.responseText.length);
           }
         };
 
         xhttp.open("POST","");
-        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-        xhttp.send(JSON.stringify(queryObject));         // send request to server
+        xhttp.send(request);         // send request to server
         this.refresh();
       }
     }
@@ -712,43 +727,45 @@ class widgetTableNodes {
     obj.from = {"properties":{"M_GUID":GUID}, "return":false};
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions"};
+    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    const request = JSON.stringify(queryObject);
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress(this.widgetDOM, "Checking permissions");
+    const update = app.startProgress(this.widgetDOM, "Checking permissions", request.length);
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
-        app.stopProgress(nodes.widgetDOM, update);
+        app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
         nodes.checkPermission(data, GUID, button, toAdd);
       }
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    xhttp.send(request);         // send request to server
   }
 
   checkPermission(data, GUID, button, toAdd) {
     if (data.length > 0 && data[0].rel.properties.username && data[0].rel.properties.password) { // If a relation to delete was found
       const obj = {};
       obj.rel = {"id":data[0].rel.id, "return":false};
+      const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
+      const request = JSON.stringify(queryObject);
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
-      const update = app.startProgress(this.widgetDOM, "Deleting old permissions");
+      const update = app.startProgress(this.widgetDOM, "Deleting old permissions", request.length);
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
-          app.stopProgress(nodes.widgetDOM, update);
+          app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
           nodes.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
         }
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
+      xhttp.send(request);         // send request to server
     }
 
     else { // If there was no relation to delete, need to ask for a new username and password
@@ -786,22 +803,23 @@ class widgetTableNodes {
       obj.from = {"properties":{"M_GUID":GUID}, "return":false};
       obj.to = {"type":"M_LoginTable", "properties":{"name":toAdd}, "return":false};
       obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
+      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+      const request = JSON.stringify(queryObject);
 
       const xhttp = new XMLHttpRequest();
       const nodes = this;
-      const update = app.startProgress(this.widgetDOM, "Setting permissions");
+      const update = app.startProgress(this.widgetDOM, "Setting permissions", request.length);
 
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          app.stopProgress(nodes.widgetDOM, update);
+          app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
           nodes.search(data);
         }
       };
 
       xhttp.open("POST","");
-      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-      xhttp.send(JSON.stringify(queryObject));         // send request to server
+      xhttp.send(request);         // send request to server
     }
   }
 
@@ -813,20 +831,21 @@ class widgetTableNodes {
     obj.from = {"properties":{"M_GUID":GUID}, "return":false};
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions", "return":false};
+    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
+    const request = JSON.stringify(queryObject);
 
     const xhttp = new XMLHttpRequest();
     const nodes = this;
-    const update = app.startProgress(this.widgetDOM, "Removing permissions");
+    const update = app.startProgress(this.widgetDOM, "Removing permissions", request.length);
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(nodes.widgetDOM, update);
+        app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
         nodes.search();
       }
     };
 
     xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
     xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes
