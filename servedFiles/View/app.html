@@ -11,6 +11,7 @@
     <script src="../code/dragDropTable.js"></script>
     <script src="../code/widgetTableQuery.js"></script>
     <script src="../code/widgetTableNodes.js"></script>
+    <script src="../code/widgetTableRelations.js"></script>
     <script src="../code/widgetDetails.js"></script>
     <script src="../code/widgetNode.js"></script>
     <script src="../code/domFunctions.js"></script>
@@ -35,9 +36,12 @@
     <div id="tableHeader">
       <div id="buttonsDiv" class="widget">
         <div class="widgetHeader">
-          <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
-          <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Button Header', this)">
-          <b>Node Search Buttons</b>
+          <span class="freezable">
+            <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
+            <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Button Header', this)">
+            <b>Node Search Buttons</b>
+          </span>
+          <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
         </div>
         <div class="widgetBody">
           <div id="buttons"></div>

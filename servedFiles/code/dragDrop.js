@@ -86,7 +86,8 @@ class dragDrop {
     if (element.hasAttribute("editable")) { // Create inputs for each editable node
       const input = document.createElement("input");
       input.setAttribute("onchange", "app.widget('recordText', this)");
-      input.setAttribute("onkeydown", "app.widget('addOnEnter', this, event)");
+      input.setAttribute("onkeydown", "app.widget('lookForEnter', this, event)");
+      input.setAttribute("onblur", "app.widget('insert', this)");
       input.setAttribute("idr", `input${this.inputCount++}`);
       element.insertBefore(input, element.firstChild);
     }
@@ -361,12 +362,6 @@ class dragDrop {
     this.log(JSON.stringify(obj));
     app.regression.log(JSON.stringify(obj));
     app.regression.record(obj);
-  }
-
-  addOnEnter(input, evnt) {
-    if (evnt.key == "Enter") {
-      this.insert(input);
-    }
   }
 
   recordText(input) {

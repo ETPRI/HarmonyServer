@@ -1,6 +1,8 @@
 // This class handles everything to do with logging in and out of the website.
 class widgetLogin {
   constructor() {
+    this.requests = [];
+
     // DOM elements to be filled in later
     this.info = null; // Will show whether the user is logged in, and if so, their name and role
     this.sessionInfo = null;
@@ -67,6 +69,7 @@ class widgetLogin {
         app.regression.buildRegressionHeader();
         app.login.viewAdmin.push(document.getElementById("debugButton"));
         app.login.viewAdmin.push(document.getElementById("regressionButton"));
+        app.login.viewAdmin.push(document.getElementById("dataBrowserButton"));
 
         app.login.viewLoggedIn.push(document.getElementById('changeProfileButton'));
       }
@@ -95,26 +98,12 @@ class widgetLogin {
     }
     else { // Otherwise, create a session and browser node first, then record the request
       const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
-      const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-      const request = JSON.stringify(queryObject);
 
-      const xhttp = new XMLHttpRequest();
-      const login = this;
-      const update = app.startProgress(this.loginDiv, "Creating session", request.length);
-
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          const responseSize = this.responseText.length;
-          const data = JSON.parse(this.responseText);
-          login.sessionGUID = data[0].node.properties.M_GUID;
-          login.requestCount = 0;
-          app.stopProgress(login.loginDiv, update, responseSize);
-          login.mergeBrowser();
-        }
-      };
-
-      xhttp.open("POST","");
-      xhttp.send(request);         // send request to server
+      app.sendQuery(obj, 'createNode', "Creating Session", this.loginDiv, function(data) {
+        this.sessionGUID = data[0].node.properties.M_GUID;
+        this.requestCount = 0;
+        this.mergeBrowser();
+      }.bind(this));
     }
   }
 
@@ -167,7 +156,7 @@ class widgetLogin {
       xhttp.onreadystatechange = function() {
         if (this.readyState == 4 && this.status == 200) {
           const data = JSON.parse(this.responseText);
-          // app.stopProgress(login.loginDiv, update, this.responseText.length);
+          app.stopProgress(login.loginDiv, update, this.responseText.length);
           login.loginComplete(data);
         }
       };
@@ -330,51 +319,32 @@ class widgetLogin {
         }
 
         // Add any missing values to settings, then store it in app.metaData
-        app.updateObject(app.metaData.node[name], settings);
-        app.metaData.node[name] = settings;
+  			if (app.metaData.node[name]) { // If a node metadata object exists with this type
+  				app.updateObject(app.metaData.node[name], settings); // Bring in any fields which are in metadata but aren't in node
+  				app.metaData.node[name] = settings; // Store the updated object in this.metaData
+  			}
+  			else if (app.metaData.relation[name]) { // If a relation metadata object exists with this type
+  				app.updateObject(app.metaData.relation[name], settings); // Bring in any fields which are in metadata but aren't in relation
+  				app.metaData.relation[name] = settings; // Store the updated object in this.metaData
+  			}
       }
 
-      // let properties = row.metadata.properties; // default values
-      // const name = properties.name;
-      //
-      // const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy'];
-      // for (let i = 0; i < propertyNames.length; i++) {
-      //   if (row.settings && row.settings.properties[propertyNames[i]]) { // user-specific values overrule defaults if they are present, except for "fields"
-      //     properties[propertyNames[i]] = row.settings.properties[propertyNames[i]];
-      //   }
-      //
-      //   if (properties[propertyNames[i]]) {
-      //     app.metaData.node[name][propertyNames[i]] = JSON.parse(properties[propertyNames[i]]);
-      //   }
-      // }
-      //
-      // // Now check the fields. If a field is in the relation, then overwrite THAT SPECIFIC FIELD in properties.
-      // let fields = JSON.parse(properties.fields); // fields from metadata object
-      // if (row.settings && row.settings.properties.fields) {
-      //   const relFields = JSON.parse(row.settings.properties.fields); // fields from relation
-      //   for (let name in relFields) {
-      //     // Replace label (and if, somehow, the user had a field the node didn't, add it)
-      //     fields[name] = relFields[name];
-      //   } // end for (every field in the relation)
-      // } // end if (there are fields stored in the relation)
-      //
-      // // Then plug the result into app.metaData.node[name].fields
-      // app.metaData.node[name].fields = fields;
+      if (app.metaData.node[name]) { // if this is metadata for a node, not a relation
+        // Create a widgetTableNodes widget for this node type
+        app.widgets[name] = new widgetTableNodes(name, null);
 
-      // Create a widgetTableNodes widget for this node type
-      app.widgets[name] = new widgetTableNodes(name, null);
+        // Create a button for this nodeType
+        button = document.createElement('input');
+        if (name.slice(0,2) === "M_") { // If this button represents a metadata node type, only admins should see it
+          adminButtons.append(button);
+        }
+        else {
+          buttons.append(button);
+          app.userNodes.push({"db":name, "label":app.metaData.node[name].nodeLabel});
+        }
 
-      // Create a button for this nodeType
-      button = document.createElement('input');
-      if (name.slice(0,2) === "M_") { // If this button represents a metadata node type, only admins should see it
-        adminButtons.append(button);
-      }
-      else {
-        buttons.append(button);
-        app.userNodes.push({"db":name, "label":app.metaData.node[name].nodeLabel});
-      }
-
-      button.outerHTML = `<input type="button" value="${app.metaData.node[name].nodeLabel}" onclick="app.menuNodes('${name}')">`
+        button.outerHTML = `<input type="button" value="${app.metaData.node[name].nodeLabel}" onclick="app.menuNodes('${name}')">`
+      } // end if (this is metadata for a node)
     } // end for (each metadata node)
   }
 
@@ -411,7 +381,7 @@ class widgetLogin {
       for (let i = 0; i < GUIDs.length; i++) { // Go through all the ordered GUIDs the user stored
         const cell = row.lastElementChild; // The blank cell should be the last one since the user hasn't had a chance to rearrange yet
         // Get the data item with the given GUID, if any
-        const fave = data.filter(node => node.to && node.to.properties && node.to.properties.M_GUID == GUIDs[i]);
+        const fave = data.filter(node => app.getProp(node, "to", "properties", "M_GUID") == GUIDs[i]);
         if (fave.length == 1) { // If this item exists, add a cell for it...
           this.addFavoriteCell(row, cell, fave[0].to);
 
@@ -656,7 +626,7 @@ class widgetLogin {
     app.faveNode = 1;
 
     this.loginButton.setAttribute("value", "Log In");
-    this.loginButton.setAttribute("onclick", "app.widget('login', this)");
+    this.loginButton.setAttribute("onclick", "app.widget('createSession', this)");
 
     this.userID = null; // Log the user out
     this.userGUID = null;

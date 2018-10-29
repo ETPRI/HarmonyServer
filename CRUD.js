@@ -277,11 +277,15 @@ module.exports = class CRUD {
       changeLogs = `with from, rel, to create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
     }
 
-    if (strings.ret != "" && dataObj.distinct) {
+    if (strings.ret !== "" && dataObj.distinct) {
       strings.ret = `return distinct ${strings.ret}`;
     }
-    else if (strings.ret != "") {
+    else if (strings.ret !== "") {
       strings.ret = `return ${strings.ret}`;
+    }
+
+    else { // if strings.ret == ""
+      strings.ret = `return null`; // Just so something is always returned
     }
 
     let orderBy = "";

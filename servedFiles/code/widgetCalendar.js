@@ -12,6 +12,7 @@ class widgetCalendar {
     this.selectedButton = null;
     this.detailsPane = null;
     this.details = null;
+    this.requests = [];
 
     this.nodeLabel = app.metaData.getNode('calendar').nodeLabel;
 
@@ -44,9 +45,10 @@ class widgetCalendar {
     <input type="button" idr="monthButton" value="Month" onclick="app.widget('changeView', this)">
     <input type="button" idr="yearButton" value="Year" onclick="app.widget('changeView', this)">
     <input type="button" idr="forwardButton" value=">" onclick="app.widget('page', this)">
-    <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)">
+    <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)"></span>
+    <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
     </div>
-    <div class="widgetBody"><table><tr idr="calendarRow">
+    <div class="widgetBody freezable"><table><tr idr="calendarRow">
       <td id="calendar${this.widgetID}"></td>
       <td id = "detailsPane" class="hidden">
         <b idr= "nodeTypeLabel" contentEditable="true">${this.nodeLabel}</b>

@@ -90,10 +90,10 @@ checkMetaData() {
 	xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
-addMetaData(data) {
+addMetaData(data) { // data should be all metadata nodes, for both nodes and relations
 	if (!data || data.length == 0) { // If no metadata nodes were found, add them.
 		let type;
-		for (type in this.metaData.node) {
+		for (type in this.metaData.node) { // Add all node metadata...
 			const obj = {"type":"M_MetaData", "properties":{"name":type}};
 			obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
 			obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
@@ -107,7 +107,21 @@ addMetaData(data) {
 			const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
 			xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
-	}
+
+		for (type in this.metaData.relation) { // and all relation metadata
+			const obj = {"type":"M_MetaData", "properties":{"name":type}};
+			obj.properties.relLabel = this.stringEscape(JSON.stringify(this.metaData.relation[type].relLabel));
+			obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.relation[type].orderBy));
+			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.relation[type].fields));
+			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
+
+			const xhttp = new XMLHttpRequest();
+
+			xhttp.open("POST","");
+			const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+			xhttp.send(JSON.stringify(queryObject));         // send request to server
+		}
+	} // end if (no data were returned; no metadata nodes were found)
 
 	else {
 		// if data were found, it will be an array of metadata nodes. For every metadata node that was found,
@@ -124,17 +138,34 @@ addMetaData(data) {
 				node[prop] = JSON.parse(node[prop]);
 			}
 
-			const updated = this.updateObject(this.metaData.node[name], node); // Bring in any fields which are in metadata but aren't in node
-			this.metaData.node[name] = node;
+			let updated = false;
+			if (this.metaData.node[name]) { // If a node metadata object exists with this type
+				updated = this.updateObject(this.metaData.node[name], node); // Bring in any fields which are in metadata but aren't in node
+				this.metaData.node[name] = node; // Store the updated object in this.metaData
+			}
+			else if (this.metaData.relation[name]) { // If a relation metadata object exists with this type
+				updated = this.updateObject(this.metaData.relation[name], node); // Bring in any fields which are in metadata but aren't in relation
+				this.metaData.relation[name] = node; // Store the updated object in this.metaData
+			}
 
 			if (updated) { // If anything was added to the DB node from the metadata class, save the updated DB node
 				const obj = {};
 				obj.node = {"type":"M_MetaData", "properties":{"name":name}};
-				obj.changes = [{"property":"nodeLabel", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].nodeLabel))}
-											,{"property":"orderBy", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].orderBy))}
-											,{"property":"fields", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].fields))}
-											,{"property":"fieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].fieldsDisplayed))}
-											,{"property":"formFieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].formFieldsDisplayed))}];
+
+			  if (this.metaData.node[name]) { // If this metadata object represents a node
+					obj.changes = [{"property":"nodeLabel", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].nodeLabel))}
+												,{"property":"orderBy", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].orderBy))}
+												,{"property":"fields", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].fields))}
+												,{"property":"fieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].fieldsDisplayed))}
+												,{"property":"formFieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].formFieldsDisplayed))}];
+				}
+
+				else { // If the node was updated, it MUST have matched either a node or relation object. If it's not a node it must be a relation.
+					obj.changes = [{"property":"nodeLabel", "value":this.stringEscape(JSON.stringify(this.metaData.relation[name].relLabel))}
+												,{"property":"orderBy", "value":this.stringEscape(JSON.stringify(this.metaData.relation[name].orderBy))}
+												,{"property":"fields", "value":this.stringEscape(JSON.stringify(this.metaData.relation[name].fields))}
+												,{"property":"fieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.relation[name].fieldsDisplayed))}];
+				}
 
 				const xhttp = new XMLHttpRequest();
 
@@ -143,7 +174,7 @@ addMetaData(data) {
 				xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
 			node.name = name; // put the name back for the next step
-		}
+		} // end for (every metadata node that was found)
 
 		let type;
 		for (type in this.metaData.node) { // for every entry in this.metaData.node...
@@ -155,6 +186,23 @@ addMetaData(data) {
 				obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
 				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
 				obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
+
+				const xhttp = new XMLHttpRequest();
+
+				xhttp.open("POST","");
+				const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+				xhttp.send(JSON.stringify(queryObject));         // send request to server
+			}
+		}
+
+		for (type in this.metaData.relation) { // for every entry in this.metaData.relation...
+			let DBNode = data.find(x => x.node.properties.name === type); // look for a matching DB metadata node.
+			if (!DBNode) { // If there is no such node, create one.
+				const obj = {"type":"M_MetaData", "properties":{"name":type}};
+				obj.properties.relLabel = this.stringEscape(JSON.stringify(this.metaData.relation[type].relLabel));
+				obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.relation[type].orderBy));
+				obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.relation[type].fields));
+				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
 
 				const xhttp = new XMLHttpRequest();
 
@@ -359,10 +407,11 @@ widgetHeader(widgetType, tag){
 	onmousedown="app.setActiveWidget(this)">
 	<hr>
 	<div idr="header" class="widgetHeader" draggable="true" ondragstart="app.drag(this, event)">
-	<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
-	<input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
-	<input type="button" value = "<>" idr="fullScreenButton" onclick = "app.widgetFullScreen(this)">
-	<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}', app.domFunctions.widgetGetId(this))">
+		<span class="freezable">
+			<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
+			<input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
+			<input type="button" value = "<>" idr="fullScreenButton" onclick = "app.widgetFullScreen(this)">
+			<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}', app.domFunctions.widgetGetId(this))">
 		`)
 }
 
@@ -379,7 +428,8 @@ widgetCollapse(domElement) {
 		this.widgetFullScreen(fullScreen);
 	}
 
-	const children = Array.from(domElement.parentElement.parentElement.children);
+	// parent = span grandparent = header great-grandparent = widget
+	const children = Array.from(domElement.parentElement.parentElement.parentElement.children);
 	let widgetBody;
 	for (let i = 0; i < children.length; i++) {
 		if (children[i].classList.contains('widgetBody')) {
@@ -745,7 +795,7 @@ setOwner(domElement, object, method, data) { // If there is data, this was calle
 	obj.from = {"id":object.id};
 	obj.to = {"id":this.login.userID};
 	obj.rel = {"type":"Owner"};
-	const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+	const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": this.login.userGUID};
 	const request = JSON.stringify(queryObject);
 
 	const xhttp = new XMLHttpRequest();
@@ -792,7 +842,17 @@ startProgress(DOMelement, text, length) {
 
 	// topWidget should now be the top-level widget containing the element, or null if the element doesn't exist or isn't in a widget
 	if (topWidget) {
-		topWidget.classList.add("requestRunning");
+		const freezables = topWidget.getElementsByClassName('freezable');
+		for (let i = 0; i < freezables.length; i++) {
+			freezables[i].classList.add("requestRunning");
+		}
+		const header = topWidget.getElementsByClassName('widgetHeader');
+		for (let i = 0; i < header.length; i++) {
+			header[i].classList.add("grayedOut");
+		}
+
+		const cancel = this.domFunctions.getChildByIdr(topWidget, 'cancelButton');
+		cancel.classList.remove('hidden');
 	}
 
 	const avail = document.getElementById("available");
@@ -805,18 +865,10 @@ startProgress(DOMelement, text, length) {
 		row.setAttribute("widget", topWidget.id);
 	}
 	const status = document.createTextNode(text);
-	const cancel = document.createElement("INPUT");
-	cancel.setAttribute('idr', 'cancel');
-	cancel.setAttribute("type", "button");
-	cancel.setAttribute("value", "Cancel");
-	cancel.setAttribute("onclick", 'app.stopProgress(this)');
-	cancel.disabled = true;
-	cancel.classList.add('cancelButton');
 	const timer = document.createElement("SPAN");
 	timer.innerHTML = ":  0 ms";
 	row.appendChild(status);
 	row.appendChild(timer);
-	row.appendChild(cancel);
 	ongoing.appendChild(row);
 
 	const startTime = performance.now();
@@ -824,16 +876,29 @@ startProgress(DOMelement, text, length) {
 		const currTime = performance.now();
 		const elapsedTime = currTime - startTime;
 		timer.innerHTML = `:  ${Math.round(elapsedTime)} ms`;
-		if (elapsedTime > 1000) {
-			cancel.disabled = false;
-		}}, 10);
+	}, 10);
 	row.setAttribute("update", update);
+
+	const requestObj = {"timer":update};
+	if (topWidget) {
+		const id = topWidget.getAttribute('id');
+		const JSinstance = this.widgets[id];
+		if (JSinstance) {
+			if (JSinstance.requests == undefined) { // make sure there's a requests array
+				JSinstance.requests = [];
+			}
+			JSinstance.requests.push(requestObj);
+		}
+	}
 
 	let count = null;
 	if (this.login.sessionGUID && this.login.browserGUID) { // if a session is ongoing, record the request
 	  count = this.login.requestCount++; // Will have to pass this around later, in order to track which request is which
+		requestObj.count = count;
 
 		recordStartTime = Date.now();
+		requestObj.startTime = recordStartTime;
+
 	  const obj = {};
 	  obj.from = {"type":"M_Session", "properties":{"M_GUID":this.login.sessionGUID}};
 	  obj.rel = {"type":"Request", "properties":{"count":count, "description":text, "startTime":recordStartTime, "requestLength":length}};
@@ -845,100 +910,92 @@ startProgress(DOMelement, text, length) {
 	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep"};
 	  xhttp.send(JSON.stringify(queryObject));         // send request to server
 	} // end if (a session is ongoing)
-	row.setAttribute("count", count);
-	row.setAttribute("update", update);
-	row.setAttribute("startTime", recordStartTime);
-
-	return {"update":update, "row":row, "count":count, "startTime":recordStartTime}; // Info stopProgress will need later
+	return requestObj; // Info stopProgress will need later
 }
 
 stopProgress(DOMelement, obj, length) {
-	let row = null;
-	let update = null;
+	let requests = [];
 	let topWidget = null;
-	let count = null;
-	let startTime = null;
 	let result = "Succeeded";
 
-	// If this was called by a cancel button (and the button was passed in)
-	if (DOMelement && DOMelement.tagName == 'INPUT' && DOMelement.type == "button" && DOMelement.value == "Cancel") {
-		row = DOMelement.parentElement;
-		update = row.getAttribute("update");
-		topWidget = document.getElementById(row.getAttribute("widget"));
-		count = row.getAttribute("count");
-		result = "Cancelled";
-		startTime = row.getAttribute("startTime");
+	let DOMelSearch = DOMelement;
+
+	while (DOMelSearch) { // Get the top widget that the DOM element is in
+		if (DOMelSearch.classList.contains("widget")) {
+			topWidget = DOMelSearch;
+		}
+		DOMelSearch = DOMelSearch.parentElement;
 	}
 
-	// If this was called by a request finishing (and a widget element and update object were passed in)
-	else {
-		if (obj) {
-			row = obj.row;
-			update = obj.update;
-			count = obj.count;
-			startTime = obj.startTime;
+	let JSinstance = null;
+
+	if (topWidget) {
+		const id = topWidget.getAttribute('id');
+		JSinstance = this.widgets[id];
+	}
+
+	// If this was called by a cancel button (and the button was passed in), get the request list from the widget the cancel button was in
+	if (DOMelement && DOMelement.tagName == 'INPUT' && DOMelement.type == "button" && DOMelement.value == "Cancel" && JSinstance) {
+		requests = Array.from(JSinstance.requests); // This will include timer, count and startTime. Make a copy so as not to change requests while changing JSinstance.requests
+		result = "Cancelled";
+	}
+
+	// If this was called by a request finishing (and a widget element and update object were passed in), use the update object as the request
+	else if (obj) {
+		requests.push(obj);
+	}
+
+	for (let i = 0; i < requests.length; i++) {
+		clearInterval(requests[i].timer);
+		if (JSinstance) {
+			JSinstance.requests.splice(JSinstance.requests.indexOf(requests[i]), 1); // remove from JS class, if it exists
 		}
 
-		// Go to the top-level widget
-		while (DOMelement) {
-			if (DOMelement.classList.contains("widget")) {
-				topWidget = DOMelement;
+		// If a session is running, and the count is defined (meaning that this request was logged when it began),
+		// then update the record of that request now.
+		if (this.login.sessionGUID && this.login.browserGUID && requests[i].count !== undefined) {
+			const duration = Date.now() - requests[i].startTime;
+
+			const obj = {};
+			obj.from = {"type":"M_Session", "properties":{"M_GUID":this.login.sessionGUID}};
+			obj.rel = {"type":"Request", "properties":{"count":requests[i].count}};
+			obj.to = {"type":"M_Browser", "properties":{"M_GUID":this.login.browserGUID}};
+			obj.changes = [
+					{"item":"rel", "property":"duration", "value":duration},
+					{"item":"rel", "property":"endResult", "value":result},
+			];
+
+			if (length) { // if the length is not undefined - meaning if this was called after a response was received, not by a cancel button
+				obj.changes.push({"item":"rel", "property":"responseLength", "value":length});
 			}
-			DOMelement = DOMelement.parentElement;
+
+			const xhttp = new XMLHttpRequest();
+
+			xhttp.open("POST","");
+			const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "upkeep"};
+			xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 	}
 
 	// topWidget should now be either
-	// a) the top-level widget stored in the row (usually the case when cancelling),
-	// b) the top-level widget containing the element which was passed in (usually the case when finishing a request), or
-	// c) null (if the row stored no widget, or if the element passed in didn't exist or wasn't in a widget)
-	if (topWidget) {
-		topWidget.classList.remove("requestRunning");
-	}
+	// a) the top-level widget containing the element which was passed in (usually the case), or
+	// b) null (if the element passed in didn't exist or wasn't in a widget)
 
-	clearInterval(update);
-
-	const cancel = this.domFunctions.getChildByIdr(row, 'cancel');
-	if (cancel) {
-		row.removeChild(cancel);
-	}
-
-	// If a session is running, and the count is non-null (meaning that this request was logged when it began),
-	// then update the record of that request now.
-	if (this.login.sessionGUID && this.login.browserGUID && !(count == null)) {
-		const duration = Date.now() - startTime;
-
-		const obj = {};
-		obj.from = {"type":"M_Session", "properties":{"M_GUID":this.login.sessionGUID}};
-		obj.rel = {"type":"Request", "properties":{"count":count}};
-		obj.to = {"type":"M_Browser", "properties":{"M_GUID":this.login.browserGUID}};
-		obj.changes = [
-				{"item":"rel", "property":"duration", "value":duration},
-				{"item":"rel", "property":"endResult", "value":result},
-		];
-
-		if (length) { // if the length is not undefined - meaning if this was called after a response was received, not by a cancel button
-			obj.changes.push({"item":"rel", "property":"responseLength", "value":length});
+	// If the top widget exists, the JS class for that widget exists and all requests have been cleared,
+	// unfreeze its freezable parts and hide the cancel button
+	if (topWidget && JSinstance && JSinstance.requests.length === 0) {
+		const freezables = topWidget.getElementsByClassName('freezable');
+		for (let i = 0; i < freezables.length; i++) {
+			freezables[i].classList.remove("requestRunning");
+		}
+		const header = topWidget.getElementsByClassName('widgetHeader');
+		for (let i = 0; i < header.length; i++) {
+			header[i].classList.remove("grayedOut");
 		}
 
-		const xhttp = new XMLHttpRequest();
-
-		xhttp.open("POST","");
-		const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "upkeep"};
-		xhttp.send(JSON.stringify(queryObject));         // send request to server
+		const cancel = this.domFunctions.getChildByIdr(topWidget, 'cancelButton');
+		cancel.classList.add('hidden');
 	}
-
-	const box = row.parentElement.parentElement;
-
-	// Repaint the box - there's a bug (NOT in my code - a known issue) that makes it disappear when the scrollbars disappear
-	box.parentElement.insertBefore(box, box.nextElementSibling);
-
-	// if (list.children.length == 0) { // If there are no more items in the list of ongoing calls
-	// 	const avail = document.getElementById("available");
-	// 	avail.hidden = false;
-	// 	const ongoing = document.getElementById("ongoing");
-	// 	ongoing.hidden = true;
-	// }
 }
 
 clearRequests() {
@@ -1202,6 +1259,34 @@ resize() {
 			object[method](...args); // run the method in the object with the args.
 		}
 	}
+}
+
+getProp(o, ...args) {
+    while (o && args.length > 0) {
+        o = o[args.shift()];
+    }
+    return args.length ? null : o;
+}
+
+sendQuery(obj, CRUD, description, DOMelement, onComplete, ...args) {
+	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": "setup"};
+	const request = JSON.stringify(queryObject);
+
+	const xhttp = new XMLHttpRequest();
+	const update = this.startProgress(DOMelement, description, request.length);
+	const app = this;
+
+	xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+			const responseSize = this.responseText.length;
+			const data = JSON.parse(this.responseText);
+			app.stopProgress(DOMelement, update, responseSize);
+			onComplete(data, ...args);
+		}
+	};
+
+	xhttp.open("POST","");
+	xhttp.send(request);         // send request to server
 }
 
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.

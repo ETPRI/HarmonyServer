@@ -6,6 +6,10 @@
 	height: 100%;
 }
 
+.selectedItem {
+	background-color:lightblue;
+}
+
 .listField {
 	list-style:none;
 	margin:0;
@@ -43,7 +47,7 @@
 	background-color: #999;
 }
 
-.requestRunning :not(.cancelButton) {
+.requestRunning {
 	-webkit-touch-callout: none !important;
 	-webkit-user-select: none !important;
 	-khtml-user-select: none !important;
@@ -54,7 +58,7 @@
 }
 
 
-.requestRunning .widgetHeader {
+.widgetHeader.grayedOut {
 	background-color:lightgray;
 }
 
@@ -142,8 +146,6 @@ td {
 	font-weight: bold;
 	font-size: 120%;
 }
-
-.activeView {background-color: lightblue}
 
 svg {
 	border-style: ridge;

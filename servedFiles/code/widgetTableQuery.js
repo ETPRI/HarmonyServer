@@ -16,9 +16,10 @@ constructor (nameQueryObject, id) {
   this.queryObj        = this.queryObjects[nameQueryObject];  // select one query
   this.queryData       = null;
   this.fields          = this.queryObj.fields;
-  this.dropdownId = id;
-  this.widgetID = app.idCounter;
-  this.widgetDOM = null;
+  this.dropdownId      = id;
+  this.widgetID        = app.idCounter;
+  this.widgetDOM       = null;
+  this.requests        = [];
 
   const queryObject = {"server": "CRUD", "function": "getMetaData", "query": nameQueryObject, "GUID": app.login.userGUID};
   const request = JSON.stringify(queryObject);
@@ -82,14 +83,15 @@ queryComplete(data) {
 buildHeader() {
   // build header
 
-  const html =app.widgetHeader(widgetTableQuery) +'<b> '+ this.queryObjectName +` </b></div>
+  const html = app.widgetHeader('widgetTableQuery') +`<b>${this.queryObjectName}</b></span>
+  <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)"></div>
 
-  <table>
+  <table class="widgetBody freezable">
     <thead>#header#</thead>
     <tbody>#data#</tbody>
   </table>
   </div>
-  `
+  `;
 
   //  const html2 = app.idReplace(html,1);  // replace relative ids with absolute ides
   const html3 = html.replace("#header#",

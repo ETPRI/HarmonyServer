@@ -10,6 +10,7 @@ class widgetSVG {
     this.containedWidgets = [];
     this.callerID = callerID;
     this.owner = null;
+    this.requests = [];
 
     this.d3Functions    = null;
     this.clicks         = null;
@@ -72,9 +73,10 @@ class widgetSVG {
                      onblur="this.parentNode.draggable = true;">${this.name}</b>
       <input type="button" idr="save" value="Save" onclick="app.widget('startSave', this)">
       <input type="button" idr="saveAs" value="Save As" onclick="app.widget('startSave', this)">
-      <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)" class="hidden">
+      <input type="button" idr="details" value="Show Details" onclick="app.widget('toggleWidgetDetails', this)" class="hidden"></span>
+      <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
     </div>
-    <div class = "widgetBody fullWidth"><table class="fullWidth"><tr idr="svgRow"><td>
+    <div class = "widgetBody fullWidth freezable"><table class="fullWidth"><tr idr="svgRow"><td>
       <svg id="svg${this.widgetID}" height="${this.height}"
         ondblclick="app.widget('newBox', this, event)"
         ondragover="app.widget('allowDrop', this, event)"
@@ -101,7 +103,7 @@ class widgetSVG {
       caller = caller.parentElement;
     }
 
-    if (caller.parentElement == parent) { // If the caller (or its parent widget) is, itself, in the widgets div
+    if (caller && caller.parentElement == parent) { // If the caller (or its parent widget) is, itself, in the widgets div
       parent.insertBefore(newWidget, caller); // Insert the new div before the caller
     }
     else {
@@ -1040,7 +1042,7 @@ class widgetSVG {
                    {"property":"viewBox", "value":this.SVG_DOM.getAttribute("viewBox")}];
 
     const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.parse(queryObject);
+    const request = JSON.stringify(queryObject);
 
     const xhttp = new XMLHttpRequest();
     const SVG = this;

@@ -1,9 +1,12 @@
 <div class="widgetHeader">
+  <span class = "freezable">
     <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
     <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Harmony, Active Dev', this, 'topic')">
     <span id="userInfo">Not Logged In</span> <span id="sessionInfo"></span>
+  </span>
+  <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
 </div>
-<div class="widgetBody">
+<div class="widgetBody freezable">
   <div class="statusBar">
     <input type="button" id="clearRequests" value="Clear" onclick="app.clearRequests()">
     <p id="available">Server Requests</p>
@@ -28,6 +31,8 @@
 
   <input id="debugButton" type="button" value="Show Debug Menu" onclick="app.showDebug(this)" hidden="true">
   <input id="regressionButton" type="button" value="Show Regression Menu" onclick="app.showRegression(this)" hidden="true">
+  <input id="dataBrowserButton" type="button" value="New Data Browser" onclick="new dataBrowser()" hidden="true">
+
   <table>
     <tbody>
       <tr id="faveNodes" idr="faveNodes" class = "dropNodes">

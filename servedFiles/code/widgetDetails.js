@@ -176,7 +176,7 @@ buildWidget() { // public - build table header
   if (app.login.permissions === "Admin") { // Only admins can see metadata at all, so only they get the show change logs button
     const changeLogButton = document.createElement('input');
     this.widgetDOM.insertBefore(changeLogButton, main);
-    button.outerHTML = `<input type="button" value="Show Change Logs"
+    changeLogButton.outerHTML = `<input type="button" value="Show Change Logs"
                         onclick="app.menuNodes('M_ChangeLog', [{name:'item_GUID', value:'${this.GUID}', dropDownValue:'='}])">`;
   }
   const drag = document.createElement('b');

@@ -188,7 +188,7 @@ class widgetView {
 
       const dataID = data[i].user.id;
       if (app.login.userID && app.login.userID == dataID) {      // if this row represents the logged-in user...
-        innerRow.classList.add("loggedIn", "activeView");            // format it...
+        innerRow.classList.add("loggedIn", "selectedItem");            // format it...
         nameCell.setAttribute("idr", "loggedInView");                // give the cell with their name an idr, so it can be logged and replayed...
         nameCell.setAttribute("ondrop", "app.widget('drop', this, event)")  // give the cell with their name an ondrop, so data can be dropped in...
         nameCell.setAttribute("ondragover", "event.preventDefault()"); // and an ondragover, so data can be dropped...
@@ -221,7 +221,7 @@ class widgetView {
       // Remove formatting from the old active row and change the active toggle button back to +
       if (this.activeToggle) {
         const activeRow = this.activeToggle.parentElement.parentElement; // activeToggle is in a cell which is in a row
-        activeRow.classList.remove("activeView");
+        activeRow.classList.remove("selectedItem");
         this.activeToggle.setAttribute("value", "+");
       }
 
@@ -247,7 +247,7 @@ class widgetView {
       this.activeToggle = button;
 
       // Format the row
-      row.classList.add("activeView");
+      row.classList.add("selectedItem");
     } // end if (opening a relation)
     else { // we are closing a relation
       button.value = "+";
@@ -257,7 +257,7 @@ class widgetView {
 
       // Remove formatting from the old active row
       const activeRow = button.parentElement.parentElement;
-      activeRow.classList.remove("activeView");
+      activeRow.classList.remove("selectedItem");
 
       // reset active relation and toggle to null
       this.activeDOM = null;
@@ -447,7 +447,7 @@ class widgetView {
     // Remove formatting from the old active row and change the active toggle button back to +
     if (this.activeToggle) {
       const activeRow = this.activeToggle.parentElement.parentElement; // activeToggle is in a cell which is in a row
-      activeRow.classList.remove("activeView");
+      activeRow.classList.remove("selectedItem");
       this.activeToggle.setAttribute("value", "+");
       this.activeToggle = null;
     }

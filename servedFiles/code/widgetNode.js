@@ -2,6 +2,7 @@ class widgetNode extends widgetDetails {
 constructor(callerID, queryObjectName, GUID, name) {
   // this.startDOM and this.endDOM are instance variables, but can't be set before super and shouldn't be reset after it
   super (queryObjectName, null, GUID, name, callerID);
+  this.requests = [];
 }
 
 finishConstructor(data) {
@@ -36,9 +37,10 @@ buildWidget() { // public - build table header
 
   app.idCounter--; // decrement ID counter so that the widget header will end up with the right ID
   const html = app.widgetHeader('widgetNode') + `<b idr= "nodeTypeLabel" contentEditable="true"
-                                        onfocus="this.parentNode.draggable = false;"
-                                        onblur="this.parentNode.draggable = true;">${this.nodeLabel}</b>
-                                        <b idr="nodeLabel">: ${name}</b></div><table class="widgetBody"><tbody><tr>
+    onfocus="this.parentNode.draggable = false;" onblur="this.parentNode.draggable = true;">${this.nodeLabel}</b>
+    <b idr="nodeLabel">: ${name}</b></span>
+    <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)"></div>
+    <table class="widgetBody freezable"><tbody><tr>
   <td idr="end"></td>
   <td idr="main">
     ${addSave}${changeLogHTML}

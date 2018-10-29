@@ -22,16 +22,128 @@ getNode(name){
   return(this.node[name]);
 }
 
-// Initializes the objects representing different types of relations. So far there's only one, called "link".
-// All objects are stored as key/value pairs in this.relation. The objects include a label for the type of link,
-// and a list of fields which should be stored for this type of link with their labels.
+// Initializes the objects representing different types of relations. All objects are stored as key/value pairs in this.relation.
+// The objects include a label for the type of link, and a list of fields which should be stored for this type of link with their labels.
 initRelationData(){
-  this.relation.link = {
-     nodeLabel: "link"
+  this.relation.Favorite = {
+     relLabel: "Favorite"
     ,fields: {
-    	"comment":   {label: "Comment"}
-    }}
+      "M_GUID":{label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID"]
+    ,orderBy: [{"name":"M_GUID"}]
+  };
 
+  this.relation.Owner = {
+     relLabel: "Owner"
+    ,fields: {
+      "M_GUID":{label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID"]
+    ,orderBy: [{"name":"M_GUID"}]
+  };
+
+  this.relation.User = {
+     relLabel: "User"
+    ,fields: {
+      "M_GUID":{label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID"]
+    ,orderBy: [{"name":"M_GUID"}]
+  };
+
+  this.relation.MapNode = {
+     relLabel: "Map Node"
+    ,fields: {
+      "id": {label:"Label ID"}
+      ,"M_GUID":{label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID", "id"]
+    ,orderBy: [{"name":"id"}, {"name":"M_GUID"}]
+  };
+
+  this.relation.Trash = {
+     relLabel: "Trash"
+    ,fields: {
+      "reason": {label:"Reason"}
+      ,"M_GUID": {label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID", "reason"]
+    ,orderBy: [{"name":"reason"}, {"name":"M_GUID"}]
+  };
+
+  this.relation.Permissions = {
+     relLabel: "Permissions"
+    ,fields: {
+      "username": {label:"Username"}
+      ,"password": {label:"Password"}
+      ,"M_GUID": {label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID", "username", "password"]
+    ,orderBy: [{"name":"username"}, {"name":"password"}, {"name":"M_GUID"}]
+  };
+
+  this.relation.ViewLink = {
+     relLabel: "View Link"
+    ,fields: {
+      "userGUID": {label:"User GUID"}
+      ,"comment": {label:"Comment"}
+      ,"M_GUID": {label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID", "userGUID", "comment"]
+    ,orderBy: [{"name":"userGUID"}, {"name":"comment"}, {"name":"M_GUID"}]
+  };
+
+  this.relation.View = {
+     relLabel: "View"
+    ,fields: {
+      "start_order": {label:"Out order"}
+      ,"end_order": {label:"In order"}
+      ,"start_placeholders": {label:"Out comments"}
+      ,"end_placeholders": {label:"In comments"}
+      ,"M_GUID": {label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID", "start_order", "end_order", "start_placeholders", "end_placeholders"]
+    ,orderBy: [{"name":"start_order"}, {"name":"end_order"}, {"name":"start_placeholders"}, {"name":"end_placeholders"}, {"name":"M_GUID"}]
+  };
+
+  this.relation.Settings = {
+     relLabel: "Settings"
+    ,fields: {
+      "nodeLabel": {label:"Node Label"}
+      ,"fields": {label:"Fields"}
+      ,"fieldsDisplayed": {label:"Table Fields Displayed"}
+      ,"formFieldsDisplayed": {label:"Form Fields Displayed"}
+      ,"orderBy": {label:"Order By"}
+      ,"M_GUID": {label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID", "nodeLabel", "fields", "fieldsDisplayed", "formFieldsDisplayed", "orderBy"]
+    ,orderBy: [{"name":"nodeLabel"}, {"name":"fields"}, {"name":"fieldsDisplayed"}, {"name":"formFieldsDisplayed"}, {"name":"orderBy"}, {"name":"M_GUID"}]
+  };
+
+  this.relation.Request = {
+     relLabel: "Request"
+    ,fields: {
+      "count": {label:"Request number"}
+      ,"description": {label:"Deacription"}
+      ,"startTime": {label:"Start Time (ms since 1970)"}
+      ,"requestLength": {label:"Request Length (chars)"}
+      ,"duration": {label:"Duration (ms)"}
+      ,"responseLength": {label:"Response Length (chars)"}
+      ,"endResult": {label:"End Result"}
+      ,"M_GUID": {label:"GUID"}
+    }
+    ,fieldsDisplayed: ["M_GUID", "startTime", "count", "description","requestLength", "duration", "ResponseLength", "endResult"]
+    ,orderBy: [
+      {"name":"startTime"}
+      ,{"name":"count"}
+      ,{"name":"description"}
+      ,{"name":"endResult"}
+      ,{"name":"duration"}
+      ,{"name":"requestLength"}
+      ,{"name":"responseLength"}
+      ,{"name":"M_GUID"}]
+  };
 }  /////// end method
 
 // Initializes the objects representing various types of nodes. All objects are stored as key/value pairs in this.node.
@@ -80,7 +192,6 @@ initNodeData() { // move to DB in the future
     }
     ,proposedFields:{}
   }
-
 
   this.node.address = {
     nodeLabel: "address"

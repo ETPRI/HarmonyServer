@@ -18,6 +18,8 @@ class widgetTableNodes {
     this.limitDefault         = 9;
     this.widgetDOM            = null;
 
+    this.requests             = [];
+
     this.idWidget = app.idCounter;   // strings
     this.searchTrigger = controlId;
     this.fieldPopup = app.setUpPopup(this);
@@ -198,9 +200,11 @@ class widgetTableNodes {
     <input type="button" value="Search" idr="searchButton" onclick="app.widgetSearch(this)">
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
     limit <input value ="${this.limitDefault}" idr = "limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
+    </span>
+    <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
     </div>
 
-    <div class="widgetBody">
+    <div class="widgetBody freezable">
       <table>
         <thead idr = "headerRow">
         <tr idr="headerSearch"></tr>
