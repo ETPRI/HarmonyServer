@@ -6,23 +6,26 @@ class checkEmpty {
   checkEmpty() {
     const obj = {};
     obj.node = {};
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const check = this;
-    const update = app.startProgress(null, "Looking for nodes", request.length);
+    app.sendQuery(obj, "changeNode", "Looking for nodes", null, this.verifyEmpty.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(null, update, this.responseText.length);
-        check.verifyEmpty(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const check = this;
+    // const update = app.startProgress(null, "Looking for nodes", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     app.stopProgress(null, update, this.responseText.length);
+    //     check.verifyEmpty(data);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   // Checks whether any nodes were found. If so, alert the user that an empty database is needed,

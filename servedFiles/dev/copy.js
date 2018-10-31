@@ -4,24 +4,94 @@ class copy {
     this.rels = [];
     this.nodesDone = [];
     this.relsDone = [];
-    this.blocksize = 100;
+    this.nodeBlocksize = 100;
+    this.relBlocksize = 20;
     this.progress = document.getElementById('progress');
 
+    this.source = "";
+    this.destination = "";
   }
 
-  //-----------------------------------Copy code-----------------------------
 
-  checkOtherDB(copy) {
+  //-----------------------------------Preliminary copy/restore code-----------------------------
+  startCopyFrom() { // calls checkLocalDB iff logged in locally; sets this.source
+    if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+      this.source = `http://${document.getElementById('copySource').value}`;
+      this.checkLocalDB();
+    }
+    else {
+      alert("Not logged in locally!");
+      this.source = "";
+    }
+  }
+
+  checkLocalDB() { // warns the user and allows them to cancel if data will be erased; calls clearDB or startNodes
+    var xhttp = new XMLHttpRequest();
+    const copy = this;
+
+    xhttp.onload = function() {
+      // call back function when state of send changes
+      const results = JSON.parse(this.responseText);
+      if (results.length == 0) {
+        copy.startNodes();
+      }
+      else {
+        if (confirm("There is already data in the local database; do you want to overwrite it?.")) {
+          copy.clearDB();
+        }
+        else {
+          this.source = ""; // cancel and reset source
+        }
+      }
+    };
+
+    xhttp.open("POST", "");
+    const steps = "MATCH (n) return n limit 1"
+    const obj = {"server": "neo4j", "query": steps};  // create object to send to server
+
+    xhttp.send(JSON.stringify(obj));         // send request to server
+  }
+
+  clearDB() {// clears the local DB and calls startNodes
+    var xhttp = new XMLHttpRequest();
+    const copy = this;
+
+    xhttp.onload = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        if (data[0].count.low === 0) {
+          copy.startNodes();
+        }
+        else {
+          copy.clearDB(); // keep calling itself recursively while there are more nodes to delete
+        }
+      }
+    }
+
+    xhttp.open("POST", "");
+    const steps = "MATCH (n) with n limit 1000 detach delete n return count(n) as count"; // Deletes in batches to avoid freezing
+    const obj = {"server": "neo4j", "query": steps};  // create object to send to server
+
+    xhttp.send(JSON.stringify(obj));         // send request to server
+  }
+
+  startCopyTo() { // calls startNodes iff the destination DB is empty; sets this.destination
     this.destination = `http://${document.getElementById('copyDestination').value}`;
     var xhttp2 = new XMLHttpRequest();
+    const copy = this;
+
     xhttp2.onload = function() {
       // call back function when state of send changes
       const results = JSON.parse(this.responseText);
       if (results.length == 0) {
-        copy.startCopyTo(copy);
+        copy.startNodes();
       }
-      else alert("Could not proceed because the target database is not empty.");
+      else {
+        alert("Could not proceed because the target database is not empty.");
+        this.destination = ""; // reset destination
+      }
     };
+
     xhttp2.open("POST", this.destination);
     const steps = "MATCH (n) return n limit 1"
     const obj = {"server": "neo4j", "query": steps};  // create object to send to server
@@ -29,13 +99,15 @@ class copy {
     xhttp2.send(JSON.stringify(obj));         // send request to server
   }
 
-  checkLocalDB(copy) {
+  startRestore() { // calls getNodeData iff the local DB is empty
     var xhttp = new XMLHttpRequest();
+    const copy = this;
+
     xhttp.onload = function() {
       // call back function when state of send changes
       const results = JSON.parse(this.responseText);
       if (results.length == 0) {
-        copy.startRestore(copy);
+        copy.getNodeData();
       }
       else alert("Could not proceed because the local database is not empty.");
     };
@@ -46,33 +118,39 @@ class copy {
     xhttp.send(JSON.stringify(obj));         // send request to server
   }
 
-  startCopyTo(copy) {
+  //----------------------------------Main copy code---------------------------------------
+
+  // gets a list of node labels from the source DB, or the local DB if there is no source. Then calls startRels.
+  startNodes() {
     var xhttp = new XMLHttpRequest();
+    const copy = this;
 
     xhttp.onreadystatechange = function() {
       // call back function when state of send changes
       if (this.readyState == 4 && this.status == 200) {
-      copy.nodes = JSON.parse(this.responseText);
-      // clear progress bar before starting
-      copy.progress.innerHTML = "";
-      for (let i = 0; i < copy.nodes.length; i++) {
-        copy.nodesDone[i] = 0;
-        copy.progress.innerHTML +=
-        `<tr><td>Node</td><td>${copy.nodes[i].L}</td><td id="nodeCount${i}">0</td><td>${copy.nodes[i].count.low}</td></tr>`;
-      }
-      copy.startRels(copy);
+        copy.nodes = JSON.parse(this.responseText);
+        // clear progress bar before starting
+        copy.progress.innerHTML = "";
+        for (let i = 0; i < copy.nodes.length; i++) {
+          copy.nodesDone[i] = 0;
+          copy.progress.innerHTML +=
+          `<tr><td>Node</td><td>${copy.nodes[i].L}</td><td id="nodeCount${i}">0</td><td>${copy.nodes[i].count.low}</td></tr>`;
+        }
+        copy.startRels();
       }
     };
 
-    xhttp.open("POST", "");
+    xhttp.open("POST", this.source);
     const steps = "MATCH (n) unwind labels(n) as L RETURN  distinct L, count(L) as count"
     const obj = {"server": "neo4j", "query": steps};  // create object to send to server
 
     xhttp.send(JSON.stringify(obj));         // send request to server
   }
 
-  startRels(copy) {
-    var xhttp = new XMLHttpRequest();
+  // gets a list of rel types from the source DB, or the local DB if there is no source. Then calls downloadNodes.
+  startRels() {
+    const xhttp = new XMLHttpRequest();
+    const copy = this;
 
     xhttp.onreadystatechange = function() {
       // call back function when state of send changes
@@ -83,19 +161,21 @@ class copy {
         copy.progress.innerHTML +=
         `<tr><td>Relation</td><td>${copy.rels[i].type}</td><td id="relCount${i}">0</td><td>${copy.rels[i].count.low}</td></tr>`;
       }
-      copy.downloadNodes(0, 0, copy);
+      copy.downloadNodes(0, 0);
       }
     };
 
-    xhttp.open("POST", "");
+    xhttp.open("POST", this.source);
     const steps =   "MATCH (a)-[r]->(b) return distinct type(r) as type, count(r) as count order by type";
     const obj = {"server": "neo4j", "query": steps};  // create object to send to server
 
     xhttp.send(JSON.stringify(obj));         // send request to server
   }
 
-  downloadNodes(typeIndex, minimum, copy) {
+  // downloads up to [nodeBlocksize] nodes of a given type from the source or local DB. Then calls uploadNodes.
+  downloadNodes(typeIndex, minimum) {
     var xhttp = new XMLHttpRequest();
+    const copy = this;
 
     xhttp.onreadystatechange = function() {
       // call back function when state of send changes
@@ -103,23 +183,26 @@ class copy {
         const results = JSON.parse(this.responseText);
 
         // call next function
-        copy.uploadNodes(typeIndex, minimum, copy, results);
+        copy.uploadNodes(typeIndex, minimum, results);
       }
     };
 
-    xhttp.open("POST", "");
+    xhttp.open("POST", this.source);
     let where = "";
     if (minimum > 0) {
       where = `where ID(n) > ${minimum}`;
     }
-    const steps = `match (n: ${copy.nodes[typeIndex].L}) ${where} return n order by ID(n) limit ${copy.blocksize}`;
+    const steps = `match (n: ${copy.nodes[typeIndex].L}) ${where} return n order by ID(n) limit ${copy.nodeBlocksize}`;
     const obj = {"server": "neo4j", "query": steps};  // crearte object to send to server
 
     xhttp.send(JSON.stringify(obj));         // send request to server
   }
 
-  uploadNodes(typeIndex, minimum, copy, data) {
+  // Uploads the data from downloadNodes to the destination or local DB. Then calls downloadNodes, or if the nodes are done, downloadRels.
+  uploadNodes(typeIndex, minimum, data) {
     var xhttp2 = new XMLHttpRequest();
+    const copy = this;
+
     xhttp2.onreadystatechange = function() {
       // call back function when state of send changes
       if (this.readyState == 4 && this.status == 200) {
@@ -131,7 +214,7 @@ class copy {
         // call next function - either downloading more nodes, or downloading rels
         if (copy.nodesDone[typeIndex] < copy.nodes[typeIndex].count.low) {  // If there are more nodes of this type to download
           // Get the LAST item from the results and retrieve its ID
-          const last = data[copy.blocksize - 1];
+          const last = data[copy.nodeBlocksize - 1];
           minimum = last.n.identity.low;
         }
         else {
@@ -140,10 +223,10 @@ class copy {
         }
 
         if (typeIndex < copy.nodes.length) {
-          copy.downloadNodes(typeIndex, minimum, copy);
+          copy.downloadNodes(typeIndex, minimum);
         }
         else {
-          copy.downloadRels(0, 0, copy);
+          copy.downloadRels(0, 0);
         }
       }
     };
@@ -181,8 +264,10 @@ class copy {
     }
   }
 
-  downloadRels(typeIndex, minimum, copy) {
-    var xhttp = new XMLHttpRequest();
+  // downloads up to [relBlocksize] rels of a given type from the source or local DB. Then calls uploadRels.
+  downloadRels(typeIndex, minimum) {
+    const xhttp = new XMLHttpRequest();
+    const copy = this;
 
     xhttp.onreadystatechange = function() {
       // call back function when state of send changes
@@ -190,24 +275,28 @@ class copy {
         const results = JSON.parse(this.responseText);
 
         // call next function
-        copy.uploadRels(typeIndex, minimum, copy, results);
+        copy.uploadRels(typeIndex, minimum, results);
       }
     };
 
-    xhttp.open("POST", "");
+    xhttp.open("POST", this.source);
     let where = "";
     if (minimum > 0) {
       where = `where ID(r) > ${minimum}`;
     }
 
-    const steps = `match (a)-[r:${copy.rels[typeIndex].type}]->(b) ${where} return a, b, r order by ID(r) limit ${copy.blocksize}`;
+    const steps = `match (a)-[r:${copy.rels[typeIndex].type}]->(b) ${where} return a, b, r order by ID(r) limit ${copy.relBlocksize}`;
     const obj = {"server": "neo4j", "query": steps};  // crearte object to send to server
 
     xhttp.send(JSON.stringify(obj));         // send request to server
   }
 
-  uploadRels(typeIndex, minimum, copy, data) {
-    var xhttp2 = new XMLHttpRequest();
+  // uploads the data from downloadRels to the destination or local DB. Then calls downloadRels if there are more rels.
+  // If there are no more rels, tells the user it's done and resets this.source and this.destination.
+  uploadRels(typeIndex, minimum, data) {
+    const xhttp2 = new XMLHttpRequest();
+    const copy = this;
+
     xhttp2.onreadystatechange = function() {
       // call back function when state of send changes
       if (this.readyState == 4 && this.status == 200) {
@@ -218,7 +307,7 @@ class copy {
 
         if (copy.relsDone[typeIndex] < copy.rels[typeIndex].count.low) { // If there are more relations of this type to download
           // Get the LAST item from the results and retrieve its ID
-          const last = data[copy.blocksize-1];
+          const last = data[copy.relBlocksize-1];
           minimum = last.r.identity.low;
         }
         else {
@@ -228,10 +317,12 @@ class copy {
 
         // call next function - either downloading more rels, or ending the copy process
         if (typeIndex < copy.rels.length) {
-          copy.downloadRels(typeIndex, minimum, copy);
+          copy.downloadRels(typeIndex, minimum);
         }
         else {
           copy.progress.innerHTML += "Done!";
+          copy.source = "";
+          copy.destination = "";
         }
       }
     };
@@ -241,7 +332,7 @@ class copy {
     let relText = "";
 
     for (let i = 0; i < data.length; i++) { // for every relation...
-      nodeText += `(a${i} {M_GUID:'${data[i].a.properties.M_GUID}'}), (b${i} {M_GUID:'${data[i].b.properties.M_GUID}'}), `
+      nodeText += `(a${i}:${data[i].a.labels[0]} {M_GUID:'${data[i].a.properties.M_GUID}'}), (b${i}:${data[i].b.labels[0]} {M_GUID:'${data[i].b.properties.M_GUID}'}), `
 
       const rProps = data[i].r.properties;
       let rProperties = "";
@@ -364,7 +455,7 @@ class copy {
 
     xhttp.open("POST", "");
     const obj = {"server": "backupNeo4j"};  // create object to send to server
-    const query = {"functionName": "backupNodes", "name": progress.nodesDone[index].name, "minimum": minimum, "blocksize": this.blocksize}; // query to start the backup process
+    const query = {"functionName": "backupNodes", "name": progress.nodesDone[index].name, "minimum": minimum, "blocksize": this.nodeBlocksize}; // query to start the backup process
     obj.query = query;
 
     xhttp.send(JSON.stringify(obj));         // send request to server
@@ -402,18 +493,20 @@ class copy {
 
     xhttp.open("POST", "");
     const obj = {"server": "backupNeo4j"};  // create object to send to server
-    const query = {"functionName": "backupRels", "name": progress.relsDone[index].name, "minimum": minimum, "blocksize": this.blocksize}; // query to back up the relations
+    const query = {"functionName": "backupRels", "name": progress.relsDone[index].name, "minimum": minimum, "blocksize": this.relBlocksize}; // query to back up the relations
     obj.query = query;
 
     xhttp.send(JSON.stringify(obj));         // send request to server
   }
 
 
-  //------------------------------------Restore code-------------------------
+  //------------------------------------Main restore code-------------------------
 
-  startRestore(copy) {
+  getNodeData() {
     const restoreFolder = document.getElementById('backupSource').value;
     this.progress.innerHTML = "";
+    const copy = this;
+
     var xhttp = new XMLHttpRequest();
 
     xhttp.onreadystatechange = function() {

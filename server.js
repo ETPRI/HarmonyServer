@@ -26,7 +26,13 @@ let integrity = new integrityClass(driver, uuidv1, stringEscape, true);
 let CRUD = new CRUDclass(uuidv1, integrity, driver);
 
 http.createServer(function (request, response) {
-    console.log('request ', request.url);
+    let source = "Remote ";
+    if (request.headers.host === `127.0.0.1:${config.port}` || request.headers.host === `localhost:${config.port}`) {
+      source = "Local ";
+    }
+
+    console.log(source, 'request ', request.url);
+
     var q = url.parse(request.url, true);
     response.setHeader('Access-Control-Allow-Origin', '*');
 

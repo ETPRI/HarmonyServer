@@ -125,7 +125,7 @@ initRelationData(){
      relLabel: "Request"
     ,fields: {
       "count": {label:"Request number"}
-      ,"description": {label:"Deacription"}
+      ,"description": {label:"Description"}
       ,"startTime": {label:"Start Time (ms since 1970)"}
       ,"requestLength": {label:"Request Length (chars)"}
       ,"duration": {label:"Duration (ms)"}
@@ -133,7 +133,7 @@ initRelationData(){
       ,"endResult": {label:"End Result"}
       ,"M_GUID": {label:"GUID"}
     }
-    ,fieldsDisplayed: ["M_GUID", "startTime", "count", "description","requestLength", "duration", "ResponseLength", "endResult"]
+    ,fieldsDisplayed: ["M_GUID", "startTime", "count", "description","requestLength", "duration", "responseLength", "endResult"]
     ,orderBy: [
       {"name":"startTime"}
       ,{"name":"count"}

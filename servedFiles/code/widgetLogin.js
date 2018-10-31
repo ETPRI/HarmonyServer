@@ -111,24 +111,27 @@ class widgetLogin {
   mergeBrowser() {
     const obj = {};
     obj.node = {"type":"M_Browser", "properties":{"name":navigator.userAgent}, "merge":true};
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-    const update = app.startProgress(this.loginDiv, "Creating session", request.length);
+    app.sendQuery(obj, "changeNode", "Creating session", this.loginDiv, this.login.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        login.browserGUID = data[0].node.properties.M_GUID;
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-        login.login();
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const login = this;
+    // const update = app.startProgress(this.loginDiv, "Creating session", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     login.browserGUID = data[0].node.properties.M_GUID;
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //     login.login();
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   // Checks to make sure the user entered both a name and password, then searches for a user with that name and password.
@@ -146,23 +149,26 @@ class widgetLogin {
       obj.from = {"name":"user"};
       obj.to = {"name":"table", "type":"M_LoginTable"};
       obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
-      const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
-      const request = JSON.stringify(queryObject);
 
-      const xhttp = new XMLHttpRequest();
-      const login = this;
-      const update = app.startProgress(this.loginDiv, "Logging In", request.length);
+      app.sendQuery(obj, "changeRelation", "Logging In", this.loginDiv, this.loginComplete.bind(this));
 
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          const data = JSON.parse(this.responseText);
-          app.stopProgress(login.loginDiv, update, this.responseText.length);
-          login.loginComplete(data);
-        }
-      };
-
-      xhttp.open("POST","");
-      xhttp.send(request);         // send request to server
+      // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
+      // const request = JSON.stringify(queryObject);
+      //
+      // const xhttp = new XMLHttpRequest();
+      // const login = this;
+      // const update = app.startProgress(this.loginDiv, "Logging In", request.length);
+      //
+      // xhttp.onreadystatechange = function() {
+      //   if (this.readyState == 4 && this.status == 200) {
+      //     const data = JSON.parse(this.responseText);
+      //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+      //     login.loginComplete(data);
+      //   }
+      // };
+      //
+      // xhttp.open("POST","");
+      // xhttp.send(request);         // send request to server
     }
   }
 
@@ -225,23 +231,29 @@ class widgetLogin {
       obj.from = {"properties":{"M_GUID":this.userGUID}};
       obj.rel = {"type":"User"};
       obj.to = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
-      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "setup"};
-      const request = JSON.stringify(queryObject);
 
-      const xhttp = new XMLHttpRequest();
-      const login = this;
-      const update = app.startProgress(this.loginDiv, "Linking session", request.length);
+      app.sendQuery(obj, "createRelation", "Linking session", this.loginDiv, function() {
+        this.getMetaData();
+        this.getFavorites();
+      }.bind(this));
 
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          app.stopProgress(login.loginDiv, update, this.responseText.length);
-          login.getMetaData();
-          login.getFavorites();
-        }
-      };
-
-      xhttp.open("POST","");
-      xhttp.send(request);         // send request to server
+      // const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "setup"};
+      // const request = JSON.stringify(queryObject);
+      //
+      // const xhttp = new XMLHttpRequest();
+      // const login = this;
+      // const update = app.startProgress(this.loginDiv, "Linking session", request.length);
+      //
+      // xhttp.onreadystatechange = function() {
+      //   if (this.readyState == 4 && this.status == 200) {
+      //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+      //     login.getMetaData();
+      //     login.getFavorites();
+      //   }
+      // };
+      //
+      // xhttp.open("POST","");
+      // xhttp.send(request);         // send request to server
 
   	 // end elseif (can log in)
     } else {
@@ -266,23 +278,26 @@ class widgetLogin {
     obj.required = {"type":"M_MetaData", "name":"metadata"};
     obj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
     obj.optional = {"id":this.userID, "return":false};
-    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": "setup"};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-    const update = app.startProgress(this.loginDiv, "Restoring settings", request.length);
+    app.sendQuery(obj, "findOptionalRelation", "Restoring settings", this.loginDiv, this.updateMetaData.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-        login.updateMetaData(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": "setup"};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const login = this;
+    // const update = app.startProgress(this.loginDiv, "Restoring settings", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //     login.updateMetaData(data);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   updateMetaData(data) {
@@ -294,7 +309,7 @@ class widgetLogin {
     adminButtons.innerHTML = "";
 
     // create a table and button for "all" - the only "node type" that doesn't have a metadata node
-    app.widgets.all = new widgetTableNodes("all", null);
+    // app.widgets.all = new widgetTableNodes("all", null);
 
     // Create a button for this nodeType
     let button = document.createElement('input');
@@ -331,7 +346,7 @@ class widgetLogin {
 
       if (app.metaData.node[name]) { // if this is metadata for a node, not a relation
         // Create a widgetTableNodes widget for this node type
-        app.widgets[name] = new widgetTableNodes(name, null);
+        // app.widgets[name] = new widgetTableNodes(name, null);
 
         // Create a button for this nodeType
         button = document.createElement('input');
@@ -352,23 +367,26 @@ class widgetLogin {
     const obj = {};
     obj.from = {"id":this.userID};
     obj.rel = {"type":"Favorite", "return":false};
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-    const update = app.startProgress(this.loginDiv, "Restoring settings", request.length);
+    app.sendQuery(obj, "changeRelation", "Restoring settings", this.loginDiv, this.loadFavorites.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-        login.loadFavorites(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const login = this;
+    // const update = app.startProgress(this.loginDiv, "Restoring settings", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //     login.loadFavorites(data);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   loadFavorites(data) {
@@ -434,21 +452,24 @@ class widgetLogin {
     obj.from = {"id":this.userID};
     obj.to = {"properties":{"M_GUID":input.getAttribute("GUID")}};
     obj.rel = {"type":"Favorite", "merge":true};
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-    const update = app.startProgress(this.loginDiv, "Saving favorite", request.length);
+    app.sendQuery(obj, "changeRelation", "Saving favorite", this.loginDiv);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const login = this;
+    // const update = app.startProgress(this.loginDiv, "Saving favorite", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   saveFavoritesList() {
@@ -463,21 +484,24 @@ class widgetLogin {
     const obj = {};
     obj.node = {"id":this.userID};
     obj.changes = [{"property": "M_favoriteGUIDs", "value":app.stringEscape(JSON.stringify(GUIDs))}];
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-    const update = app.startProgress(this.loginDiv, "Updating favorites", request.length);
+    app.sendQuery(obj, "changeNode", "Updating favorites", this.loginDiv);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const login = this;
+    // const update = app.startProgress(this.loginDiv, "Updating favorites", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
 
   }
 
@@ -490,47 +514,57 @@ class widgetLogin {
     obj.from = {"id":this.userID};
     obj.to = {"properties":{"M_GUID":element.getAttribute("GUID")}};
     obj.rel = {"type":"Favorite"};
-    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": "setup"};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const login = this;
-    const update = app.startProgress(this.loginDiv, "Deleting favorite", request.length);
+    app.sendQuery(obj, "deleteRelation", "Deleting favorite", this.loginDiv);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": "setup"};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const login = this;
+    // const update = app.startProgress(this.loginDiv, "Deleting favorite", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   checkUserName(input) {
     const obj = {};
     obj.rel = {"type":"Permissions", "properties":{"username":input.value}};
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const update = app.startProgress(this.loginDiv, "Updating profile", request.length);
-    const login = this;
-
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-        const data = JSON.parse(this.responseText);
-        if (data.length > 0) {
-          alert ("That username is taken; please choose another.");
-          input.value = "";
-        }
+    app.sendQuery(obj, "changeRelation", "Updating profile", this.loginDiv, function(data, input) {
+      if (data.length > 0) {
+        alert ("That username is taken; please choose another.");
+        input.value = "";
       }
-    };
+    }.bind(this), input);
 
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
-
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const update = app.startProgress(this.loginDiv, "Updating profile", request.length);
+    // const login = this;
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //     const data = JSON.parse(this.responseText);
+    //     if (data.length > 0) {
+    //       alert ("That username is taken; please choose another.");
+    //       input.value = "";
+    //     }
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   checkPassword(input) {
@@ -565,21 +599,24 @@ class widgetLogin {
     if (pwInput.value) {
       obj.changes.push({"item":"rel", "property":"password", "value":app.stringEscape(pwInput.value)});
     }
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const update = app.startProgress(this.loginDiv, "Updating profile", request.length);
-    const login = this;
+    app.sendQuery(obj, "changeRelation", "Updating profile", this.loginDiv);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(login.loginDiv, update, this.responseText.length);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const update = app.startProgress(this.loginDiv, "Updating profile", request.length);
+    // const login = this;
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(login.loginDiv, update, this.responseText.length);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
 
     popup.hidden = true;
   }
@@ -643,11 +680,13 @@ class widgetLogin {
     obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
     obj.changes = [{"item":"node", "property":"endTime", "value":Date.now()},];
 
-    const xhttp = new XMLHttpRequest();
+    app.sendQuery(obj, "changeNode", "Ending session", this.loginDiv);
 
-    xhttp.open("POST","");
-    const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "upkeep"};
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    // const xhttp = new XMLHttpRequest();
+    //
+    // xhttp.open("POST","");
+    // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "upkeep"};
+    // xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     this.sessionGUID = null;
     this.browserGUID = null;

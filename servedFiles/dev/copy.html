@@ -9,14 +9,26 @@ Step 2: Start an empty Neo4j database and NodeJS server on the destination compu
 Step 3: Enter the IP address, including port number, of the destination computer in the text box below these instructions and click the Start button<br>
 <br>
 Destination URL: <input type="text" id="copyDestination"><br>
-<input type="button" id="startCopyTo" value="start" onclick="copy.checkOtherDB(copy)"><br><hr>
+<input type="button" id="startCopyTo" value="start" onclick="copy.startCopyTo()"><br><hr>
+
+<b>Copy to the logged-in server from a database on another server</b><br>
+Notes: No need to enter "http" - that is added by the program.<br>
+If entering an IP address, DO include the port number (unless it's a default port).<br>
+You may only copy to the logged-in server if you are logged in LOCALLY - that is, if you're logged into 127.0.0.1 or localhost.
+<br>
+Step 1: Log into the server you want to copy to locally (if you're seeing this, you should have done this step already)<br>
+Step 2: Start a Neo4j database and NodeJS server on your computer. The DB does not have to be empty, but be aware that whatever data is in it will be wiped out.<br>
+Step 3: Enter the IP address, including port number, of the source computer in the text box below these instructions and click the Start button<br>
+<br>
+Source URL: <input type="text" id="copySource"><br>
+<input type="button" id="startCopyFrom" value="start" onclick="copy.startCopyFrom()"><br><hr>
 
 <b>Backup to local file on server</b><br>
 <input type="button" id="startBackup" value="start" onclick="copy.startBackup(copy)"><br><hr>
 
 <b>Restore from backup file on server</b><br>
 Source folder (name only - path to backups/Neo4j is hardcoded): <input type="text" id="backupSource"><br>
-<input type="button" id="startRestore" value="start" onclick="copy.checkLocalDB(copy)"><br><hr>
+<input type="button" id="startRestore" value="start" onclick="copy.startRestore()"><br><hr>
 
 <b>Progress</b><br>
 <table>

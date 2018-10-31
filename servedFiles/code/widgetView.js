@@ -32,23 +32,26 @@ class widgetView {
     obj.from = {"name":"user"};
     obj.rel = {"type":"View", "return":false};
     obj.to = {"id":nodeID, "return":false};
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const view = this;
-    const update = app.startProgress(this.containerDOM, "Searching for views", request.length);
+    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, this.buildViews.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(view.containerDOM, update, this.responseText.length);
-        view.buildViews(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const view = this;
+    // const update = app.startProgress(this.containerDOM, "Searching for views", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     app.stopProgress(view.containerDOM, update, this.responseText.length);
+    //     view.buildViews(data);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   // Adds the view widget to the page: A list of views, possibly an active view,
@@ -282,23 +285,26 @@ class widgetView {
     obj.from = {"name":"user"};
     obj.rel = {"type":"View", "return":false};
     obj.to = {"id":this.nodeID, "return":false};
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const view = this;
-    const update = app.startProgress(this.containerDOM, "Searching for views", request.length);
+    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, this.buildViews.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(view.containerDOM, update, this.responseText.length);
-        view.buildViews(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const view = this;
+    // const update = app.startProgress(this.containerDOM, "Searching for views", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     app.stopProgress(view.containerDOM, update, this.responseText.length);
+    //     view.buildViews(data);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   // Expands or collapses the whole widget.
@@ -412,23 +418,26 @@ class widgetView {
     obj.from = {"properties":{"M_GUID":app.login.userGUID}};
     obj.to = {"id":this.nodeID};
     obj.rel = {"type":"View", "merge":true};
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const view = this;
-    const update = app.startProgress(this.containerDOM, "Adding your view", request.length);
+    app.sendQuery(obj, "changeRelation", "Adding your view", this.containerDOM, this.refresh.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(view.containerDOM, update, this.responseText.length);
-        view.refresh(data);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const view = this;
+    // const update = app.startProgress(this.containerDOM, "Adding your view", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     app.stopProgress(view.containerDOM, update, this.responseText.length);
+    //     view.refresh(data);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(JSON.stringify(queryObject));         // send request to server
 
     // Log click
     const recordObj = {};

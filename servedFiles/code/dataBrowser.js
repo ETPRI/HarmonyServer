@@ -36,6 +36,11 @@ class dataBrowser {
   buildWidget() {
     let html = app.widgetHeader('dataBrowser');
     html += `<b idr="nodeLabel">Data Browsing Tool</b></span>
+              <input type="checkbox" checked idr="leftDataCheck" onclick="app.widget('toggleCell', this, 'leftCell')">Incoming Node&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type="checkbox" checked idr="leftRelCheck" onclick="app.widget('toggleCell', this, 'inCell')">Incoming Relations&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type="checkbox" checked idr="mainCellCheck" onclick="app.widget('toggleCell', this, 'mainCell')">Main Node&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type="checkbox" checked idr="rightDataCheck" onclick="app.widget('toggleCell', this, 'outCell')">Outgoing Relations&nbsp;&nbsp;&nbsp;&nbsp;
+              <input type="checkbox" checked idr="rightRelCheck" onclick="app.widget('toggleCell', this, 'rightCell')">Outgoing Node&nbsp;&nbsp;&nbsp;&nbsp;
               <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
               </div><table class = 'widgetBody freezable'><tbody><tr>
               <td idr = "leftCell"><p class = "dataBrowserHeader">Incoming Node</p></td>
@@ -109,8 +114,6 @@ class dataBrowser {
   search(GUID) {
     // Clear all existing data and highlights
     this.leftData = null;
-    // this.inData = null;
-    // this.outData = null;
     this.rightData = null;
     this.highlightGUIDLeft = null;
     this.highlightGUIDRight = null;
@@ -130,25 +133,27 @@ class dataBrowser {
       obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
       obj.optional = {"name":"in"};
       obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
-      const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-      const request = JSON.stringify(queryObject);
 
-      const xhttp = new XMLHttpRequest();
-      const dataBrowser = this;
-      const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
+      app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, this.findOuts.bind(this), GUID, "mainData");
 
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          const newData = JSON.parse(this.responseText);
-          app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
-          dataBrowser.findOuts(newData, GUID, "mainData");
-        }
-      };
-
-      xhttp.open("POST","");
-      xhttp.send(request);         // send request to server
+      // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+      // const request = JSON.stringify(queryObject);
+      //
+      // const xhttp = new XMLHttpRequest();
+      // const dataBrowser = this;
+      // const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
+      //
+      // xhttp.onreadystatechange = function() {
+      //   if (this.readyState == 4 && this.status == 200) {
+      //     const newData = JSON.parse(this.responseText);
+      //     app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
+      //     dataBrowser.findOuts(newData, GUID, "mainData");
+      //   }
+      // };
+      //
+      // xhttp.open("POST","");
+      // xhttp.send(request);         // send request to server
     }
-
   }
 
   refresh() {
@@ -181,15 +186,6 @@ class dataBrowser {
       this.fillRels(this.inCell, this.mainData.ins, this.mainData.inRels, "Incoming");
       this.fillRels(this.outCell, this.mainData.outs, this.mainData.outRels, "Outgoing");
     }
-    // if (this.highlightIDRLeft !== null) {
-    //   let leftRow = app.domFunctions.getChildByIdr(this.inCell, this.highlightIDRLeft);
-    //   leftRow.setAttribute("class", "dataBrowserOpen");
-    // }
-    //
-    // if (this.highlightIDRRight !== null) {
-    //   let rightRow = app.domFunctions.getChildByIdr(this.outCell, this.highlightIDRRight);
-    //   rightRow.setAttribute("class", "dataBrowserOpen");
-    // }
     this.toToggle = null; // reset variable for next time
   }
 
@@ -223,7 +219,6 @@ class dataBrowser {
   cell: The DOM element of the cell to fill
   allNodes: The array of all nodes which are connected to the main node in the given direction
   allRels: The array of all relations which are connected to the main node in the given direction
-  detailRel: The relation whose attributes should be shown in detail - probably no longer needed
   relName: The name of the type of relation: "Incoming" or "Outgoing"
   */
   fillRels(cell, allNodes, allRels, relName) {
@@ -263,43 +258,6 @@ class dataBrowser {
 
     this.containedWidgets.push(app.idCounter);
     this[tableName] = new widgetTableRelations(allRels, allNodes, div, relDirection, this, type, highlightGUID);
-    // let html = `<p class = "dataBrowserHeader">${relName} Relations</p>
-    //             <input type="button" idr="${direction}Arrow" value="${arrow}" onclick = "app.widget('moveCell', this)" ${working}>
-    //             <div class="relTable"><table><tbody>`;
-    //
-    // for (let i = 0; i < allRels.length; i++) { // for every relation
-    //   let name = allNodes[i].labels[0]; // type first...
-    //
-    //   if (allNodes[i].properties.name) { // then name if applicable
-    //     name += `: ${allNodes[i].properties.name}`;
-    //   }
-    //
-    //   const arrowHTML =
-    //   `<td class="dataBrowserCell" idr="arrow${allNodes[i].properties.M_GUID}" onclick="app.widget('toggleNode', this)"
-    //        onmouseover="app.widget('showPopup', this)" onmouseout="app.widget('hidePopup', this)">
-    //        ${allRels[i].type}-&gt;${this.buildPopup(allRels[i])}
-    //    </td>`;
-    //    const nameHTML =
-    //    `<td class="dataBrowserCell" idr="name_${allNodes[i].properties.M_GUID}" onclick="app.widget('toggleNode', this)"
-    //         onmouseover="app.widget('showPopup', this)" onmouseout="app.widget('hidePopup', this)">
-    //         ${name}${this.buildPopup(allNodes[i])}
-    //     </td>`;
-    //
-    //   if (cell.getAttribute('idr') === "inCell") {
-    //     html += `<tr idr="row_${allRels[i].properties.M_GUID}">${nameHTML}${arrowHTML}</tr>`;
-    //   }
-    //   else if (cell.getAttribute('idr') === "outCell") {
-    //     html += `<tr idr="row_${allRels[i].properties.M_GUID}">${arrowHTML}${nameHTML}</tr>`;
-    //   }
-    //   else {
-    //     app.error("Tried to display relation data in a data browser cell other than inCell or outCell");
-    //   }
-    // }
-    //
-    // // Finish that div and start the one for the details - it should exist even if it's blank
-    // html += `</tbody></table></div><div idr = "relDetails">${this.updateDetails(detailRel)}</div>`;
-    //
-    // cell.innerHTML = html;
   }
 
   updateDetails(detailRel) {
@@ -322,23 +280,26 @@ class dataBrowser {
     obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
     obj.optional = {"name":"out"};
     obj.rel = {"name":"outRel"};
-    const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const dataBrowser = this;
-    const update = app.startProgress(this.widgetDOM, "Searching for relations", request.length)
+    app.sendQuery(obj, "findOptionalRelation", "Searching for relations", this.widgetDOM, this.processData.bind(this), data, dataName);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const newData = JSON.parse(this.responseText);
-        app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
-        dataBrowser.processData(newData, data, dataName);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const dataBrowser = this;
+    // const update = app.startProgress(this.widgetDOM, "Searching for relations", request.length)
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const newData = JSON.parse(this.responseText);
+    //     app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
+    //     dataBrowser.processData(newData, data, dataName);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   processData(outData, inData, dataName) {
@@ -401,37 +362,30 @@ class dataBrowser {
     else {
       const relGUID = row.getAttribute('relGUID');
       const rowCount = row.getAttribute('idr').slice(3); // idr is like rowxxx
-      const typeCell = app.domFunctions.getChildByIdr(row, `TypeCell${rowCount}`);
-      const type = typeCell.textContent; // type of the relation
+
+      const typeDD = app.domFunctions.getChildByIdr(bigCell, "relTypeSelect", true);
+      // const typeCell = app.domFunctions.getChildByIdr(row, `TypeCell${rowCount}`);
+      const type = typeDD.options[typeDD.selectedIndex].value; // type of the relation
 
       // determine where to put the new data and which highlight GUID to change
       let nodeName = "";
       let nodeGUID = row.getAttribute('nodeGUID');
-      // let relIDR = cell.parentElement.getAttribute("idr");
-      // let relGUID = relIDR.slice(4); // idr is like rowxxx
 
       if (bigCell.getAttribute('idr') === "inCell") {
         nodeName = "leftData";
         this.toToggle = "left";
         this.highlightGUIDLeft = relGUID;
         this.typeLeft = type;
-
-        // relation data should be stored in the main node - just have to find it
-        // this.inData = this.mainData.inRels.find(x => x.properties.M_GUID === relGUID);
       }
       else if (bigCell.getAttribute('idr') === "outCell") {
         nodeName = "rightData";
         this.toToggle = "right";
         this.highlightGUIDRight = relGUID;
         this.typeRight = type;
-
-        // relation data should be stored in the main node - just have to find it
-        // this.outData = this.mainData.outRels.filter(x => x.properties.M_GUID == relGUID)[0];
       }
       else {
         app.error ("Trying to open a dataBrowser cell, but the control's great-great-great-grandparent is not inCell or outCell");
       }
-
 
       // check whether the node data already exist
       if (this.nodeData[nodeGUID]) {
@@ -445,40 +399,28 @@ class dataBrowser {
         obj.required = {"name":"n", "properties":{"M_GUID":nodeGUID}};
         obj.optional = {"name":"in"};
         obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
-        const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-        const request = JSON.stringify(queryObject);
 
-        const xhttp = new XMLHttpRequest();
-        const dataBrowser = this;
-        const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
+        app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, this.findOuts.bind(this), nodeGUID, nodeName);
 
-        xhttp.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            const newData = JSON.parse(this.responseText);
-            app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
-            dataBrowser.findOuts(newData, nodeGUID, nodeName);
-          }
-        };
-
-        xhttp.open("POST","");
-        xhttp.send(request);         // send request to server
+        // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
+        // const request = JSON.stringify(queryObject);
+        //
+        // const xhttp = new XMLHttpRequest();
+        // const dataBrowser = this;
+        // const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
+        //
+        // xhttp.onreadystatechange = function() {
+        //   if (this.readyState == 4 && this.status == 200) {
+        //     const newData = JSON.parse(this.responseText);
+        //     app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
+        //     dataBrowser.findOuts(newData, nodeGUID, nodeName);
+        //   }
+        // };
+        //
+        // xhttp.open("POST","");
+        // xhttp.send(request);         // send request to server
       }
     }
-  }
-
-  buildPopup(data) {
-    let type = data.type;
-    if (!type) type = data.labels[0];
-
-    let html = `<div class="dataBrowserDescription">
-                  <table><tr><th>Type</th><td>${type}</td></tr>`; // start div and table, create first row
-
-    for (let fieldName in data.properties) {
-      html += `<tr><th>${fieldName}</th><td>${data.properties[fieldName]}</td></tr>`;
-    }
-
-    html += `</table></div>`;
-    return ""; // temporarily disabled - change back to return html if I want it to work again
   }
 
   moveCell(button) {
@@ -491,8 +433,6 @@ class dataBrowser {
         this.typeRight = this.typeLeft;
         this.highlightGUIDLeft = null;
         this.typeLeft = null;
-        // this.outData = this.inData; // The incoming relation which was highlighted is now an outgoing relation
-        // this.inData = null;
         break;
       case 'rightArrow': // move to the right - the right cell becomes main, the main cell becomes left
         this.leftData = this.mainData;
@@ -502,9 +442,6 @@ class dataBrowser {
         this.typeLeft = this.typeRight;
         this.highlightGUIDRight = null;
         this.typeRight = null;
-        // this.inData = this.outData; // The outgoing relation which was highlighted is now an incoming relation
-        // this.outData = null;
-
         break;
       default:
         app.error("Trying to move through data browser, but the arrow button's IDR is not leftArrow or rightArrow");
@@ -513,13 +450,13 @@ class dataBrowser {
     this.refresh();
   }
 
-  showPopup(cell) {
-    // const popup = cell.firstElementChild;
-    // popup.setAttribute("class", "dataBrowserDescShow");
-  }
-
-  hidePopup(cell) {
-    // const popup = cell.firstElementChild;
-    // popup.setAttribute("class", "dataBrowserDescription");
+  toggleCell(checkBox, name) {
+    const cell = app.domFunctions.getChildByIdr(this.widgetDOM, name);
+    if (checkBox.checked) {
+      cell.classList.remove('hidden');
+    }
+    else {
+      cell.classList.add('hidden');
+    }
   }
 }

@@ -62,22 +62,27 @@ class widgetTableNodes {
       } // end for (every item in the criteria array)
     } // end if (search criteria were passed in)
 
-    const xhttp = new XMLHttpRequest();
-    const nodes = this;
-    const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
-    const update = app.startProgress(this.widgetDOM, `Searching for ${this.queryObject.nodeLabel}`, request.length);
+    app.sendQuery(this.buildQuery, "tableNodeSearch", `Searching for ${this.queryObject.nodeLabel}`, this.widgetDOM, function(data) {
+      this.data = data;
+      this.refresh();
+    }.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        nodes.data = JSON.parse(this.responseText);
-        app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-        nodes.refresh();
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const xhttp = new XMLHttpRequest();
+    // const nodes = this;
+    // const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    // const update = app.startProgress(this.widgetDOM, `Searching for ${this.queryObject.nodeLabel}`, request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
+    //     nodes.data = JSON.parse(this.responseText);
+    //     nodes.refresh();
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   searchOnEnter(input, evnt) { // Makes hitting enter run a search
@@ -199,7 +204,7 @@ class widgetTableNodes {
     <b>${this.queryObject.nodeLabel}:${this.queryObjectName}</b>${addText}
     <input type="button" value="Search" idr="searchButton" onclick="app.widgetSearch(this)">
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
-    limit <input value ="${this.limitDefault}" idr = "limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
+    limit <input value ="${this.limitDefault}" idr="limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
     </span>
     <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
     </div>
@@ -291,21 +296,24 @@ class widgetTableNodes {
 	  obj.rel = {"type":"Settings", "merge":true};
 	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
 	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-    const table = this;
+    app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(table.widgetDOM, update, this.responseText.length);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
+    // const table = this;
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
 
     this.fieldSelectPopup.hidden = true;
     this.refresh();
@@ -629,21 +637,24 @@ class widgetTableNodes {
     	  obj.rel = {"type":"Settings", "merge":true};
     	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
-        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-        const request = JSON.stringify(queryObject);
 
-        const xhttp = new XMLHttpRequest();
-        const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-        const table = this;
+        app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-        xhttp.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            app.stopProgress(table.widgetDOM, update, this.responseText.length);
-          }
-        };
-
-        xhttp.open("POST","");
-        xhttp.send(request);         // send request to server
+        // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+        // const request = JSON.stringify(queryObject);
+        //
+        // const xhttp = new XMLHttpRequest();
+        // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
+        // const table = this;
+        //
+        // xhttp.onreadystatechange = function() {
+        //   if (this.readyState == 4 && this.status == 200) {
+        //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
+        //   }
+        // };
+        //
+        // xhttp.open("POST","");
+        // xhttp.send(request);         // send request to server
         this.refresh();
       }
     }
@@ -731,45 +742,53 @@ class widgetTableNodes {
     obj.from = {"properties":{"M_GUID":GUID}, "return":false};
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions"};
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const nodes = this;
-    const update = app.startProgress(this.widgetDOM, "Checking permissions", request.length);
+    app.sendQuery(obj, "changeRelation", "Checking permissions", this.widgetDOM, this.checkPermission.bind(this), GUID, button, toAdd);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-        nodes.checkPermission(data, GUID, button, toAdd);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const nodes = this;
+    // const update = app.startProgress(this.widgetDOM, "Checking permissions", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     const data = JSON.parse(this.responseText);
+    //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
+    //     nodes.checkPermission(data, GUID, button, toAdd);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
   }
 
   checkPermission(data, GUID, button, toAdd) {
     if (data.length > 0 && data[0].rel.properties.username && data[0].rel.properties.password) { // If a relation to delete was found
       const obj = {};
       obj.rel = {"id":data[0].rel.id, "return":false};
-      const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-      const request = JSON.stringify(queryObject);
 
-      const xhttp = new XMLHttpRequest();
-      const nodes = this;
-      const update = app.startProgress(this.widgetDOM, "Deleting old permissions", request.length);
+      app.sendQuery(obj, "deleteRelation", "Deleting old permissions", this.widgetDOM, function(data, button, toAdd, GUID) {
+        this.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
+      }.bind(this), button, toAdd, GUID);
 
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-          nodes.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
-        }
-      };
-
-      xhttp.open("POST","");
-      xhttp.send(request);         // send request to server
+      // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
+      // const request = JSON.stringify(queryObject);
+      //
+      // const xhttp = new XMLHttpRequest();
+      // const nodes = this;
+      // const update = app.startProgress(this.widgetDOM, "Deleting old permissions", request.length);
+      //
+      // xhttp.onreadystatechange = function() {
+      //   if (this.readyState == 4 && this.status == 200) {
+      //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
+      //     nodes.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
+      //   }
+      // };
+      //
+      // xhttp.open("POST","");
+      // xhttp.send(request);         // send request to server
     }
 
     else { // If there was no relation to delete, need to ask for a new username and password
@@ -807,23 +826,28 @@ class widgetTableNodes {
       obj.from = {"properties":{"M_GUID":GUID}, "return":false};
       obj.to = {"type":"M_LoginTable", "properties":{"name":toAdd}, "return":false};
       obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
-      const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-      const request = JSON.stringify(queryObject);
 
-      const xhttp = new XMLHttpRequest();
-      const nodes = this;
-      const update = app.startProgress(this.widgetDOM, "Setting permissions", request.length);
+      app.sendQuery(obj, "createRelation", "Setting permission", this.widgetDOM, function() {
+        this.search();
+      }.bind(this));
 
-      xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-          const data = JSON.parse(this.responseText);
-          app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-          nodes.search(data);
-        }
-      };
-
-      xhttp.open("POST","");
-      xhttp.send(request);         // send request to server
+      // const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
+      // const request = JSON.stringify(queryObject);
+      //
+      // const xhttp = new XMLHttpRequest();
+      // const nodes = this;
+      // const update = app.startProgress(this.widgetDOM, "Setting permissions", request.length);
+      //
+      // xhttp.onreadystatechange = function() {
+      //   if (this.readyState == 4 && this.status == 200) {
+      //     const data = JSON.parse(this.responseText);
+      //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
+      //     nodes.search(data);
+      //   }
+      // };
+      //
+      // xhttp.open("POST","");
+      // xhttp.send(request);         // send request to server
     }
   }
 
@@ -835,21 +859,26 @@ class widgetTableNodes {
     obj.from = {"properties":{"M_GUID":GUID}, "return":false};
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions", "return":false};
-    const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const nodes = this;
-    const update = app.startProgress(this.widgetDOM, "Removing permissions", request.length);
+    app.sendQuery(obj, "deleteRelation", "Removing permissions", this.widgetDOM, function() {
+      this.search();
+    }.bind(this));
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-        nodes.search();
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(JSON.stringify(queryObject));         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const nodes = this;
+    // const update = app.startProgress(this.widgetDOM, "Removing permissions", request.length);
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
+    //     nodes.search();
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes

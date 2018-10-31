@@ -21,23 +21,25 @@ constructor (nameQueryObject, id) {
   this.widgetDOM       = null;
   this.requests        = [];
 
-  const queryObject = {"server": "CRUD", "function": "getMetaData", "query": nameQueryObject, "GUID": app.login.userGUID};
-  const request = JSON.stringify(queryObject);
+  app.sendQuery(nameQueryObject, "getMetaData", "Searching for metadata", this.widgetDOM, this.queryComplete.bind(this));
 
-  const xhttp = new XMLHttpRequest();
-  const table = this;
-  const update = app.startProgress(this.widgetDOM, "Searching for metadata", request.length);
-
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      app.stopProgress(table.widgetDOM, update, this.responseText.length);
-      table.queryComplete(data);
-    }
-  };
-
-  xhttp.open("POST","");
-  xhttp.send(request);         // send request to server
+  // const queryObject = {"server": "CRUD", "function": "getMetaData", "query": nameQueryObject, "GUID": app.login.userGUID};
+  // const request = JSON.stringify(queryObject);
+  //
+  // const xhttp = new XMLHttpRequest();
+  // const table = this;
+  // const update = app.startProgress(this.widgetDOM, "Searching for metadata", request.length);
+  //
+  // xhttp.onreadystatechange = function() {
+  //   if (this.readyState == 4 && this.status == 200) {
+  //     const data = JSON.parse(this.responseText);
+  //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
+  //     table.queryComplete(data);
+  //   }
+  // };
+  //
+  // xhttp.open("POST","");
+  // xhttp.send(request);         // send request to server
 }
 
 queryComplete(data) {
@@ -207,23 +209,26 @@ showReasons(element) {
   obj.from = {"name":"user"};
   obj.to = {"name":"node", "properties":{"M_GUID":GUID}};
   obj.rel = {"type":"Trash"};
-  const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  const request = JSON.stringify(queryObject);
 
-  const xhttp = new XMLHttpRequest();
-  const table = this;
-  const update = app.startProgress(this.widgetDOM, "Searching for details", request.length);
+  app.sendQuery(obj, "changeRelation", "Searching for details", this.widgetDOM, this.buildReasons.bind(this));
 
-  xhttp.onreadystatechange = function() {
-    if (this.readyState == 4 && this.status == 200) {
-      const data = JSON.parse(this.responseText);
-      app.stopProgress(table.widgetDOM, update, this.responseText.length);
-      table.buildReasons(data);
-    }
-  };
-
-  xhttp.open("POST","");
-  xhttp.send(request);         // send request to server
+  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+  // const request = JSON.stringify(queryObject);
+  //
+  // const xhttp = new XMLHttpRequest();
+  // const table = this;
+  // const update = app.startProgress(this.widgetDOM, "Searching for details", request.length);
+  //
+  // xhttp.onreadystatechange = function() {
+  //   if (this.readyState == 4 && this.status == 200) {
+  //     const data = JSON.parse(this.responseText);
+  //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
+  //     table.buildReasons(data);
+  //   }
+  // };
+  //
+  // xhttp.open("POST","");
+  // xhttp.send(request);         // send request to server
 }
 
 buildReasons(data) {

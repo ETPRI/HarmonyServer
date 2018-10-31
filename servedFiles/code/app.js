@@ -75,19 +75,21 @@ checkMetaData() {
 	const obj = {};
 	obj.node = {"type":"M_MetaData"};
 
-	const xhttp = new XMLHttpRequest();
-	const appObj = this;
+	this.sendQuery(obj, "changeNode", "Looking for metadata", null, this.addMetaData.bind(this));
 
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			const data = JSON.parse(this.responseText);
-			appObj.addMetaData(data);
-		}
-	};
-
-	xhttp.open("POST","");
-	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-	xhttp.send(JSON.stringify(queryObject));         // send request to server
+	// const xhttp = new XMLHttpRequest();
+	// const appObj = this;
+  //
+	// xhttp.onreadystatechange = function() {
+	// 	if (this.readyState == 4 && this.status == 200) {
+	// 		const data = JSON.parse(this.responseText);
+	// 		appObj.addMetaData(data);
+	// 	}
+	// };
+  //
+	// xhttp.open("POST","");
+	// const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
+	// xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 addMetaData(data) { // data should be all metadata nodes, for both nodes and relations
@@ -101,11 +103,13 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
 			obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
 
-			const xhttp = new XMLHttpRequest();
+			this.sendQuery(obj, "createNode", "Adding metadata");
 
-	    xhttp.open("POST","");
-			const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-			xhttp.send(JSON.stringify(queryObject));         // send request to server
+			// const xhttp = new XMLHttpRequest();
+      //
+	    // xhttp.open("POST","");
+			// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+			// xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 
 		for (type in this.metaData.relation) { // and all relation metadata
@@ -115,11 +119,13 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.relation[type].fields));
 			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
 
-			const xhttp = new XMLHttpRequest();
+			this.sendQuery(obj, "createNode", "Adding metadata");
 
-			xhttp.open("POST","");
-			const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-			xhttp.send(JSON.stringify(queryObject));         // send request to server
+			// const xhttp = new XMLHttpRequest();
+      //
+			// xhttp.open("POST","");
+			// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+			// xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 	} // end if (no data were returned; no metadata nodes were found)
 
@@ -167,11 +173,13 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 												,{"property":"fieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.relation[name].fieldsDisplayed))}];
 				}
 
-				const xhttp = new XMLHttpRequest();
+				this.sendQuery(obj, "changeNode", "Updating metadata");
 
-				xhttp.open("POST","");
-				const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-				xhttp.send(JSON.stringify(queryObject));         // send request to server
+				// const xhttp = new XMLHttpRequest();
+        //
+				// xhttp.open("POST","");
+				// const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
+				// xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
 			node.name = name; // put the name back for the next step
 		} // end for (every metadata node that was found)
@@ -187,11 +195,13 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
 				obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
 
-				const xhttp = new XMLHttpRequest();
+				this.sendQuery(obj, "createNode", "Adding metadata");
 
-				xhttp.open("POST","");
-				const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-				xhttp.send(JSON.stringify(queryObject));         // send request to server
+				// const xhttp = new XMLHttpRequest();
+        //
+				// xhttp.open("POST","");
+				// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+				// xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
 		}
 
@@ -204,11 +214,13 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 				obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.relation[type].fields));
 				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
 
-				const xhttp = new XMLHttpRequest();
+				this.sendQuery(obj, "createNode", "Adding metadata");
 
-				xhttp.open("POST","");
-				const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-				xhttp.send(JSON.stringify(queryObject));         // send request to server
+				// const xhttp = new XMLHttpRequest();
+        //
+				// xhttp.open("POST","");
+				// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
+				// xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
 		}
 	}
@@ -351,17 +363,23 @@ createDebug() {
 
 // Runs when a search button is clicked. Shows the table associated with that search button. Criteria is an array of objects representing search criteria.
 menuNodes(name, criteria) {
+	// Hide the shown table, if any
 	if (this.shownTable) {
 		this.shownTable.classList.add("hidden");
 		this.shownTable = null;
 	}
 
+	// Create the required table, if it didn't already exist
+	if (!(this.widgets[name])) {
+		this.widgets[name] = new widgetTableNodes(name, null);
+	}
+
+	// Show the required table
 	let newTable = document.getElementById(name);
 	if (newTable) {
 		newTable.classList.remove("hidden");
 		this.shownTable = newTable;
 		let newTableJS = this.widgets[name];
-		newTableJS.search(criteria);
 	}
 }
 
@@ -754,23 +772,28 @@ deleteLink(input) {
 checkOwner(type, newItem, domElement, object, method, name) {
 	if (newItem || (object.owner && object.owner.id !== this.login.userID)) { // If the user asked for a new item, or the node is owned by someone else
 		const obj = {"type":type, "properties":{"name":name}};
-		const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": this.login.userGUID};
-		const request = JSON.stringify(queryObject);
 
-		const xhttp = new XMLHttpRequest();
-		const app = this;
-		const update = this.startProgress(domElement, "Creating node", request.length);
+		this.sendQuery(obj, "createNode", "Creating node", domElement, function(data, domElement, object, method) {
+			this.setOwner(domElement, object, method, data);
+		}.bind(this), domElement, object, method);
 
-		xhttp.onreadystatechange = function() {
-			if (this.readyState == 4 && this.status == 200) {
-				const data = JSON.parse(this.responseText);
-				app.stopProgress(domElement, update, this.responseText.length);
-				app.setOwner(domElement, object, method, data); // If this is a new item or a new copy, it belongs to the user who made it
-			}
-		};
-
-		xhttp.open("POST","");
-		xhttp.send(request);         // send request to server
+		// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": this.login.userGUID};
+		// const request = JSON.stringify(queryObject);
+    //
+		// const xhttp = new XMLHttpRequest();
+		// const app = this;
+		// const update = this.startProgress(domElement, "Creating node", request.length);
+    //
+		// xhttp.onreadystatechange = function() {
+		// 	if (this.readyState == 4 && this.status == 200) {
+		// 		const data = JSON.parse(this.responseText);
+		// 		app.stopProgress(domElement, update, this.responseText.length);
+		// 		app.setOwner(domElement, object, method, data); // If this is a new item or a new copy, it belongs to the user who made it
+		// 	}
+		// };
+    //
+		// xhttp.open("POST","");
+		// xhttp.send(request);         // send request to server
 	}
 	else {
 		if (object.owner) { // If the node already has an owner (which should be the user at this point), it still belongs to them - no need to update
@@ -795,25 +818,32 @@ setOwner(domElement, object, method, data) { // If there is data, this was calle
 	obj.from = {"id":object.id};
 	obj.to = {"id":this.login.userID};
 	obj.rel = {"type":"Owner"};
-	const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": this.login.userGUID};
-	const request = JSON.stringify(queryObject);
 
-	const xhttp = new XMLHttpRequest();
-	const app = this;
-	const update = this.startProgress(domElement, "Setting owner", request.length);
-
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			const data = JSON.parse(this.responseText);
-			app.stopProgress(domElement, update, this.responseText.length);
-			if (object && method) {
-				object[method](data);
-			}
+	this.sendQuery(obj, "createRelation", "Setting owner", domElement, function(data, object, method) {
+		if (object && method) {
+			object[method](data);
 		}
-	};
+	}.bind(this), object, method);
 
-	xhttp.open("POST","");
-	xhttp.send(request);         // send request to server
+	// const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": this.login.userGUID};
+	// const request = JSON.stringify(queryObject);
+  //
+	// const xhttp = new XMLHttpRequest();
+	// const app = this;
+	// const update = this.startProgress(domElement, "Setting owner", request.length);
+  //
+	// xhttp.onreadystatechange = function() {
+	// 	if (this.readyState == 4 && this.status == 200) {
+	// 		const data = JSON.parse(this.responseText);
+	// 		app.stopProgress(domElement, update, this.responseText.length);
+	// 		if (object && method) {
+	// 			object[method](data);
+	// 		}
+	// 	}
+	// };
+  //
+	// xhttp.open("POST","");
+	// xhttp.send(request);         // send request to server
 }
 
 error(message) {
@@ -855,29 +885,36 @@ startProgress(DOMelement, text, length) {
 		cancel.classList.remove('hidden');
 	}
 
-	const avail = document.getElementById("available");
-	avail.hidden = true;
-	const ongoing = document.getElementById("ongoing");
-	ongoing.hidden = false;
-
-	const row = document.createElement("LI");
-	if (topWidget && topWidget.id) {
-		row.setAttribute("widget", topWidget.id);
-	}
-	const status = document.createTextNode(text);
-	const timer = document.createElement("SPAN");
-	timer.innerHTML = ":  0 ms";
-	row.appendChild(status);
-	row.appendChild(timer);
-	ongoing.appendChild(row);
-
 	const startTime = performance.now();
-	const update = setInterval(function () {
-		const currTime = performance.now();
-		const elapsedTime = currTime - startTime;
-		timer.innerHTML = `:  ${Math.round(elapsedTime)} ms`;
-	}, 10);
-	row.setAttribute("update", update);
+	let update = null;
+
+	const avail = document.getElementById("available");
+	if (avail) {
+		avail.hidden = true;
+	}
+	const ongoing = document.getElementById("ongoing");
+	if (ongoing) {
+		ongoing.hidden = false;
+
+		const row = document.createElement("LI");
+		if (topWidget && topWidget.id) {
+			row.setAttribute("widget", topWidget.id);
+		}
+		const status = document.createTextNode(text);
+		const timer = document.createElement("SPAN");
+		timer.innerHTML = ":  0 ms";
+		row.appendChild(status);
+		row.appendChild(timer);
+		ongoing.appendChild(row);
+
+		update = setInterval(function () {
+			const currTime = performance.now();
+			const elapsedTime = currTime - startTime;
+			timer.innerHTML = `:  ${Math.round(elapsedTime)} ms`;
+		}, 10);
+
+		row.setAttribute("update", update);
+	}
 
 	const requestObj = {"timer":update};
 	if (topWidget) {
@@ -946,7 +983,9 @@ stopProgress(DOMelement, obj, length) {
 	}
 
 	for (let i = 0; i < requests.length; i++) {
-		clearInterval(requests[i].timer);
+		if (requests[i].timer) {
+			clearInterval(requests[i].timer);
+		}
 		if (JSinstance) {
 			JSinstance.requests.splice(JSinstance.requests.indexOf(requests[i]), 1); // remove from JS class, if it exists
 		}
@@ -1028,31 +1067,44 @@ showHelp(widgetType, button, nodeType) {
 	}
 	const obj = {};
 	obj.node = {"type":nodeType, "properties":{"name":widgetType}, "merge":true}; // If the help node doesn't exist, create it
-	const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
-	const request = JSON.stringify(queryObject);
 
-	const xhttp = new XMLHttpRequest();
-	const update = this.startProgress(null, `Searching for help on ${widgetType}`, request.length);
-	const app = this;
-
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			const data = JSON.parse(this.responseText);
-			app.stopProgress(null, update, this.responseText.length);
-			if (data.length == 0) {
-				app.error("Help could not be found or created");
-			}
-			else if (data.length == 1) {
-				new widgetNode(button, "M_Widget", data[0].node.properties.M_GUID);
-			}
-			else {
-				app.error("Multiple help nodes found");
-			}
+	this.sendQuery(obj, 'changeNode', `Searching for help on ${widgetType}`, null, function(data, button) {
+		if (data.length == 0) {
+			this.error("Help could not be found or created");
 		}
-	};
+		else if (data.length == 1) {
+			new widgetNode(button, "M_Widget", data[0].node.properties.M_GUID);
+		}
+		else {
+			this.error("Multiple help nodes found");
+		}
+	}.bind(this), button);
 
-	xhttp.open("POST","");
-	xhttp.send(request);         // send request to server
+	// const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
+	// const request = JSON.stringify(queryObject);
+  //
+	// const xhttp = new XMLHttpRequest();
+	// const update = this.startProgress(null, `Searching for help on ${widgetType}`, request.length);
+	// const app = this;
+  //
+	// xhttp.onreadystatechange = function() {
+	// 	if (this.readyState == 4 && this.status == 200) {
+	// 		const data = JSON.parse(this.responseText);
+	// 		app.stopProgress(null, update, this.responseText.length);
+	// 		if (data.length == 0) {
+	// 			app.error("Help could not be found or created");
+	// 		}
+	// 		else if (data.length == 1) {
+	// 			new widgetNode(button, "M_Widget", data[0].node.properties.M_GUID);
+	// 		}
+	// 		else {
+	// 			app.error("Multiple help nodes found");
+	// 		}
+	// 	}
+	// };
+  //
+	// xhttp.open("POST","");
+	// xhttp.send(request);         // send request to server
 }
 
 createLIS(dataArray, compFunction) {
@@ -1227,21 +1279,23 @@ setUpPopup(JSobj) {
 	                 {"item":"rel", "property":"fieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
 	                 {"item":"rel", "property":"formFieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
-		const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.app.login.userGUID};
-		const request = JSON.stringify(queryObject);
+		app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-	  const xhttp = new XMLHttpRequest();
-	  const update = this.app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-	  const details = this;
-
-	  xhttp.onreadystatechange = function() {
-	    if (this.readyState == 4 && this.status == 200) {
-	      details.app.stopProgress(details.widgetDOM, update, this.responseText.length);
-	    }
-	  };
-
-	  xhttp.open("POST","");
-	  xhttp.send(request);         // send request to server
+		// const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.app.login.userGUID};
+		// const request = JSON.stringify(queryObject);
+    //
+	  // const xhttp = new XMLHttpRequest();
+	  // const update = this.app.startProgress(this.widgetDOM, "Updating metadata", request.length);
+	  // const details = this;
+    //
+	  // xhttp.onreadystatechange = function() {
+	  //   if (this.readyState == 4 && this.status == 200) {
+	  //     details.app.stopProgress(details.widgetDOM, update, this.responseText.length);
+	  //   }
+	  // };
+    //
+	  // xhttp.open("POST","");
+	  // xhttp.send(request);         // send request to server
 
 	  // close popup
 	  this.fieldPopup.hidden = true;
@@ -1269,7 +1323,12 @@ getProp(o, ...args) {
 }
 
 sendQuery(obj, CRUD, description, DOMelement, onComplete, ...args) {
-	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": "setup"};
+	let GUID = this.getProp(this, "login", "userID");
+	if (!GUID) {
+		GUID = "none";
+	}
+
+	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": GUID};
 	const request = JSON.stringify(queryObject);
 
 	const xhttp = new XMLHttpRequest();
@@ -1281,7 +1340,9 @@ sendQuery(obj, CRUD, description, DOMelement, onComplete, ...args) {
 			const responseSize = this.responseText.length;
 			const data = JSON.parse(this.responseText);
 			app.stopProgress(DOMelement, update, responseSize);
-			onComplete(data, ...args);
+			if (onComplete) {
+				onComplete(data, ...args);
+			}
 		}
 	};
 

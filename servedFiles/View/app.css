@@ -6,6 +6,14 @@
 	height: 100%;
 }
 
+.source {
+	background-color: yellow;
+}
+
+.sink {
+	background-color: blue;
+}
+
 .selectedItem {
 	background-color:lightblue;
 }

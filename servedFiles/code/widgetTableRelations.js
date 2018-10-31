@@ -36,6 +36,9 @@ class widgetTableRelations {
     this.data = null; // current data to display
     this.summary = null; // array of objects representing count and name of each type
 
+    this.showNodeName = true;
+    this.showNodeType = true;
+
     this.fieldSelectPopup = document.createElement("div");
     this.fieldSelectPopup.setAttribute("hidden", "true");
     this.fieldSelectPopup.setAttribute('class', 'fieldPopup');
@@ -60,7 +63,13 @@ class widgetTableRelations {
     header.innerHTML =
     `<input type="button" value="Search" idr="searchButton" onclick="app.widget('search', this)">
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
-    limit <input idr="limit" style="width: 20px;" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
+    limit <input idr="limit" style="width: 20px;" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
+    <span idr="fieldSelectSpan"></span>
+    <span idr="relTypeSelectSpan"></span>
+    <span idr = "nodeChecks" class="hidden">
+      <input type="checkbox" checked idr="nodeNameCheck" onclick="app.widget('toggleColumn', this, 'showNodeName')">Node Name&nbsp;&nbsp;&nbsp;&nbsp;
+      <input type="checkbox" checked idr="nodeTypeCheck" onclick="app.widget('toggleColumn', this, 'showNodeType')">Node Type
+    </span>`;
 
     const body = document.createElement("table");
     this.widgetDOM.appendChild(body);
@@ -356,21 +365,24 @@ class widgetTableRelations {
 	  obj.rel = {"type":"Settings", "merge":true};
 	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
 	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
-    const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    const request = JSON.stringify(queryObject);
 
-    const xhttp = new XMLHttpRequest();
-    const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-    const table = this;
+    app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-    xhttp.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        app.stopProgress(table.widgetDOM, update, this.responseText.length);
-      }
-    };
-
-    xhttp.open("POST","");
-    xhttp.send(request);         // send request to server
+    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+    // const request = JSON.stringify(queryObject);
+    //
+    // const xhttp = new XMLHttpRequest();
+    // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
+    // const table = this;
+    //
+    // xhttp.onreadystatechange = function() {
+    //   if (this.readyState == 4 && this.status == 200) {
+    //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
+    //   }
+    // };
+    //
+    // xhttp.open("POST","");
+    // xhttp.send(request);         // send request to server
 
     this.fieldSelectPopup.hidden = true;
     this.refresh();
@@ -397,22 +409,53 @@ class widgetTableRelations {
     let buttonHTML = '';
     let dirSearchHTML = '';
     let dirNameHTML = '';
+    let typeSearchHTML = '';
+    let typeNameHTML = '';
+    let checkSpan = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeChecks');
     if (this.queryObjectName !== 'All') {
       buttonHTML = `<input type="button" value="Field Select" onclick="app.widget('fieldSelect', this)">`;
-      dirSearchHTML =
-      `<th>
-        <input idr = "textNodeName" size="7" onblur="app.regression.logText(this)"
-        onkeydown="app.widget('searchOnEnter', this, event)" value="">
-        ${strSearch.replace('#x#', 'nodeName')}
-      </th>
-      <th>
-        <input idr = "textNodeType" size="7" onblur="app.regression.logText(this)"
-        onkeydown="app.widget('searchOnEnter', this, event)" value="">
-        ${strSearch.replace('#x#', 'nodeType')}
-      </th>`;
+      if (this.showNodeName) {
+        dirSearchHTML +=
+         `<th>
+            <input idr = "textNodeName" size="7" onblur="app.regression.logText(this)"
+            onkeydown="app.widget('searchOnEnter', this, event)" value="">
+            ${strSearch.replace('#x#', 'nodeName')}
+          </th>`;
+          dirNameHTML += `<th>${this.relationDirection}: Name</th>`;
+      }
+      if (this.showNodeType) {
+        dirSearchHTML += `
+        <th>
+          <input idr = "textNodeType" size="7" onblur="app.regression.logText(this)"
+          onkeydown="app.widget('searchOnEnter', this, event)" value="">
+          ${strSearch.replace('#x#', 'nodeType')}
+        </th>`;
+        dirNameHTML += `<th>${this.relationDirection}: Type</th>`;
+      }
+      // dirSearchHTML =
+      // `<th>
+      //   <input idr = "textNodeName" size="7" onblur="app.regression.logText(this)"
+      //   onkeydown="app.widget('searchOnEnter', this, event)" value="">
+      //   ${strSearch.replace('#x#', 'nodeName')}
+      // </th>
+      // <th>
+      //   <input idr = "textNodeType" size="7" onblur="app.regression.logText(this)"
+      //   onkeydown="app.widget('searchOnEnter', this, event)" value="">
+      //   ${strSearch.replace('#x#', 'nodeType')}
+      // </th>`;
 
-      dirNameHTML = `<th>${this.relationDirection}: Name</th><th>${this.relationDirection}: Type</th>`;
+      // dirNameHTML = `<th>${this.relationDirection}: Name</th><th>${this.relationDirection}: Type</th>`;
+
+      checkSpan.classList.remove('hidden');
     }
+    else {
+      typeSearchHTML = '<th></th>';
+      typeNameHTML = "<th>Type</th>";
+      checkSpan.classList.add('hidden');
+    }
+
+    let span = app.domFunctions.getChildByIdr(this.widgetDOM, 'fieldSelectSpan');
+    span.innerHTML = buttonHTML;
 
     let dropdownHTML = `<select idr="relTypeSelect"><option value="All">All (summary)</option>`;
     for (let i = 0; i < this.summary.length; i++) {
@@ -424,28 +467,22 @@ class widgetTableRelations {
     }
     dropdownHTML += `</select>`;
 
+    let dropDownSpan = app.domFunctions.getChildByIdr(this.widgetDOM, 'relTypeSelectSpan');
+    dropDownSpan.innerHTML = dropdownHTML;
+
     let headerSearch = app.domFunctions.getChildByIdr(this.widgetDOM, 'headerSearch');
     let searchCells = Array.from(headerSearch.children);
 
-    //Order: row number (and field select), type (and dropdown), to/from node (if not summary), count or specific fields
+    //Order: row number, type (if summary), to/from node (if not summary), count or specific fields
 
     // build search part of buildHeader.
-    let s=`<th>${buttonHTML}</th><th>${dropdownHTML}</th>${dirSearchHTML}`;
+    let s=`<th></th>${typeSearchHTML}${dirSearchHTML}`;
     if (this.queryObjectName === 'All') {
       s += `<th></th>`; // No search function for count
     }
     else {
       for (let i=0; i<this.fieldsDisplayed.length; i++ ) {
         const fieldName =this.fieldsDisplayed[i];
-        // const cell = searchCells.find(x=>x.getAttribute('db') === fieldName);
-        // let text = "";
-        // let select = "";
-        // if (cell) { // if the cell exists, its first child is a text input and its second is a dropdown
-        //   text = cell.firstElementChild.value;
-        //   const dropDown = cell.lastElementChild;
-        //   select = dropDown.options[dropDown.selectedIndex].value; // get their values and plug them into the new HTML
-        // }
-
         let s1 = `<th db="${fieldName}" idr="searchCell${fieldName}" ondragstart="app.widget('dragHeader', this, event)"
                   ondragover="event.preventDefault()" ondrop="app.widget('dropHeader', this, event)" draggable="true">
                     <input idr = "text${i}" db="#1" size="7" onblur="app.regression.logText(this)"
@@ -463,10 +500,10 @@ class widgetTableRelations {
 
     headerSearch.innerHTML = s;
 
-    //Order: row number (and field select), type (and dropdown), direction (if not summary), count or specific fields
+    //Order: row number, type (if summary), direction (if not summary), count or specific fields
 
     // build field name part of header
-    let f=`<th>#</th><th>Type</th>${dirNameHTML}`;
+    let f=`<th>#</th>${typeNameHTML}${dirNameHTML}`;
     if (this.queryObjectName === "All") {
       f += `<th>Count</th>`;
     }
@@ -502,7 +539,7 @@ class widgetTableRelations {
       row = document.createElement('tr');
       row.setAttribute('idr', `row${rowCount}`);
 
-      //Order: row number (and field select), type (and dropdown), direction (if not summary), count or specific fields
+      //Order: row number, type (if summary), direction (if not summary), count or specific fields
 
       // Create a cell for rowCount and append it
       cell = document.createElement('td');
@@ -533,27 +570,26 @@ class widgetTableRelations {
         // Clicking the row ID number shows/hides the relation
         cell.setAttribute("onclick", "app.widget('showRel', this)");
 
-        // Create a cell for type and append it
-        cell = document.createElement('td');
-        row.appendChild(cell);
-        cell.outerHTML = `<td idr="TypeCell${rowCount++}">${r[i].type}</td>`;
-
         // this.highlightGUID is passed in at the start to determine which row should start off selected
         if (r[i].properties.M_GUID === this.highlightGUID) {
           row.classList.add("selectedItem");
           this.highlightDOM = row;
         }
 
-        // Now add cells for "to" or "from"
+        // Now add cells for "to" or "from" if needed
         const node = this.nodes.find(n => n.properties.M_GUID == r[i].properties.nodeGUID);
 
-        cell = document.createElement('td');
-        row.appendChild(cell);
-        cell.outerHTML = `<td>${app.getProp(node, "properties", "name")}</td>`;
+        if (this.showNodeName) {
+          cell = document.createElement('td');
+          row.appendChild(cell);
+          cell.outerHTML = `<td>${app.getProp(node, "properties", "name")}</td>`;
+        }
 
-        cell = document.createElement('td');
-        row.appendChild(cell);
-        cell.outerHTML = `<td>${app.getProp(node, "labels", 0)}</td>`;
+        if (this.showNodeType) {
+          cell = document.createElement('td');
+          row.appendChild(cell);
+          cell.outerHTML = `<td>${app.getProp(node, "labels", 0)}</td>`;
+        }
 
         // For each display field, create a cell and append it
         for (let j=0; j<this.fieldsDisplayed.length; j++) {
@@ -593,21 +629,24 @@ class widgetTableRelations {
     	  obj.rel = {"type":"Settings", "merge":true};
     	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
-        const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-        const request = JSON.stringify(queryObject);
 
-        const xhttp = new XMLHttpRequest();
-        const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-        const table = this;
+        app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-        xhttp.onreadystatechange = function() {
-          if (this.readyState == 4 && this.status == 200) {
-            app.stopProgress(table.widgetDOM, update, this.responseText.length);
-          }
-        };
-
-        xhttp.open("POST","");
-        xhttp.send(request);         // send request to server
+        // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
+        // const request = JSON.stringify(queryObject);
+        //
+        // const xhttp = new XMLHttpRequest();
+        // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
+        // const table = this;
+        //
+        // xhttp.onreadystatechange = function() {
+        //   if (this.readyState == 4 && this.status == 200) {
+        //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
+        //   }
+        // };
+        //
+        // xhttp.open("POST","");
+        // xhttp.send(request);         // send request to server
         this.refresh();
       }
     }
@@ -639,5 +678,15 @@ class widgetTableRelations {
     }
 
     this.parent.toggleNode(cell); // calls toggleNode in the parent, so the parent can decide how to show the relation
+  }
+
+  toggleColumn(checkBox, name) {
+    if (checkBox.checked) {
+      this[name] = true;
+    }
+    else {
+      this[name] = false;
+    }
+    this.refresh();
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes
