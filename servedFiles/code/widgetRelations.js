@@ -53,7 +53,7 @@ refresh() {
       obj.to = thisNode;
     }
 
-    app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, this.processSummary.bind(this));
+    app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, null, null, this.processSummary.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -80,7 +80,7 @@ refresh() {
     obj.to = {"id":this.nodeID};
     obj.rel = {"type":"View"};
 
-    app.sendQuery(obj, "changeRelation", "Finding view", this.containerDOM, this.findLinks.bind(this));
+    app.sendQuery(obj, "changeRelation", "Finding view", this.containerDOM, null, null, this.findLinks.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -161,7 +161,7 @@ findLinks(data) { // If data were returned, they will include the node's GUID an
     app.error("Relation type is neither 'start' nor 'end'");
   }
 
-  app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, this.rComplete.bind(this));
+  app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, null, null, this.rComplete.bind(this));
 
   // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   // const request = JSON.stringify(queryObject);
@@ -670,7 +670,7 @@ processNext(data, rows, prevFunction) {
         // Create node, return, then update fields and add "newData" class and call processNext
         const obj = {"type":type, "properties":{"name":app.stringEscape(row.children[5].textContent)}};
 
-        app.sendQuery(obj, "createNode", "Creating new node", this.containerDOM, function(data, row, rows) {
+        app.sendQuery(obj, "createNode", "Creating new node", this.containerDOM, null, null, function(data, row, rows) {
           const nodeIDcell = row.children[2];
           nodeIDcell.textContent = data[0].node.properties.M_GUID;
           const nameCell = row.children[3];
@@ -745,14 +745,14 @@ processNext(data, rows, prevFunction) {
 
     // Update view ordering and placeholders and refresh
     const obj = {};
-    obj.from = {"properties":{"M_GUID":app.login.userGUID}};
+    obj.from = {"properties":{"M_GUID":app.login.userGUID}, "return":false};
     obj.to = {"properties":{"M_GUID":this.nodeGUID}};
     obj.rel = {"type":"View"};
     // obj.node = {"name":"view", "id":this.viewNodeID};
     obj.changes = [{"item":"rel", "property":`${this.relationType}_order`, "value":JSON.stringify(this.order), "string":false},
                    {"item":"rel", "property":`${this.relationType}_placeholders`, "value":JSON.stringify(this.placeholders), "string":false}];
 
-    app.sendQuery(obj, "changeRelation", "Updating view", this.containerDOM, this.findLinks.bind(this));
+    app.sendQuery(obj, "changeRelation", "Updating view", this.containerDOM, null, null, this.findLinks.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -784,10 +784,11 @@ deleteNode(row, rows) {
 
   // delete the relation, then call processNext() to do the next row.
   const obj = {};
-  obj.to = {"name":"node"};
+  obj.to = {"name":"node", "return":false};
   obj.rel = {"properties":{"M_GUID":id}, "return":false};
+  obj.from = {"return":false};
 
-  app.sendQuery(obj, "deleteRelation", "Deleting link", this.containerDOM, function(data, rows) {
+  app.sendQuery(obj, "deleteRelation", "Deleting link", this.containerDOM, null, null, function(data, rows) {
     this.processNext(null, rows);
   }.bind(this), rows);
 
@@ -834,9 +835,11 @@ modifyNode (row, rows) {
 
   const obj = {};
   obj.rel = {"properties":{"M_GUID":GUID}, "return":false};
+  obj.from = {"return":false};
+  obj.to = {"return":false};
   obj.changes = [{"item":"rel", "property":"comment", "value":app.stringEscape(comment)}];
 
-  app.sendQuery(obj, "changeRelation", "Updating link", this.containerDOM, this.processNext.bind(this), rows, "modify");
+  app.sendQuery(obj, "changeRelation", "Updating link", this.containerDOM, null, null, this.processNext.bind(this), rows, "modify");
 
   // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   // const request = JSON.stringify(queryObj);
@@ -863,11 +866,11 @@ modifyNode (row, rows) {
 addNode(row, rows) {
   // Start the query by searching for this user's view of this node.
   const obj = {};
-  obj.from = {"properties":{"M_GUID":app.login.userGUID}};
-  obj.to = {"properties":{"M_GUID":this.nodeGUID}};
+  obj.from = {"properties":{"M_GUID":app.login.userGUID}, "return":false};
+  obj.to = {"properties":{"M_GUID":this.nodeGUID}, "return":false};
   obj.rel = {"type":"View"};
 
-  app.sendQuery(obj, "changeRelation", "Searching for view", this.containerDOM, function(data, row, rows) {
+  app.sendQuery(obj, "changeRelation", "Searching for view", this.containerDOM, null, null, function(data, row, rows) {
     if (data.length > 0) {
       this.createLink(row, rows);
     }
@@ -937,11 +940,11 @@ createLink(row, rows) {
     }
 
     const obj = {};
-    obj.from = {"properties":{"M_GUID":startGUID}};
+    obj.from = {"properties":{"M_GUID":startGUID}, "return":false};
     obj.rel = {"type":"ViewLink", "properties":attributes, "name":"link"};
-    obj.to = {"properties":{"M_GUID":endGUID}};
+    obj.to = {"properties":{"M_GUID":endGUID}, "return":false};
 
-    app.sendQuery(obj, "createRelation", "Adding link", this.containerDOM, this.processNext.bind(this), rows, "add");
+    app.sendQuery(obj, "createRelation", "Adding link", this.containerDOM, null, null, this.processNext.bind(this), rows, "add");
 
     // const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -970,11 +973,11 @@ createLink(row, rows) {
 // Create the user's view of the node
 createView(row, rows) {
   const obj = {};
-  obj.from = {"properties":{"M_GUID":app.login.userGUID}};
-  obj.to = {"properties":{"M_GUID":this.nodeGUID}};
-  obj.rel = {"type":"View", "merge":true};
+  obj.from = {"properties":{"M_GUID":app.login.userGUID}, "return":false};
+  obj.to = {"properties":{"M_GUID":this.nodeGUID}, "return":false};
+  obj.rel = {"type":"View", "merge":true, "return":false};
 
-  app.sendQuery(obj, "changeRelation", "Creating view", this.containerDOM, function(data, row, rows) {
+  app.sendQuery(obj, "changeRelation", "Creating view", this.containerDOM, null, null, function(data, row, rows) {
     this.createLink(row, rows);
   }.bind(this), row, rows);
 

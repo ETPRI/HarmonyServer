@@ -99,7 +99,7 @@ class widgetLogin {
     else { // Otherwise, create a session and browser node first, then record the request
       const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
 
-      app.sendQuery(obj, 'createNode', "Creating Session", this.loginDiv, function(data) {
+      app.sendQuery(obj, 'createNode', "Creating Session", this.loginDiv, null, null, function(data) {
         this.sessionGUID = data[0].node.properties.M_GUID;
         this.requestCount = 0;
         this.mergeBrowser();
@@ -112,7 +112,7 @@ class widgetLogin {
     const obj = {};
     obj.node = {"type":"M_Browser", "properties":{"name":navigator.userAgent}, "merge":true};
 
-    app.sendQuery(obj, "changeNode", "Creating session", this.loginDiv, this.login.bind(this));
+    app.sendQuery(obj, "changeNode", "Creating session", this.loginDiv, null, null, this.login.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
     // const request = JSON.stringify(queryObject);
@@ -150,7 +150,7 @@ class widgetLogin {
       obj.to = {"name":"table", "type":"M_LoginTable"};
       obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
 
-      app.sendQuery(obj, "changeRelation", "Logging In", this.loginDiv, this.loginComplete.bind(this));
+      app.sendQuery(obj, "changeRelation", "Logging In", this.loginDiv, null, null, this.loginComplete.bind(this));
 
       // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "setup"};
       // const request = JSON.stringify(queryObject);
@@ -228,11 +228,11 @@ class widgetLogin {
 
       // Link the user to the session, then call the getMetaData function to search for metadata and the getFavorites function to get favorite nodes
       const obj = {};
-      obj.from = {"properties":{"M_GUID":this.userGUID}};
-      obj.rel = {"type":"User"};
-      obj.to = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
+      obj.from = {"properties":{"M_GUID":this.userGUID}, "return":false};
+      obj.rel = {"type":"User", "return":false};
+      obj.to = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}, "return":false};
 
-      app.sendQuery(obj, "createRelation", "Linking session", this.loginDiv, function() {
+      app.sendQuery(obj, "createRelation", "Linking session", this.loginDiv, null, null, function() {
         this.getMetaData();
         this.getFavorites();
       }.bind(this));
@@ -279,7 +279,7 @@ class widgetLogin {
     obj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
     obj.optional = {"id":this.userID, "return":false};
 
-    app.sendQuery(obj, "findOptionalRelation", "Restoring settings", this.loginDiv, this.updateMetaData.bind(this));
+    app.sendQuery(obj, "findOptionalRelation", "Restoring settings", this.loginDiv, null, null, this.updateMetaData.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": "setup"};
     // const request = JSON.stringify(queryObject);
@@ -368,7 +368,7 @@ class widgetLogin {
     obj.from = {"id":this.userID};
     obj.rel = {"type":"Favorite", "return":false};
 
-    app.sendQuery(obj, "changeRelation", "Restoring settings", this.loginDiv, this.loadFavorites.bind(this));
+    app.sendQuery(obj, "changeRelation", "Restoring settings", this.loginDiv, null, null, this.loadFavorites.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -449,9 +449,9 @@ class widgetLogin {
 
   saveFavorite(input) {
     let obj = {};
-    obj.from = {"id":this.userID};
-    obj.to = {"properties":{"M_GUID":input.getAttribute("GUID")}};
-    obj.rel = {"type":"Favorite", "merge":true};
+    obj.from = {"id":this.userID, "return":false};
+    obj.to = {"properties":{"M_GUID":input.getAttribute("GUID")}, "return":false};
+    obj.rel = {"type":"Favorite", "merge":true, "return":false};
 
     app.sendQuery(obj, "changeRelation", "Saving favorite", this.loginDiv);
 
@@ -482,7 +482,7 @@ class widgetLogin {
       }
     }
     const obj = {};
-    obj.node = {"id":this.userID};
+    obj.node = {"id":this.userID, "return":false};
     obj.changes = [{"property": "M_favoriteGUIDs", "value":app.stringEscape(JSON.stringify(GUIDs))}];
 
     app.sendQuery(obj, "changeNode", "Updating favorites", this.loginDiv);
@@ -511,9 +511,9 @@ class widgetLogin {
     }
 
     let obj = {};
-    obj.from = {"id":this.userID};
-    obj.to = {"properties":{"M_GUID":element.getAttribute("GUID")}};
-    obj.rel = {"type":"Favorite"};
+    obj.from = {"id":this.userID, "return":false};
+    obj.to = {"properties":{"M_GUID":element.getAttribute("GUID")}, "return":false};
+    obj.rel = {"type":"Favorite", "return":false};
 
     app.sendQuery(obj, "deleteRelation", "Deleting favorite", this.loginDiv);
 
@@ -537,8 +537,10 @@ class widgetLogin {
   checkUserName(input) {
     const obj = {};
     obj.rel = {"type":"Permissions", "properties":{"username":input.value}};
+    obj.to = {"return":false};
+    obj.from = {"return":false};
 
-    app.sendQuery(obj, "changeRelation", "Updating profile", this.loginDiv, function(data, input) {
+    app.sendQuery(obj, "changeRelation", "Updating profile", this.loginDiv, null, null, function(data, input) {
       if (data.length > 0) {
         alert ("That username is taken; please choose another.");
         input.value = "";
@@ -588,9 +590,9 @@ class widgetLogin {
     const pwInput = app.domFunctions.getChildByIdr(popup, 'password');
 
     const obj = {};
-    obj.from = {"id":app.login.userID};
-    obj.rel = {"type":"Permissions"};
-    obj.to = {"type":"M_LoginTable", "properties":{"name":this.permissions}};
+    obj.from = {"id":app.login.userID, "return":false};
+    obj.rel = {"type":"Permissions", "return":false};
+    obj.to = {"type":"M_LoginTable", "properties":{"name":this.permissions}, "return":false};
     obj.changes = [];
     if (nameInput.value) {
       this.userHandle = nameInput.value;
@@ -677,8 +679,8 @@ class widgetLogin {
     this.passwordInput.value = "";
 
     const obj = {};
-    obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}};
-    obj.changes = [{"item":"node", "property":"endTime", "value":Date.now()},];
+    obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}, "return":false};
+    obj.changes = [{"property":"endTime", "value":Date.now()},];
 
     app.sendQuery(obj, "changeNode", "Ending session", this.loginDiv);
 

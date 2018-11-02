@@ -7,7 +7,7 @@ class checkEmpty {
     const obj = {};
     obj.node = {};
 
-    app.sendQuery(obj, "changeNode", "Looking for nodes", null, this.verifyEmpty.bind(this));
+    app.sendQuery(obj, "changeNode", "Looking for nodes", null, null, null, this.verifyEmpty.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);

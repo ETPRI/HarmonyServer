@@ -21,7 +21,7 @@ constructor (nameQueryObject, id) {
   this.widgetDOM       = null;
   this.requests        = [];
 
-  app.sendQuery(nameQueryObject, "getMetaData", "Searching for metadata", this.widgetDOM, this.queryComplete.bind(this));
+  app.sendQuery(nameQueryObject, "getMetaData", "Searching for metadata", this.widgetDOM, null, null, this.queryComplete.bind(this));
 
   // const queryObject = {"server": "CRUD", "function": "getMetaData", "query": nameQueryObject, "GUID": app.login.userGUID};
   // const request = JSON.stringify(queryObject);
@@ -210,7 +210,7 @@ showReasons(element) {
   obj.to = {"name":"node", "properties":{"M_GUID":GUID}};
   obj.rel = {"type":"Trash"};
 
-  app.sendQuery(obj, "changeRelation", "Searching for details", this.widgetDOM, this.buildReasons.bind(this));
+  app.sendQuery(obj, "changeRelation", "Searching for details", this.widgetDOM, null, null, this.buildReasons.bind(this));
 
   // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   // const request = JSON.stringify(queryObject);

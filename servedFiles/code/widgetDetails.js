@@ -58,7 +58,7 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
       obj.optional = {"id":app.login.userID, "return":false};
       obj.rel = {"name":"r", "type":"Trash", "direction":"left"};// (n)<-[rel]-(a)
 
-      app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, this.finishConstructor.bind(this));
+      app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.finishConstructor.bind(this));
 
       // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
       // const request = JSON.stringify(queryObject);
@@ -125,7 +125,7 @@ finishConstructor(data) {
     obj.rel = {"type":"Owner", "return":"false"};
     obj.to = {};
 
-    app.sendQuery(obj, "changeRelation", "Searching for owner", this.widgetDOM, function(data) {
+    app.sendQuery(obj, "changeRelation", "Searching for owner", this.widgetDOM, null, null, function(data) {
       if (data.length == 1) {
         this.owner = {"name":data[0].to.properties.name, "id":data[0].to.id};
       }
@@ -683,7 +683,7 @@ trashNode() {
   obj.to = {"id":node, "return":false};
   obj.rel = {"type":"Trash", "merge":true, "properties":{"reason":app.stringEscape(reason)}, "return":false};
 
-  app.sendQuery(obj, "changeRelation", "Trashing node", this.widgetDOM, this.save.bind(this), "Save");
+  app.sendQuery(obj, "changeRelation", "Trashing node", this.widgetDOM, null, null, this.save.bind(this), "Save");
 
   // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   // const request = JSon.stringify(queryObject);
@@ -718,7 +718,7 @@ updateReason() {
   obj.rel = {"type":"Trash", "return":false};
   obj.changes = [{"item":"rel", "property":"reason", "value":app.stringEscape(reason)}];
 
-  app.sendQuery(obj, "changeRelation", "Updating reason", this.widgetDOM, this.save.bind(this), "Save");
+  app.sendQuery(obj, "changeRelation", "Updating reason", this.widgetDOM, null, null, this.save.bind(this), "Save");
 
   // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
   // const request = JSON.stringify(queryObject);
@@ -749,7 +749,7 @@ untrashNode() {
   obj.to = {"id":node, "return":false};
   obj.rel = {"type":"Trash", "return":false};
 
-  app.sendQuery(obj, "deleteRelation", "Restoring node", this.widgetDOM, this.save.bind(this), "Save");
+  app.sendQuery(obj, "deleteRelation", "Restoring node", this.widgetDOM, null, null, this.save.bind(this), "Save");
 
   // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
   // const request = JSON.stringify(queryObject);
@@ -787,7 +787,7 @@ updateMetaData(newFields, propFieldsChanged) {
     metadataObj.changes.push(change);
   }
 
-  app.sendQuery(metadataObj, "changeRelation", "Updating metadata", this.widgetDOM, this.updateFields.bind(this), newFields, propFieldsChanged);
+  app.sendQuery(metadataObj, "changeRelation", "Updating metadata", this.widgetDOM, null, null, this.updateFields.bind(this), newFields, propFieldsChanged);
 
   // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": metadataObj, "GUID": app.login.userGUID};
   // const request = JSON.stringify(queryObject);
@@ -831,7 +831,7 @@ updateFields(data, newFields, propFieldsChanged) { // should contain only the me
     }
 
     const obj = {};
-    obj.node = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+    obj.node = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
     obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}
                   ,{"property":"proposedFields", "value":app.stringEscape(JSON.stringify(propFields))}];
 
@@ -1092,7 +1092,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       // queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
     }
 
-    app.sendQuery(obj, CRUD, "Saving node", this.widgetDOM, func);
+    app.sendQuery(obj, CRUD, "Saving node", this.widgetDOM, null, null, func);
 
     // const request = JSON.stringify(queryObject);
     //

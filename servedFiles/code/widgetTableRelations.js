@@ -361,9 +361,9 @@ class widgetTableRelations {
     }
 
     const obj = {};
-	  obj.from = {"id":app.login.userID};
-	  obj.rel = {"type":"Settings", "merge":true};
-	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+	  obj.from = {"id":app.login.userID, "return":false};
+	  obj.rel = {"type":"Settings", "merge":true, "return":false};
+	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
 	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
     app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
@@ -625,9 +625,9 @@ class widgetTableRelations {
         this.fieldsDisplayed.splice(targetIndex, 0, data.name); // put back just before original target location
 
         const obj = {};
-    	  obj.from = {"id":app.login.userID};
-    	  obj.rel = {"type":"Settings", "merge":true};
-    	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+    	  obj.from = {"id":app.login.userID, "return":false};
+    	  obj.rel = {"type":"Settings", "merge":true, "return":false};
+    	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
         app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);

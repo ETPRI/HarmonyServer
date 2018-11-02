@@ -332,6 +332,19 @@ initNodeData() { // move to DB in the future
       ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
   }
+
+  this.node.M_DataSharePartner = {
+    nodeLabel:"Data Share Partner"
+    ,orderBy: [{"name":"IPaddress"}]
+    ,fieldsDisplayed: ["IPaddress", "localLastChange", "partnerLastChange", "comment"]
+    ,formFieldsDisplayed: ["IPaddress", "localLastChange", "partnerLastChange", "comment"]
+    ,fields: {
+      "IPaddress": {label:"IP address"}
+      ,"localLastChange": {label:"Last local changelog #"}
+      ,"partnerLastChange": {label:"Last remote changelog #"}
+      ,"comment":    {label: "Comment", input:{name:"textarea"}}
+    }
+  }
 } ////// end method
 
 } ////////////////////////////////////////////////////// end class

@@ -130,11 +130,11 @@ class dataBrowser {
     else {
       // query the DB for all info about this node and its relations, starting with the incoming relations
       const obj = {};
-      obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
+      obj.required = {"name":"n", "properties":{"M_GUID":GUID}, "return":false};
       obj.optional = {"name":"in"};
       obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
-      app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, this.findOuts.bind(this), GUID, "mainData");
+      app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.findOuts.bind(this), GUID, "mainData");
 
       // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
       // const request = JSON.stringify(queryObject);
@@ -281,7 +281,7 @@ class dataBrowser {
     obj.optional = {"name":"out"};
     obj.rel = {"name":"outRel"};
 
-    app.sendQuery(obj, "findOptionalRelation", "Searching for relations", this.widgetDOM, this.processData.bind(this), data, dataName);
+    app.sendQuery(obj, "findOptionalRelation", "Searching for relations", this.widgetDOM, null, null, this.processData.bind(this), data, dataName);
 
     // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -396,11 +396,11 @@ class dataBrowser {
       else {
         // query the DB for all info about this node and its relations, starting with incoming relations
         const obj = {};
-        obj.required = {"name":"n", "properties":{"M_GUID":nodeGUID}};
+        obj.required = {"name":"n", "properties":{"M_GUID":nodeGUID}, "return":false};
         obj.optional = {"name":"in"};
         obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
-        app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, this.findOuts.bind(this), nodeGUID, nodeName);
+        app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.findOuts.bind(this), nodeGUID, nodeName);
 
         // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
         // const request = JSON.stringify(queryObject);

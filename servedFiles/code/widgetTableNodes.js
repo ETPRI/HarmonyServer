@@ -62,7 +62,7 @@ class widgetTableNodes {
       } // end for (every item in the criteria array)
     } // end if (search criteria were passed in)
 
-    app.sendQuery(this.buildQuery, "tableNodeSearch", `Searching for ${this.queryObject.nodeLabel}`, this.widgetDOM, function(data) {
+    app.sendQuery(this.buildQuery(), "tableNodeSearch", `Searching for ${this.queryObject.nodeLabel}`, this.widgetDOM, null, null, function(data) {
       this.data = data;
       this.refresh();
     }.bind(this));
@@ -292,9 +292,9 @@ class widgetTableNodes {
     }
 
     const obj = {};
-	  obj.from = {"id":app.login.userID};
-	  obj.rel = {"type":"Settings", "merge":true};
-	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+	  obj.from = {"id":app.login.userID, "return":false};
+	  obj.rel = {"type":"Settings", "merge":true, "return":false};
+	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
 	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
     app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
@@ -633,9 +633,9 @@ class widgetTableNodes {
         this.fieldsDisplayed.splice(targetIndex, 0, data.name); // put back just before original target location
 
         const obj = {};
-    	  obj.from = {"id":app.login.userID};
-    	  obj.rel = {"type":"Settings", "merge":true};
-    	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+    	  obj.from = {"id":app.login.userID, "return":false};
+    	  obj.rel = {"type":"Settings", "merge":true, "return":false};
+    	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
         app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
@@ -743,7 +743,7 @@ class widgetTableNodes {
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions"};
 
-    app.sendQuery(obj, "changeRelation", "Checking permissions", this.widgetDOM, this.checkPermission.bind(this), GUID, button, toAdd);
+    app.sendQuery(obj, "changeRelation", "Checking permissions", this.widgetDOM, null, null, this.checkPermission.bind(this), GUID, button, toAdd);
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -764,14 +764,16 @@ class widgetTableNodes {
     // xhttp.send(request);         // send request to server
   }
 
-  checkPermission(data, GUID, button, toAdd) {
-    if (data.length > 0 && data[0].rel.properties.username && data[0].rel.properties.password) { // If a relation to delete was found
+  checkPermission(oldData, GUID, button, toAdd) {
+    if (oldData.length > 0 && oldData[0].rel.properties.username && oldData[0].rel.properties.password) { // If a relation to delete was found
       const obj = {};
-      obj.rel = {"id":data[0].rel.id, "return":false};
+      obj.rel = {"id":oldData[0].rel.id, "return":false};
+      obj.to = {"return":false};
+      obj.from = {"return":false};
 
-      app.sendQuery(obj, "deleteRelation", "Deleting old permissions", this.widgetDOM, function(data, button, toAdd, GUID) {
-        this.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
-      }.bind(this), button, toAdd, GUID);
+      app.sendQuery(obj, "deleteRelation", "Deleting old permissions", this.widgetDOM, null, null, function(data, oldData, button, toAdd, GUID) {
+        this.givePermission(button, toAdd, GUID, oldData[0].rel.properties.username, oldData[0].rel.properties.password);
+      }.bind(this), oldData, button, toAdd, GUID);
 
       // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
       // const request = JSON.stringify(queryObject);
@@ -827,7 +829,7 @@ class widgetTableNodes {
       obj.to = {"type":"M_LoginTable", "properties":{"name":toAdd}, "return":false};
       obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
 
-      app.sendQuery(obj, "createRelation", "Setting permission", this.widgetDOM, function() {
+      app.sendQuery(obj, "createRelation", "Setting permission", this.widgetDOM, null, null, function() {
         this.search();
       }.bind(this));
 
@@ -860,7 +862,7 @@ class widgetTableNodes {
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions", "return":false};
 
-    app.sendQuery(obj, "deleteRelation", "Removing permissions", this.widgetDOM, function() {
+    app.sendQuery(obj, "deleteRelation", "Removing permissions", this.widgetDOM, null, null, function() {
       this.search();
     }.bind(this));
 

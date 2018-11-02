@@ -75,7 +75,7 @@ checkMetaData() {
 	const obj = {};
 	obj.node = {"type":"M_MetaData"};
 
-	this.sendQuery(obj, "changeNode", "Looking for metadata", null, this.addMetaData.bind(this));
+	this.sendQuery(obj, "changeNode", "Looking for metadata nodes", null, null, null, this.addMetaData.bind(this));
 
 	// const xhttp = new XMLHttpRequest();
 	// const appObj = this;
@@ -96,14 +96,14 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 	if (!data || data.length == 0) { // If no metadata nodes were found, add them.
 		let type;
 		for (type in this.metaData.node) { // Add all node metadata...
-			const obj = {"type":"M_MetaData", "properties":{"name":type}};
+			const obj = {"type":"M_MetaData", "properties":{"name":type}, "return":false};
 			obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
 			obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
 			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
 			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
 			obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
 
-			this.sendQuery(obj, "createNode", "Adding metadata");
+			this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
 
 			// const xhttp = new XMLHttpRequest();
       //
@@ -113,13 +113,13 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 		}
 
 		for (type in this.metaData.relation) { // and all relation metadata
-			const obj = {"type":"M_MetaData", "properties":{"name":type}};
+			const obj = {"type":"M_MetaData", "properties":{"name":type}, "return":false};
 			obj.properties.relLabel = this.stringEscape(JSON.stringify(this.metaData.relation[type].relLabel));
 			obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.relation[type].orderBy));
 			obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.relation[type].fields));
 			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
 
-			this.sendQuery(obj, "createNode", "Adding metadata");
+			this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
 
 			// const xhttp = new XMLHttpRequest();
       //
@@ -156,7 +156,7 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 
 			if (updated) { // If anything was added to the DB node from the metadata class, save the updated DB node
 				const obj = {};
-				obj.node = {"type":"M_MetaData", "properties":{"name":name}};
+				obj.node = {"type":"M_MetaData", "properties":{"name":name}, "return":false};
 
 			  if (this.metaData.node[name]) { // If this metadata object represents a node
 					obj.changes = [{"property":"nodeLabel", "value":this.stringEscape(JSON.stringify(this.metaData.node[name].nodeLabel))}
@@ -173,7 +173,7 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 												,{"property":"fieldsDisplayed", "value":this.stringEscape(JSON.stringify(this.metaData.relation[name].fieldsDisplayed))}];
 				}
 
-				this.sendQuery(obj, "changeNode", "Updating metadata");
+				this.sendQuery(obj, "changeNode", `Updating metadata node ${name}`);
 
 				// const xhttp = new XMLHttpRequest();
         //
@@ -188,14 +188,14 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 		for (type in this.metaData.node) { // for every entry in this.metaData.node...
 			let DBNode = data.find(x => x.node.properties.name === type); // look for a matching DB metadata node.
 			if (!DBNode && type !== "all") { // If there is no such node, create one (except for "all", which doesn't get a node).
-				const obj = {"type":"M_MetaData", "properties":{"name":type}};
+				const obj = {"type":"M_MetaData", "properties":{"name":type}, "return":false};
 				obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
 				obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
 				obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.node[type].fields));
 				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].fieldsDisplayed));
 				obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
 
-				this.sendQuery(obj, "createNode", "Adding metadata");
+				this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
 
 				// const xhttp = new XMLHttpRequest();
         //
@@ -208,13 +208,13 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 		for (type in this.metaData.relation) { // for every entry in this.metaData.relation...
 			let DBNode = data.find(x => x.node.properties.name === type); // look for a matching DB metadata node.
 			if (!DBNode) { // If there is no such node, create one.
-				const obj = {"type":"M_MetaData", "properties":{"name":type}};
+				const obj = {"type":"M_MetaData", "properties":{"name":type}, "return":false};
 				obj.properties.relLabel = this.stringEscape(JSON.stringify(this.metaData.relation[type].relLabel));
 				obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.relation[type].orderBy));
 				obj.properties.fields = this.stringEscape(JSON.stringify(this.metaData.relation[type].fields));
 				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
 
-				this.sendQuery(obj, "createNode", "Adding metadata");
+				this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
 
 				// const xhttp = new XMLHttpRequest();
         //
@@ -338,6 +338,7 @@ createDebug() {
 					<option value="relations">Relations</option>
 					<option value="keysRelation">Relation Keys</option>
 					<option value="dataBrowser">Data Browser</option>
+					<option value="sync">Sync with remote server</option>
 					<option value="allTrash">All Trashed Nodes</option>
 				</select>
 				<input type="button" id="LogButton" value="Start Logging" onclick="app.regression.logToggle(this)">
@@ -395,6 +396,10 @@ menuDBstats(dropDown){
 		new dataBrowser();
 	}
 
+	if (value === "sync") {
+		new sync();
+	}
+
 	else {
 		this.widgets[this.idCounter] = new widgetTableQuery(value, dropDown.id);
 	}
@@ -415,7 +420,8 @@ widgetSearch(domElement) {
 // Gives the widget an ID as specified by this.idCounter, and increments this.idCounter.
 // Also gives the whole widget an ondrop and ondragover so that widgets can be dragged onto each other to rearrange them,
 // and gives the header an ondragstart so that widget headers, and only the headers, can be dragged in this way.
-// Does not close the header div or outer element.
+// Places the buttons in a span with class "freezable" so that they can be frozen while a request runs.
+// Does not close the span, header div or outer element.
 widgetHeader(widgetType, tag){
 	if (!tag) {
 		tag = "div";
@@ -773,7 +779,7 @@ checkOwner(type, newItem, domElement, object, method, name) {
 	if (newItem || (object.owner && object.owner.id !== this.login.userID)) { // If the user asked for a new item, or the node is owned by someone else
 		const obj = {"type":type, "properties":{"name":name}};
 
-		this.sendQuery(obj, "createNode", "Creating node", domElement, function(data, domElement, object, method) {
+		this.sendQuery(obj, "createNode", "Creating node", domElement, null, null, function(data, domElement, object, method) {
 			this.setOwner(domElement, object, method, data);
 		}.bind(this), domElement, object, method);
 
@@ -819,7 +825,7 @@ setOwner(domElement, object, method, data) { // If there is data, this was calle
 	obj.to = {"id":this.login.userID};
 	obj.rel = {"type":"Owner"};
 
-	this.sendQuery(obj, "createRelation", "Setting owner", domElement, function(data, object, method) {
+	this.sendQuery(obj, "createRelation", "Setting owner", domElement, null, null, function(data, object, method) {
 		if (object && method) {
 			object[method](data);
 		}
@@ -1068,7 +1074,7 @@ showHelp(widgetType, button, nodeType) {
 	const obj = {};
 	obj.node = {"type":nodeType, "properties":{"name":widgetType}, "merge":true}; // If the help node doesn't exist, create it
 
-	this.sendQuery(obj, 'changeNode', `Searching for help on ${widgetType}`, null, function(data, button) {
+	this.sendQuery(obj, 'changeNode', `Searching for help on ${widgetType}`, null, null, null, function(data, button) {
 		if (data.length == 0) {
 			this.error("Help could not be found or created");
 		}
@@ -1272,9 +1278,9 @@ setUpPopup(JSobj) {
 
 	  // create or update link
 	  const obj = {};
-	  obj.from = {"id":this.app.login.userID};
-	  obj.rel = {"type":"Settings", "merge":true};
-	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}};
+	  obj.from = {"id":this.app.login.userID, "return":false};
+	  obj.rel = {"type":"Settings", "merge":true, "return":false};
+	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
 	  obj.changes = [{"item":"rel", "property":"fields", "value":this.app.stringEscape(JSON.stringify(this.fields))},
 	                 {"item":"rel", "property":"fieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
 	                 {"item":"rel", "property":"formFieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
@@ -1322,10 +1328,16 @@ getProp(o, ...args) {
     return args.length ? null : o;
 }
 
-sendQuery(obj, CRUD, description, DOMelement, onComplete, ...args) {
-	let GUID = this.getProp(this, "login", "userID");
+sendQuery(obj, CRUD, description, DOMelement, GUID, url, onComplete, ...args) {
 	if (!GUID) {
-		GUID = "none";
+		GUID = this.getProp(this, "login", "userGUID");
+	}
+	if (!GUID) {
+		GUID = "upkeep";
+	}
+
+	if (!url) {
+		url = "";
 	}
 
 	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": GUID};
@@ -1346,7 +1358,7 @@ sendQuery(obj, CRUD, description, DOMelement, onComplete, ...args) {
 		}
 	};
 
-	xhttp.open("POST","");
+	xhttp.open("POST", url);
 	xhttp.send(request);         // send request to server
 }
 

@@ -33,7 +33,7 @@ class widgetView {
     obj.rel = {"type":"View", "return":false};
     obj.to = {"id":nodeID, "return":false};
 
-    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, this.buildViews.bind(this));
+    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, null, null, this.buildViews.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -286,7 +286,7 @@ class widgetView {
     obj.rel = {"type":"View", "return":false};
     obj.to = {"id":this.nodeID, "return":false};
 
-    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, this.buildViews.bind(this));
+    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, null, null, this.buildViews.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);
@@ -419,7 +419,7 @@ class widgetView {
     obj.to = {"id":this.nodeID};
     obj.rel = {"type":"View", "merge":true};
 
-    app.sendQuery(obj, "changeRelation", "Adding your view", this.containerDOM, this.refresh.bind(this));
+    app.sendQuery(obj, "changeRelation", "Adding your view", this.containerDOM, null, null, this.refresh.bind(this));
 
     // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);

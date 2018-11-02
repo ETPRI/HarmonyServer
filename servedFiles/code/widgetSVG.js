@@ -39,7 +39,7 @@ class widgetSVG {
       const obj = {};
       obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.GUID}};
 
-      app.sendQuery(obj, "findOptionalRelation", "Opening mindmap", this.widgetDOM, this.buildWidget.bind(this));
+      app.sendQuery(obj, "findOptionalRelation", "Opening mindmap", this.widgetDOM, null, null, this.buildWidget.bind(this));
 
       // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
       // const request = JSON.stringify(queryObject);
@@ -763,10 +763,10 @@ class widgetSVG {
         newMap = true;
         const obj = {};
         obj.from = {"type":"mindmap", "properties":{"name":name}};
-        obj.rel = {"type":"Owner"};
-        obj.to = {"id":app.login.userID};
+        obj.rel = {"type":"Owner", "return":false};
+        obj.to = {"id":app.login.userID, "return":false};
 
-        app.sendQuery(obj, "changeRelation", "Saving mindmap", this.widgetDOM, this.checkNameExists.bind(this), name, newMap);
+        app.sendQuery(obj, "changeRelation", "Saving mindmap", this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
 
         // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
         // const request = JSON.stringify(queryObject);
@@ -798,10 +798,10 @@ class widgetSVG {
       if (name != null) {
         const obj = {};
         obj.from = {"type":"mindmap", "properties":{"name":name}};
-        obj.rel = {"type":"Owner"};
-        obj.to = {"id":app.login.userID};
+        obj.rel = {"type":"Owner", "return":false};
+        obj.to = {"id":app.login.userID, "return":false};
 
-        app.sendQuery(obj, "changeRelation", "Checking name", this.widgetDOM, this.checkNameExists.bind(this), name, newMap);
+        app.sendQuery(obj, "changeRelation", "Checking name", this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
 
         // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
         // const request = JSON.stringify(queryObject);
@@ -877,11 +877,11 @@ class widgetSVG {
           // Now, remove the DB relation, if it exists
           if (saved && saved.inDB) {
             const obj = {};
-            obj.from = {"id":this.id};
-            obj.to = {"properties":{"M_GUID":saved.nodeID}};
-            obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
+            obj.from = {"id":this.id, "return":false};
+            obj.to = {"properties":{"M_GUID":saved.nodeID}, "return":false};
+            obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "return":false};
 
-            app.sendQuery(obj, "deleteRelation", "Removing node", this.widgetDOM, function(data, labels) {
+            app.sendQuery(obj, "deleteRelation", "Removing node", this.widgetDOM, null, null, function(data, labels) {
               this.processNodes(labels);
             }.bind(this), labels);
 
@@ -912,11 +912,11 @@ class widgetSVG {
               saved.inDB = false;
               labels.push(label); // Prepare to process the label a second time WITHOUT the relation, to check for a new relation...
               const obj = {};
-              obj.from = {"id":this.id};
-              obj.to = {"properties":{"M_GUID":saved.nodeID}};
-              obj.rel = {"type":"MapNode", "properties":{"id":label.id}};
+              obj.from = {"id":this.id, "return":false};
+              obj.to = {"properties":{"M_GUID":saved.nodeID}, "return":false};
+              obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "return":false};
 
-              app.sendQuery(obj, "deleteRelation", "Updating node info", this.widgetDOM, function(data, labels) {
+              app.sendQuery(obj, "deleteRelation", "Updating node info", this.widgetDOM, null, null, function(data, labels) {
                 this.processNodes(labels);
               }.bind(this), labels);
 
@@ -948,7 +948,7 @@ class widgetSVG {
               obj.to = {"properties":{"M_GUID":label.nodeID}, "return":false};
               obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "merge":true, "return":false};
 
-              app.sendQuery(obj, "changeRelation", "Linking node", this.widgetDOM, function(data, labels) {
+              app.sendQuery(obj, "changeRelation", "Linking node", this.widgetDOM, null, null, function(data, labels) {
                 this.processNodes(labels);
               }.bind(this), labels);
 
@@ -1060,12 +1060,12 @@ class widgetSVG {
 
     // Run the actual query and callback to update
     const obj = {};
-    obj.node = {"id":this.id};
+    obj.node = {"id":this.id, "return":false};
     obj.changes = [{"property":"M_roots", "value":app.stringEscape(JSON.stringify(rootsCopy))},
                    {"property":"M_count", "value":this.d3Functions.count},
                    {"property":"viewBox", "value":this.SVG_DOM.getAttribute("viewBox")}];
 
-    app.sendQuery(obj, "changeNode", "Saving mindmap data", this.widgetDOM, this.d3Functions.update.bind(this.d3Functions));
+    app.sendQuery(obj, "changeNode", "Saving mindmap data", this.widgetDOM, null, null, this.d3Functions.update.bind(this.d3Functions));
 
     // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
     // const request = JSON.stringify(queryObject);

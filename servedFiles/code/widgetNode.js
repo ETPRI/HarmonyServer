@@ -72,7 +72,7 @@ buildWidget() { // public - build table header
     parent.insertBefore(newWidget, caller); // Insert the new div before the caller
   }
   else {
-    parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
+    parent.insertBefore(newWidget, parent.firstElementChild); // Insert the new div at the top of the widgets div
   }
 
   newWidget.outerHTML = html; // replace placeholder with the div that was just written

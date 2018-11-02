@@ -1,10 +1,21 @@
 module.exports = class CRUD {
+  /*
+  Just copies the uuid creator function, integrity module and driver from server.js
+  */
   constructor(uuid, integrity, driver) {
     this.uuid = uuid;
     this.integrity = integrity;
     this.driver = driver;
   }
 
+  /* Calls whatever method the object requested, assuming that method exists.
+  obj is an object which contains, among other things:
+
+  "function": a string which is the name of a CRUD function
+  "query": The object describing the node(s) and relation(s) the user wants to find/create and any changes to make
+            (more details listed before each method)
+  "GUID": The GUID of the user who made the request, to be stored in the changeLogs if any are created
+  */
   runCRUD(obj, response) {
     if (obj.function in this) {
       this[obj.function](obj, response);
@@ -14,6 +25,14 @@ module.exports = class CRUD {
     }
   }
 
+  /* Creates a node with the given description. obj.query (renamed dataObj) is an object containing:
+  type: String. The type of node to create (e.g. "people" or "topic")
+  properties: Object. Each key is a property to set, and its value is the value it should be given.
+              For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to create myself.
+  return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+  name: The name under which the node will be returned. If no name is given and return is not false,
+        the node will be returned with the name "node".
+  */
   createNode(obj, response) {
     let dataObj = obj.query;
     const uuid = this.uuid();
@@ -29,15 +48,21 @@ module.exports = class CRUD {
     }
 
     let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:"${uuid}", user_GUID:"${obj.GUID}",
-                       action:"create", label:"${dataObj.type}", M_GUID:"${this.uuid()}"}), ${changeLogData.changeLogs}`;
+                       action:"create", label:"${dataObj.type}", itemType:"node", M_GUID:"${this.uuid()}"}), ${changeLogData.changeLogs}`;
     changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
-    const query = `create (${node}), ${changeLogs} set node.M_GUID = "${uuid}" ${strings.ret}`;
+    const query = `create (${node}), ${changeLogs} set node.M_GUID = "${uuid}", node.createChangeLog = ${createChangeNumber} ${strings.ret}`;
 
     console.log(query);
     this.sendQuery(query, response);
   }
 
+  /* Deletes the node(s) with the given description. obj.query (renamed dataObj) is an object containing:
+  type: String. The type of node to delete (e.g. "people" or "topic")
+  id: number. The Neo4j ID of the node to delete.
+  properties: Object. Each key is a property to set, and its value is the value it should be given.
+              For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to delete myself.
+  */
   deleteNode(obj, response) {
     let dataObj = obj.query;
 
@@ -45,10 +70,35 @@ module.exports = class CRUD {
     const node = this.buildSearchString(dataObj, strings, "where", "node");
 
     const query = `match (${node}) with node, node.M_GUID as id detach delete node
-                   create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})`;
+                   create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", itemType:"node", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})`;
     this.sendQuery(query, response);
   }
 
+  /* Finds the node(s) with the given description and makes any changes that were requested. obj.query (renamed dataObj)
+  is an object containing:
+  node: Object. Stores pretty much the same information as obj.query did in createNode and deleteNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      merge: Boolean. Defaults to false. If the node doesn't exist and merge is false, nothing happens.
+              If the node doesn't exist and merge is true, it will be created with the given properties.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "node".
+
+  changes: Array of objects. Each object contains:
+      property: string. The name of the property to set
+      value: usually string. The value to set the property to
+
+  order: Array of objects. The fields to order the results by. Each object contains:
+      name: The name of the property to order on (e.g. "nameLast" for people)
+      direction: The direction to order the results in. Defaults to ascending. If direction is set to "D", orders descending.
+
+  limit: Number. The maximum number of nodes to return.
+
+  This method can be used to find a node by simply not requesting any changes.
+  */
   changeNode(obj, response) {
     let dataObj = obj.query;
     const strings = {ret:"", where:""};
@@ -77,6 +127,11 @@ module.exports = class CRUD {
       orderBy = this.buildOrderString(dataObj.order, "node");
     }
 
+    let limit = "";
+    if (dataObj.limit) {
+      limit = `limit ${dataObj.limit}`;
+    }
+
     if (dataObj.node.merge === true) {
       const session = this.driver.session();
       let result = [];
@@ -96,7 +151,7 @@ module.exports = class CRUD {
           },
           onCompleted: function () {
             if (result.length > 0) { // if the node was found, make any changes and return it
-              const query2 = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
+              const query2 = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret} ${orderBy} ${limit}`;
               CRUD.sendQuery(query2, response);
               session.close();
             }
@@ -108,9 +163,9 @@ module.exports = class CRUD {
               }
 
               // the changes array in this case will include "property" and "value"
-              if (obj.changes) {
-                for (let i = 0; i < obj.changes.length; i++) {
-                  dataObj.node.properties[obj.changes[i].property] = obj.changes[i].value;
+              if (dataObj.changes) {
+                for (let i = 0; i < dataObj.changes.length; i++) {
+                  dataObj.node.properties[dataObj.changes[i].property] = dataObj.changes[i].value;
                 }
               }
 
@@ -126,11 +181,43 @@ module.exports = class CRUD {
     } // end if (merging)
 
     else {
-      const query = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
+      const query = `match (${node}) ${strings.where} ${changes} ${changeLogs} ${strings.ret} ${orderBy} ${limit}`;
       this.sendQuery(query, response);
     }
   }
 
+  /* Creates a relation with the given description between two nodes of the given description. Obj.query (renamed dataObj)
+  is an object containing:
+  from: Object. Describes the node the relation should start on, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      merge: Boolean. Defaults to false. If the node doesn't exist and merge is false, nothing happens.
+              If the node doesn't exist and merge is true, it will be created with the given properties.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "from".
+
+  rel: Object. Describes the relation to create, and contains all the same fields as obj.query in createNode:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      properties: Object. Each key is a property to set, and its value is the value it should be given.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to create login credentials.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel".
+
+  to: Object. Describes the node the relation should end on, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      merge: Boolean. Defaults to false. If the node doesn't exist and merge is false, nothing happens.
+              If the node doesn't exist and merge is true, it will be created with the given properties.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "to".
+  */
   createRelation(obj, response) {
     let dataObj = obj.query;
     const strings = {ret:"", where:""};
@@ -171,7 +258,7 @@ module.exports = class CRUD {
     // finish the string to generate changeLogs
     const changeUUID = this.uuid();
     let changeLogs = `(change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:"${uuid}", user_GUID:"${obj.GUID}",
-                       to_GUID:to.M_GUID, from_GUID:from.M_GUID, label:"${dataObj.rel.type}",
+                       to_GUID:to.M_GUID, from_GUID:from.M_GUID, label:"${dataObj.rel.type}", itemType:"relation",
                        action:"create", M_GUID:"${changeUUID}"}), ${changeLogData.changeLogs}`;
     changeLogs = changeLogs.slice(0,changeLogs.length-2); // remove the last ", "
 
@@ -183,10 +270,42 @@ module.exports = class CRUD {
     }
 
     const query = `match (${from}), (${to}) ${strings.where}
-                   create (from)-[${rel}]->(to), ${changeLogs} set rel.M_GUID = "${uuid}" ${strings.ret}`;
+                   create (from)-[${rel}]->(to), ${changeLogs} set rel.M_GUID = "${uuid}" ${strings.ret}, rel.createChangeLog = ${createChangeNumber}`;
     this.sendQuery(query, response);
   }
 
+  /* Deletes the relation(s) with the given description between nodes with the given description. Obj.query (renamed dataObj)
+  is an object containing:
+  from: Object. Describes the node the relation should start on, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "from".
+
+  rel: Object. Describes the relation to delete, and contains:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      id: number. The Neo4j ID of the relation to delete.
+      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to delete login credentials.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+                  If true, the relation will be "returned", but will be an empty object.
+                  This is only enabled because disabling it would be extra work and require special-case code
+                  - I can see no reason why it would be either useful or harmful.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel".
+
+  to: Object. Describes the node the relation should end on, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "to".
+  */
   deleteRelation(obj, response) {
     let dataObj = obj.query;
     // These strings are stored in an object so they can be passed in and out of methods and updated
@@ -227,11 +346,57 @@ module.exports = class CRUD {
     }
 
     const query = `match (${from})-[${rel}]->(${to}) ${strings.where} with to, from, rel, rel.M_GUID as id
-                   delete rel create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})
+                   delete rel create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", itemType:"relation", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})
                    ${strings.ret}`;
     this.sendQuery(query, response);
   }
 
+  /* Finds the relation(s) with the given description between nodes with the given description, and makes any requested changes.
+  Obj.query (renamed dataObj) is an object containing:
+  from: Object. Describes the node the relation should start on, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "from".
+
+  rel: Object. Describes the relation, and contains:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      id: number. The Neo4j ID of the relation to delete.
+      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
+      merge: Boolean. Defaults to false. If the relation doesn't exist and merge is false, nothing happens.
+              If the relation doesn't exist but the nodes do, and merge is true, the relation will be created with the given properties.
+              If even the nodes don't exist, nothing happens whether merge is set to true or not.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel".
+
+  to: Object. Describes the node the relation should end on, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "to".
+
+  changes: Array of objects. Each object contains:
+      item: string. Which item should be changed ("to", "rel" or "from")
+      property: string. The name of the property to set
+      value: usually string. The value to set the property to
+
+  order: Array of objects. The fields to order the results by. Each object contains:
+      item: Which item the property to order on belongs to ("to", "from" or "rel")
+      name: The name of the property to order on (e.g. "nameLast" for people)
+      direction: The direction to order the results in. Defaults to ascending. If direction is set to "D", orders descending.
+
+  limit: Number. The maximum number of patterns to return.
+
+  This method can be used to find a relation by simply not requesting any changes.
+  */
   changeRelation(obj, response) {
     let dataObj = obj.query;
     // These strings are stored in an object so they can be passed in and out of methods and updated
@@ -293,6 +458,11 @@ module.exports = class CRUD {
       orderBy = this.buildOrderString(dataObj.order);
     }
 
+    let limit = "";
+    if (dataObj.limit) {
+      limit = `limit ${dataObj.limit}`;
+    }
+
     // Simulate merging without using the MERGE keyword
     if (dataObj.rel.merge === true) {
       const session = this.driver.session();
@@ -332,11 +502,58 @@ module.exports = class CRUD {
     } // end if (merging)
 
     else {
-      const query = `match (${from}), (${to}) ${strings.nodesWhere} match (from)-[${rel}]->(to) ${strings.relWhere} ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
+      const query = `match (${from}), (${to}) ${strings.nodesWhere} match (from)-[${rel}]->(to) ${strings.relWhere} ${changes} ${changeLogs} ${strings.ret} ${orderBy} ${limit}`;
       this.sendQuery(query, response);
     }
   }
 
+  /* Finds the node with the given description and any relations it has of the given description, and makes any requested changes.
+  Obj.query (renamed dataObj) is an object containing:
+  required: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "required".
+
+  rel: Object. Describes the optional relation, and contains:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      id: number. The Neo4j ID of the relation to delete.
+      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel".
+      direction: The direction of the arrow between the required and optional nodes.
+            Defaults to right, meaning the relation goes from required to optional: (required)->(optional)
+            If direction is set to "left", the relation goes from optional to required: (required)<-(optional).
+            I'm not thrilled with the terminology here, but it was the best I could come up with at the time.
+
+  optional: Object. Describes the node the relation should connect the required node to, and contains:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "optional".
+
+  changes: Array of objects. Each object contains:
+      item: string. Which item should be changed ("required", "rel" or "optional")
+      property: string. The name of the property to set
+      value: usually string. The value to set the property to
+
+  order: Array of objects. The fields to order the results by. Each object contains:
+      item: Which item the property to order on belongs to ("required", "optional" or "rel")
+      name: The name of the property to order on (e.g. "nameLast" for people)
+      direction: The direction to order the results in. Defaults to ascending. If direction is set to "D", orders descending.
+
+  limit: Number. The maximum number of patterns to return.
+
+  This method can be used to find an optional relation by simply not requesting any changes.
+  */
   findOptionalRelation(obj, response) {
     let dataObj = obj.query;
     // These strings are stored in an object so they can be passed in and out of methods and updated
@@ -394,16 +611,82 @@ module.exports = class CRUD {
       orderBy = this.buildOrderString(dataObj.order);
     }
 
+    let limit = "";
+    if (dataObj.limit) {
+      limit = `limit ${dataObj.limit}`;
+    }
+
     if (strings.ret.length > 0) {
       strings.ret = `return ${strings.ret}`;
     }
 
     const query = `match (${required}) ${strings.reqWhere}
                    optional match (required)${arrow}(${optional}) ${strings.optWhere}
-                   ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
+                   ${changes} ${changeLogs} ${strings.ret} ${orderBy} ${limit}`;
     this.sendQuery(query, response);
   }
 
+  /* Finds the pattern (start)-[rel1]->(middle)-[rel2]-(end) where the nodes and relations fit the given descriptions,
+  and makes any requested changes. Obj.query (renamed dataObj) is an object containing:
+  start: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "start".
+
+  rel1: Object. Describes the optional relation, and contains:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      id: number. The Neo4j ID of the relation to delete.
+      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel1".
+
+  middle: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "middle".
+
+  rel2: Object. Describes the optional relation, and contains:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      id: number. The Neo4j ID of the relation to delete.
+      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel1".
+
+  end: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "end".
+
+  changes: Array of objects. Each object contains:
+      item: string. Which item should be changed ("start", "rel1", "middle", "rel2" or "end")
+      property: string. The name of the property to set
+      value: usually string. The value to set the property to
+
+  order: Array of objects. The fields to order the results by. Each object contains:
+      item: Which item the property to order on belongs to ("start", "rel1", "middle", "rel2" or "end")
+      name: The name of the property to order on (e.g. "nameLast" for people)
+      direction: The direction to order the results in. Defaults to ascending. If direction is set to "D", orders descending.
+
+  limit: Number. The maximum number of nodes to return.
+
+  This method can be used to find a pattern by simply not requesting any changes.
+  */
   changeTwoRelPattern(obj, response) {
     let dataObj = obj.query;
     const strings = {ret:"", where:""};
@@ -479,11 +762,33 @@ module.exports = class CRUD {
       orderBy = this.buildOrderString(dataObj.order);
     }
 
+    let limit = "";
+    if (dataObj.limit) {
+      limit = `limit ${dataObj.limit}`;
+    }
+
     const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where}
-                   ${changes} ${changeLogs} ${strings.ret} ${orderBy}`;
+                   ${changes} ${changeLogs} ${strings.ret} ${orderBy} ${limit}`;
     this.sendQuery(query, response);
   }
 
+  /* A specific method for running searches for widgetTableNodes, which involve regexes and limits
+  and can't be done with the more general methods. obj.query (renamed dataObj) contains:
+  type: The type of node to search for (e.g. "people" or "topic")
+  where: object. Each key is the name of a field (for instance, "name" for people).
+        Each value is an object with a fieldType ("string" or "number"), a searchType and a value.
+        For instance, if the field were "name", the fieldType would be "string" and the value might be "Bolt,David".
+        The searchType is "S", "M", "E", "<", ">", "<=", ">=" or "=" - that is, the search type the user chose.
+  name: String. The name under which to return the nodes that are found.
+  owner: Object representing requirements for the nodes' owner. The owner object contains a value and searchType.
+          For instance, you might set value to "Bol" and searchType to "S" to find all nodes whose owners start with "Bol".
+  permissions: String. Used to filter people based on their permissions. Can be "users", "admins", "allUsers" or "all".
+  links: Array of strings. Each string is the GUID of a node that returned nodes must be linked to.
+  orderBy: Array of objects. The fields to order the results by. Each object contains:
+      name: The name of the property to order on (e.g. "nameLast" for people)
+      direction: The direction to order the results in. Defaults to ascending. If direction is set to "D", orders descending.
+  limit: Number. The maximum number of patterns to return.
+  */
   tableNodeSearch(obj, response) {
     let dataObj = obj.query;
     let GUID = obj.GUID;
@@ -626,6 +931,11 @@ module.exports = class CRUD {
     this.sendQuery(query, response);
   }
 
+  /* A specific method for running searches for metadata, each of which has its own specialized query.
+    This is the simplest method here - obj.query is simply the name of the query to run ("nodes", "keysNode", etc.),
+    and all the method does is look up the code to run that query and pass it to sendQuery. The only other
+    parameter to note is obj.GUID, the GUID of the logged-in user, and that's only relevant when looking at their own trash.
+  */
   getMetaData(obj, response) {
     let queryName = obj.query;
     let GUID = obj.GUID;
@@ -642,9 +952,75 @@ module.exports = class CRUD {
     this.sendQuery(metadataQueries[queryName], response);
   }
 
-  // changeLogData includes: userGUID, itemGUID, changeLogs
+  /* A specific method for retrieving changeLogs for sync. obj contains:
+      GUID: The GUID of a specific user (should be the user currently logged in).
+      external: Boolean. Defaults to false. If false, searches for changelogs made by the user whose GUID was passed in.
+                        If true, searches for changelogs NOT made by the user.
+      count: Boolean. Defaults to false. If false, returns the changelogs themselves. If true, returns the NUMBER of changelogs.
+      min: Number. Should be the number of the last changelog which was already processed -
+                    the search will be for changelogs with a number HIGHER than this.
+      limit: Number. The maximum number of changelogs to search for.
+  */
+  getChangeLogs(obj, response) {
+    let where = `n.user_GUID = '${obj.GUID}'`;
+    let ret = `n`;
+    let limit = "";
+
+    if (obj.external) {
+      where = `n.user_GUID =~ '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+               and not n.user_GUID = '${obj.GUID}'`;
+    }
+
+    if (obj.min) {
+      where += ` and n.number > ${obj.min}`;
+    }
+
+    if (obj.count) {
+      ret = `count(n) as count`;
+    }
+
+    if (obj.limit) {
+      limit = `limit ${obj.limit}`;
+    }
+
+    const query = `match (n:M_ChangeLog) where ${where} return ${ret} order by n.number ${limit}`;
+    this.sendQuery(query, response);
+  }
+
+  /* A helper function to create a string describing a given node or relation - everything that goes inside the () or [].
+  Also builds a "where" string to put after the pattern, a "return" string to put at the end, and a string to make changelogs.
+
+  obj describes the node or relation in question, and can contain:
+      return: Boolean; determines whether the node or relation should be returned
+      name: String; the name to return the node or relation as (if this is not set, it will be returned using the default name)
+      type: String; The type of the object or relation
+      properties: Object describing the node or relation's properties; each key is an attribute and each value is a value
+      id: Number; the Neo4j ID of the node or relation
+
+  strings is an object which contains the return string and one or more "where" strings (two are needed for optional relations).
+
+  whereString is the name of the "where" string to be used for the node or relation in question (again, needed for optional relations).
+
+  defaultName is the name used for the node or relation when it is being searched for, and the name it is returned under if no alias is provided.
+
+  changeLogData is an object which may include:
+                userGUID (the GUID of the user making changes),
+                itemGUID (the GUID of the node or relation in question)
+                changeLogs (the string containing Neo4j code to make changeLogs.)
+  */
   buildSearchString(obj, strings, whereString, defaultName, changeLogData) {
     let string = defaultName;
+
+    let relNames = ["rel", "rel1", "rel2"];
+    let nodeNames = ["node", "from", "to", "required", "optional", "start", "middle", "end"];
+
+    let itemType = defaultName; // If anything goes wrong, at least we'll have a record of what the original name was
+    if (relNames.indexOf(defaultName) > -1) {
+      itemType = "relation";
+    }
+    else if (nodeNames.indexOf(defaultName) > -1) {
+      itemType = "node";
+    }
 
     if (obj.return !== false) { // This should usually be undefined if it's not false, but users might also set it to true
       if (strings.ret == "") {
@@ -667,7 +1043,7 @@ module.exports = class CRUD {
         // add to the changeLog string if necessary...
         if (changeLogData) {
           changeLogData.changeLogs += `(change${this.integrity.changeCount++}:M_ChangeLog {number:${this.integrity.changeCount},
-                                       item_GUID:"${changeLogData.itemGUID}", user_GUID:"${changeLogData.userGUID}",
+                                       item_GUID:"${changeLogData.itemGUID}", itemType:"${itemType}", user_GUID:"${changeLogData.userGUID}",
                                        action:"change", attribute:"${prop}", value:"${obj.properties[prop]}", M_GUID:"${this.uuid()}"}), `;
         }
         if (props == "") { // and add each one to the props string.
@@ -688,7 +1064,20 @@ module.exports = class CRUD {
     return string;
   }
 
-  // changeLogData includes: userGUID, changeLogs
+  /* A helper function to create a string describing changes to make to a pattern - everything after the word "set".
+  Also continues building the string to create changelogs.
+  changeArray is an array of changes taken from a query object. Each change is an object containing:
+    item: The name of the node or relation to change. Defaults to "node" so that users don't have to set "item"
+          when calling changeNode, which only affects one item anyway.
+    property: The property of the item to set. For instance, to change my first name, I would set "property" to "nameFirst".
+    value: The value to set the property to. For instance, to change my first name, I might set "value" to "Amy".
+    string: Boolean stating whether the value is a string. Defaults to true.
+
+  changeLogData is the same variable that it was in buildSearchString, and contains:
+    userGUID (the GUID of the user making changes),
+    itemGUID (the GUID of the node or relation in question)
+    changeLogs (the string containing Neo4j code to make changeLogs)
+  */
   buildChangesString(changeArray, changeLogData) {
     let changes = "";
     let item = "node"; // default, for changeNode
@@ -702,9 +1091,20 @@ module.exports = class CRUD {
         item = changeArray[i].item;
       }
 
+      let relNames = ["rel", "rel1", "rel2"];
+      let nodeNames = ["node", "from", "to", "required", "optional", "start", "middle", "end"];
+
+      let itemType = item; // If anything goes wrong, at least we'll have a record of what the original name was
+      if (relNames.indexOf(item) > -1) {
+        itemType = "relation";
+      }
+      else if (nodeNames.indexOf(item) > -1) {
+        itemType = "node";
+      }
+
       // add to the changeLog string
       changeLogData.changeLogs += `(change${this.integrity.changeCount++}:M_ChangeLog {number:${this.integrity.changeCount},
-                                   item_GUID:${item}.M_GUID, user_GUID:"${changeLogData.userGUID}", M_GUID:"${this.uuid()}",
+                                   item_GUID:${item}.M_GUID, itemType:"${itemType}", user_GUID:"${changeLogData.userGUID}", M_GUID:"${this.uuid()}",
                                    action:"change", attribute:"${changeArray[i].property}", value:${value}}), `;
 
       if (changes == "") {
@@ -715,7 +1115,16 @@ module.exports = class CRUD {
     return changes;
   }
 
-  // orderArray: Array of objects containing item (except for changeNode), name and direction ("A" or "D", but "A" is default and doesn't need to be specified)
+  /* A helper function to create a string describing how to order the results of a query.
+  orderArray is an array of objects, each describing one ordering that should be applied to the results. Each object contains:
+      name: The name of the property to order on
+      item: The item that contains the property to order on
+      direction: The direction of ordering. Defaults to ascending; if direction is set to "D", ordering is descending instead.
+  defaultName is the default value for item, so that when a user calls changeNode or tableNodeSearch,
+      which only affect one item, they don't need to bother setting "item".
+  initialValue is the start of the order string - that way, a method can combine custom ordering with what's generated here.
+      It just has to write the custom part first, then pass it to this function.
+  */
   buildOrderString(orderArray, defaultName, initialValue) {
     let order = initialValue;
     if (!order) {
@@ -736,6 +1145,10 @@ module.exports = class CRUD {
     return order.slice(0, order.length-2); // Remove the last ", " and return
   }
 
+  /* Sends the query to the database, processes the result and passes it back to the client through response.
+  Query is a string representing the finished Neo4j query.
+  Response is the response object used to talk to the client.
+  */
   sendQuery(query, response) {
     const session = this.driver.session();
     let result = [];
@@ -799,6 +1212,31 @@ module.exports = class CRUD {
       });
     }
 
+  /* A helper function used for merging relations. If a relation is merged and that relation does not exist,
+  this function is called to search for the nodes it should exist between. If they are found, this function
+  makes any required changes to them and calls createRelation to create the relation between them.
+
+  From and to are search strings for the nodes, already generated by changeRelation - there is no need to rewrite them.
+  Similarly, where is the where string generated by changeRelation for the nodes - no need to rewrite that either.
+  obj is the object sent to the server from the client, which contains the query.
+  The properties of the query that are used here are:
+    rel: Object. Describes the relation, and contains:
+        type: String. The type of relation to create (e.g. "View" or "Permissions")
+        id: number. The Neo4j ID of the relation to delete.
+        properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                    For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
+        merge: Boolean. Defaults to false. If the relation doesn't exist and merge is false, nothing happens.
+                If the relation doesn't exist but the nodes do, and merge is true, the relation will be created with the given properties.
+                If even the nodes don't exist, nothing happens whether merge is set to true or not.
+        return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+        name: The name under which the relation will be returned. If no name is given and return is not false,
+              the relation will be returned with the name "rel".
+
+    changes: Array of objects. Each object contains:
+        item: string. Which item should be changed ("to", "rel" or "from")
+        property: string. The name of the property to set
+        value: usually string. The value to set the property to
+  */
   findNodesForMerge(from, to, where, obj, response) {
     // search for the nodes that the relation should be merged between. Make any changes to the nodes. Return them (just to prove something was there).
     const dataObj = obj.query;

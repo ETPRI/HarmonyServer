@@ -319,10 +319,8 @@ class copy {
         if (typeIndex < copy.rels.length) {
           copy.downloadRels(typeIndex, minimum);
         }
-        else {
-          copy.progress.innerHTML += "Done!";
-          copy.source = "";
-          copy.destination = "";
+        else { // done with copying; alert the user, reset variables, and create M_DataSharePartner node
+          copy.getMin();
         }
       }
     };
@@ -362,6 +360,56 @@ class copy {
     else { // this should never happen - but may as well prepare for it
       alert ("Error: Tried to upload an empty set of relations");
     }
+  }
+
+  // Get the latest changeLog number from the source - the DB being copied from.
+  // (It should match the destination since the destination was just copied from the source.)
+  // Then call setMin.
+  getMin() {
+    const xhttp2 = new XMLHttpRequest();
+    const copy = this;
+
+    xhttp2.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        let num = -1;
+        if (data.length > 0) {
+          num = data[0].max.low;
+        }
+        copy.setMin(num);
+      }
+    };
+
+    let steps = `match (n:M_ChangeLog) return coalesce(max(n.number), 0) as max`;
+    const obj = {"server": "neo4j", "query": steps};  // create object to send to server
+
+    xhttp2.open("POST", this.source);
+    xhttp2.send(JSON.stringify(obj));         // send request to server
+  }
+
+  // Create or update the DataSharePartner node in the destination referring to the source. Then report "Done" and reset variables.
+  setMin(num) {
+    const xhttp2 = new XMLHttpRequest();
+    const copy = this;
+
+    xhttp2.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        copy.progress.innerHTML += "Done!";
+        copy.source = "";
+        copy.destination = "";
+      }
+    };
+
+    const obj = {};
+    obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.source}, "merge":true};
+    obj.changes = [{"property":"localMinCount", "value":num}, {"property":"remoteMinCount", "value":num}];
+
+    const query = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID":"initialize"};  // create object to send to server
+
+    xhttp2.open("POST", this.destination);
+    xhttp2.send(JSON.stringify(query));         // send request to server
   }
 
   //------------------------------------Backup code--------------------------
@@ -621,6 +669,26 @@ class copy {
   }
 
   //------------------------------------Helper functions---------------------
+
+  startProgress() {
+    this.progress.innerHTML = "";
+    for (let i = 0; i < this.nodes.length; i++) {
+      this.nodesDone[i] = 0;
+      this.progress.innerHTML +=
+      `<tr><td>Node</td><td>${this.nodes[i].L}</td><td id="nodeCount${i}">0</td><td>${this.nodes[i].count.low}</td></tr>`;
+    }
+
+    for (let i = 0; i < this.rels.length; i++) {
+      this.relsDone[i] = 0;
+      this.progress.innerHTML +=
+      `<tr><td>Relation</td><td>${this.rels[i].type}</td><td id="relCount${i}">0</td><td>${this.rels[i].count.low}</td></tr>`;
+    }
+
+  }
+
+  stopProgress() {
+    this.progress.innerHTML += "Done!";
+  }
 
   // Escapes special character in a string. Stringifying it and then removing the outer quotes is a good shortcut.
   stringEscape(text) {
