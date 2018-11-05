@@ -175,33 +175,33 @@ function runNeo4j(query, response) {
 
 // ------------------------------------------ Gremlin stuff ---------
 
-const Gremlin = require('gremlin');
-const async   = require('async');
-
-const client = Gremlin.createClient(
-    443,
-    config.endpoint,
-    {
-        "session": false,
-        "ssl": true,
-        "user": `/dbs/${config.database}/colls/${config.collection}`,
-        "password": config.primaryKey
-    }
-);
-
-function runGremlin2(query, response) {
-    console.log('runGremlin - %s',query);
-    return(client.execute(query, { }, (err, results) => {
-        if (err) {
-          console.error(err);
-          response.end(err);
-        } else {
-          const ret = JSON.stringify(results,null,4);
-          console.log("Result: %s\n", ret);
-          response.end(ret);
-        }
-    })) ;
-}
+// const Gremlin = require('gremlin');
+// const async   = require('async');
+//
+// const client = Gremlin.createClient(
+//     443,
+//     config.endpoint,
+//     {
+//         "session": false,
+//         "ssl": true,
+//         "user": `/dbs/${config.database}/colls/${config.collection}`,
+//         "password": config.primaryKey
+//     }
+// );
+//
+// function runGremlin2(query, response) {
+//     console.log('runGremlin - %s',query);
+//     return(client.execute(query, { }, (err, results) => {
+//         if (err) {
+//           console.error(err);
+//           response.end(err);
+//         } else {
+//           const ret = JSON.stringify(results,null,4);
+//           console.log("Result: %s\n", ret);
+//           response.end(ret);
+//         }
+//     })) ;
+// }
 
 //--------------Helper functions---------------------------------------------
 

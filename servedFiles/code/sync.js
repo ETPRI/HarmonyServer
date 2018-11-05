@@ -11,8 +11,13 @@ class sync {
     this.partnerIP = null;
     this.progress = null;
 
+    this.startTime = null;
+    this.timer = null;
+
     this.localMinCount = -1;
     this.remoteMinCount = -1;
+    this.localMaxCount = -1;
+    this.remoteMaxCount = -1;
 
     this.idWidget = app.idCounter;
     app.widgets[app.idCounter] = this; // Add to app.widgets
@@ -27,12 +32,10 @@ class sync {
     const html = app.widgetHeader('widgetSync') + `<b>Syncing - Progress</b></span>
     <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)"></div>
     <div class="widgetBody freezable">
+      Time taken so far: <span id="timeTaken">0 seconds</span>
       <table>
-        <thead><tr>
-          <th>Type</th><th>Name</th><th>Done</th><th>Total</th>
-        </thead></tr>
-        <tbody id="progress">
-          <tr><th>Item</th><th>To do</th><th>Downloaded</th>Processed</tr>
+        <tbody idr="progress">
+          <tr><th>Item</th><th>To do</th><th>Downloaded</th><th>Processed</th></tr>
         </tbody>
       </table>
     </div></div>`;
@@ -47,6 +50,9 @@ class sync {
 
     const close = app.domFunctions.getChildByIdr(this.widgetDOM, 'closeButton');
     close.classList.add('hidden');
+
+    this.startTime = performance.now();
+    this.timer = setInterval(this.updateTimer.bind(this), 1000);
   }
 
   // Searches for an M_DataSharePartner node. If one is found, stores its IP address and the changelog number to start at
@@ -63,44 +69,108 @@ class sync {
           will be unpredictable (for instance, the wrong node or no node at all could have its value updated).
           Please enter the IP address (including port number) and click OK to continue, or click Cancel to cancel:`);
         if (IP) {
-          this.partnerIP = IP;
-          this.countRemote();
+          this.partnerIP = `http://${IP}`;
+          this.getLatestCL("", "local");
+        }
+        else {
+          this.finish();
         }
       }
-      else if (data.length == 1) {
+      else if (data.length === 1) {
         this.partnerIP = data[0].node.properties.IPaddress;
-        this.localMinCount = data[0].node.properties.localMinCount;
-        this.remoteMinCount = data[0].properties.remoteMinCount;
-        this.countRemote();
+        this.localMinCount = parseInt(data[0].node.properties.localMinCount);
+        this.remoteMinCount = parseInt(data[0].node.properties.remoteMinCount);
+        this.getLatestCL("", "local");
       }
       else {
-        const addressesText = "";
+        const addresses = "";
         const partnerInfo = {};
         for (let i = 0; i < data.length; i++) {
           addresses += `${data[i].properties.IPaddress}, `;
-          partnerInfo[data[i].properties.IPaddress] = {"local":data[i].properties.localMinCount, "remote":data[i].properties.remoteMinCount};
+          partnerInfo[data[i].properties.IPaddress] = {
+            "local":parseInt(data[i].properties.localMinCount),
+            "remote":parseInt(data[i].properties.remoteMinCount)
+          };
         }
         addresses = addresses.slice(0, -2);
-        const IP = prompt(`This database has multiple records of shared databases to sync with. Their IP addresses are: ${addresses}
+        const IP = prompt(`This database has multiple records of shared databases to sync with. Their IP addresses are: ${addresses}.
           If you want to continue, you may enter the IP address (including port number) of the database you want to sync with manually.
           Be aware that if your database was not originally based on the database you sync with, the results of syncing
           will be unpredictable (for instance, the wrong node or no node at all could have its value updated).
           Please enter the IP address (including port number) and click OK to continue, or click Cancel to cancel:`);
         if (IP) {
-          this.partnerIP = IP;
-          if (partnerInfo[IP]) {
-            this.localMinCount = partnerInfo[IP].local;
-            this.remoteMinCount = partnerInfo[IP].remote;
+          this.partnerIP = `http://${IP}`;
+          if (partnerInfo[this.partnerPI]) {
+            this.localMinCount = partnerInfo[this.partnerIP].local;
+            this.remoteMinCount = partnerInfo[this.partnerIP].remote;
           }
-          this.countRemote();
+          this.getLatestCL("", "local");
+        }
+        else {
+          this.finish();
         }
       }
     }.bind(this)); // end sendQuery
   }
 
-  // Queryies the remote database for the number of changelogs to process
+  // Get the highest changelog number from a DB, which will be the lower limit for searching for changelogs the next time the DBs sync
+  // If the highest changelog number exists, passes it to setLatestCL to update the M_DataSharePartner node. If not, moves on -
+  // after getting the local min, gets the remote one, and after the remote one, calls finish() to wrap up the sync.
+  // IP is an IP address (presumably belonging to the remote server) or an empty string (a shortcut to access the local server).
+  getLatestCL(IP, phase) {
+    const obj = {};
+    obj.node = {"type":"M_ChangeLog"};
+    obj.limit = 1;
+    obj.order = [{"name":"number", "direction":"D"}];
+    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, app.login.userGUID, IP, function(data, IP, phase) {
+      const num = app.getProp(data, 0, "node", "properties", "number");
+      if (num) {
+        this[`${phase}MaxCount`] = num; // may be localMaxCount or remoteMaxCount
+        // if (phase == "local") {
+        //   this.localMaxCount = num;
+        // }
+        // else {
+        //   this.remoteMaxCount = num;
+        // }
+        this.setLatestCL(num, IP, phase);
+      }
+      else if (phase == "local") {
+        this.getLatestCL(this.partnerIP, "remote");
+      }
+      else {
+        this.countRemote();
+      }
+    }.bind(this), IP, phase);
+  }
+
+  // Updates or creates the M_DataSharePartner node corresponding to this.partnerIP. Sets the minimum local or remote
+  // (depending on the IP address passed in) changeLog number to check on the next sync. Then calls getMin or finish.
+  setLatestCL(number, IP, phase) {
+    // let property = "";
+    // if (phase === "local") {
+    //   property = "localMinCount";
+    // }
+    // else if (phase === 'remote') {
+    //   property = "remoteMinCount";
+    // }
+
+    const obj = {};
+    obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.partnerIP}, "return":false, "merge":true};
+    obj.changes = [{"property":`${phase}MinCount`, "value":number}];
+
+    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, null, null, function(data, IP, phase) {
+      if (phase == "local") {
+        this.getLatestCL(this.partnerIP, "remote");
+      }
+      else if (phase === 'remote') {
+        this.countRemote();
+      }
+    }.bind(this), IP, phase);
+  }
+
+  // Queries the remote database for the number of changelogs to process
   countRemote(data) {
-    const obj = {"GUID":app.login.userGUID, "external":true, "count":true, "min": this.remoteMinCount};
+    const obj = {"GUID":app.login.userGUID, "external":true, "count":true, "min": this.remoteMinCount, "max": this.remoteMaxCount};
     app.sendQuery(obj, "getChangeLogs", "Counting remote changelogs", this.widgetDOM, null, this.partnerIP, function(data) {
       this.remoteCount = data[0].count;
       this.progress.innerHTML += `<tr><th>Changes to pull:</th><td>${data[0].count}</td><td idr="pullDownloaded">0</td><td idr="pullProcessed">0</td></tr>`;
@@ -110,7 +180,7 @@ class sync {
 
   // Queries the local database for the number of changelogs to process
   countLocal() {
-    const obj = {"GUID":app.login.userGUID, "count":true, "min": this.localMinCount};
+    const obj = {"GUID":app.login.userGUID, "count":true, "min": this.localMinCount, "max": this.localMaxCount};
     app.sendQuery(obj, "getChangeLogs", "Counting local changelogs", this.widgetDOM, null, null, function(data) {
       this.localCount = data[0].count;
       this.progress.innerHTML += `<tr><th>Changes to push:</th><td>${data[0].count}</td><td idr="pushDownloaded">0</td><td idr="pushProcessed">0</td></tr>`;
@@ -125,14 +195,16 @@ class sync {
     let external = false;
     let IP = "";
     let min = this.localMinCount;
+    let max = this.localMaxCount;
 
-    if (phase == pull) {
+    if (phase == 'pull') {
       external = true;
       IP = this.partnerIP;
       min = this.remoteMinCount;
+      max = this.remoteMaxCount;
     }
 
-    const obj = {"GUID":app.login.userGUID, "external":external, "min": min};
+    const obj = {"GUID":app.login.userGUID, "external":external, "min": min, "max":max};
     app.sendQuery(obj, "getChangeLogs", "Downloading changelogs", this.widgetDOM, null, IP, function(data) {
       if (data.length > 0) {
         // Update the progress table and minimum, then call processChangeLogs
@@ -143,7 +215,7 @@ class sync {
 
         const lastNum = app.getProp(data, data.length - 1, "n", "properties", "number");
         if (lastNum) {
-          if (phase == pull) {
+          if (phase == 'pull') {
             this.remoteMinCount = lastNum;
           }
           else {
@@ -157,11 +229,11 @@ class sync {
         this.processChangeLogs(data, phase);
       } // end if (data were retrieved)
       else {
-        if (phase == pull) {
+        if (phase == 'pull') {
           this.downloadChangeLogs("push"); // done pulling; start pushing
         }
         else {
-          this.getMin(""); // done pushing; finish sync
+          this.finish(); // done pushing; finish sync
         }
       } // end else (no data; done with this phase)
     }.bind(this));
@@ -169,20 +241,20 @@ class sync {
 
   processChangeLogs(changeLogs, phase) {
     if (changeLogs.length > 0) {
-      const log = changeLogs.shift();
+      const log = changeLogs.shift().n;
       let obj = null;
       let CRUD = "";
 
       if (log.properties.itemType == "node") {
         switch (log.properties.action) {
           case 'create':
-            obj = {"type":log.properties.label, "return":false};
+            obj = {"type":log.properties.label, "M_GUID":log.properties.item_GUID, "return":false};
             CRUD = "createNode";
             break;
           case 'change':
             obj = {};
             obj.node = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
-            obj.changes = [{"property":log.properties.attribute, "value":log.properties.value}]
+            obj.changes = [{"property":log.properties.attribute, "value":app.stringEscape(log.properties.value)}]
             CRUD = "changeNode";
             break;
           case 'delete':
@@ -199,7 +271,7 @@ class sync {
           case 'create':
             obj = {};
             obj.to = {"properties":{"M_GUID":log.properties.to_GUID}, "return":false};
-            obj.rel = {"type":log.properties.label, "return":false};
+            obj.rel = {"type":log.properties.label, "M_GUID":log.properties.item_GUID, "return":false};
             obj.from = {"properties":{"M_GUID":log.properties.from_GUID}, "return":false};
             CRUD = "createRelation";
             break;
@@ -208,7 +280,7 @@ class sync {
             obj.to = {"return":false};
             obj.from = {"return":false};
             obj.rel = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
-            obj.changes = [{"item":"rel", "property":log.properties.attribute, "value":log.properties.value}]
+            obj.changes = [{"item":"rel", "property":log.properties.attribute, "value":app.stringEscape(log.properties.value)}];
             CRUD = "changeRelation";
             break;
           case 'delete':
@@ -231,7 +303,7 @@ class sync {
       if (obj) {
         let IP = "";
 
-        if (phase == push) {
+        if (phase == 'push') {
           IP = this.partnerIP;
         }
 
@@ -251,57 +323,69 @@ class sync {
     }
   } // end method (processChangeLogs)
 
-  // Get the highest changelog number from a DB, which will be the lower limit for searching for changelogs the next time the DBs sync
-  // If the highest changelog number exists, passes it to setMin to update the M_DataSharePartner node. If not, moves on -
-  // after getting the local min, gets the remote one, and after the remote one, calls finish() to wrap up the sync.
-  getMin(IP) {
-    const obj = {};
-    obj.node = {"type":"M_ChangeLog"};
-    obj.limit = 1;
-    obj.order = [{"name":"number", "direction":"D"}];
-    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, app.login.userGUID, IP, function(data) {
-      if (app.getProp(data, 0, "node", "number")) {
-        this.setMin(data[0].node.number, IP);
-      }
-      else if (IP == "") {
-        this.getMin(this.partnerIP);
-      }
-      else {
-        this.finish();
-      }
-    }.bind(this), IP);
-  }
-
-  // Updates or creates the M_DataSharePartner node corresponding to this.partnerIP. Sets the minimum local or remote
-  // (depending on the IP address passed in) changeLog number to check on the next sync. Then calls getMin or finish.
-  setMin(number, IP) {
-    let property = "";
-    if (IP === "") {
-      property = "localMinCount";
-    }
-    else if (IP === this.partnerIP) {
-      property = "remoteMinCount";
-    }
-
-    const obj = {};
-    obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.partnerIP}, "return":false, "merge":true};
-    obj.changes = [{"property":property, "value":number}];
-
-    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, null, null, function(data, IP) {
-      if (IP == "") {
-        this.getMin(this.partnerIP);
-      }
-      else if (IP === this.partnerIP) {
-        this.finish();
-      }
-    }.bind(this));
-  }
-
   // At this point, all database functions are done - all that's left is to tell the user that the sync has finished and unhide the close button
   finish() {
+    clearInterval(this.timer);
     alert("Finished syncing! You may close the sync widget now.");
 
     const close = app.domFunctions.getChildByIdr(this.widgetDOM, 'closeButton');
     close.classList.remove('hidden');
+  }
+
+  updateTimer() {
+    const duration = performance.now() - this.startTime;
+    let seconds = Math.round(duration/1000);
+    let minutes = 0;
+    let hours = 0;
+
+    if (seconds > 59) {
+      minutes = Math.round(seconds/60);
+      seconds = seconds % 60;
+    }
+    if (minutes > 59) {
+      hours = Math.round(minutes/60);
+      minutes = minutes % 60;
+    }
+
+    let timeString = "";
+    switch (hours) {
+      case 0:
+        break;
+      case 1:
+        timeString = "1 hour, ";
+        break;
+      default:
+        timeString = `${hours} hours, `;
+        break;
+    }
+
+    switch (minutes) {
+      case 0:
+        if (hours > 0) {
+          timeString += "0 minutes, ";
+        }
+        break;
+      case 1:
+        timeString += "1 minute, ";
+        break;
+      default:
+        timeString += `${minutes} minutes, `;
+        break;
+    }
+
+    switch (seconds) {
+      case 0:
+        timeString += "0 seconds";
+        break;
+      case 1:
+        timeString += "1 seconds";
+        break;
+      default:
+        timeString += `${seconds} seconds`;
+        break;
+    }
+    
+    const span = app.domFunctions.getChildByIdr(this.widgetDOM, 'timeTaken');
+    span.textContent = timeString;
   }
 }

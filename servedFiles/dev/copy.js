@@ -10,6 +10,7 @@ class copy {
 
     this.source = "";
     this.destination = "";
+    this.latestCL = -1;
   }
 
 
@@ -33,7 +34,7 @@ class copy {
       // call back function when state of send changes
       const results = JSON.parse(this.responseText);
       if (results.length == 0) {
-        copy.startNodes();
+        copy.getLatestCL();
       }
       else {
         if (confirm("There is already data in the local database; do you want to overwrite it?.")) {
@@ -60,7 +61,7 @@ class copy {
       if (this.readyState == 4 && this.status == 200) {
         const data = JSON.parse(this.responseText);
         if (data[0].count.low === 0) {
-          copy.startNodes();
+          copy.getLatestCL();
         }
         else {
           copy.clearDB(); // keep calling itself recursively while there are more nodes to delete
@@ -84,7 +85,7 @@ class copy {
       // call back function when state of send changes
       const results = JSON.parse(this.responseText);
       if (results.length == 0) {
-        copy.startNodes();
+        copy.getLatestCL();
       }
       else {
         alert("Could not proceed because the target database is not empty.");
@@ -120,6 +121,54 @@ class copy {
 
   //----------------------------------Main copy code---------------------------------------
 
+  // Get the latest changeLog number from the source - the DB being copied from.
+  // (It should match the destination since the destination was just copied from the source.)
+  // Then call startNodes.
+  getLatestCL() {
+    const xhttp2 = new XMLHttpRequest();
+    const copy = this;
+
+    xhttp2.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        const data = JSON.parse(this.responseText);
+        copy.latestCL = -1;
+        if (data.length > 0) {
+          copy.latestCL = data[0].max.low;
+        }
+        copy.setLatestCL();
+      }
+    };
+
+    let steps = `match (n:M_ChangeLog) return coalesce(max(n.number), 0) as max`;
+    const obj = {"server": "neo4j", "query": steps};  // create object to send to server
+
+    xhttp2.open("POST", this.source);
+    xhttp2.send(JSON.stringify(obj));         // send request to server
+  }
+
+  // Create or update the DataSharePartner node in the destination referring to the source. Then report "Done" and reset variables.
+  setLatestCL() {
+    const xhttp2 = new XMLHttpRequest();
+    const copy = this;
+
+    xhttp2.onreadystatechange = function() {
+      // call back function when state of send changes
+      if (this.readyState == 4 && this.status == 200) {
+        copy.startNodes();
+      }
+    };
+
+    const obj = {};
+    obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.source}, "merge":true};
+    obj.changes = [{"property":"localMinCount", "value":0}, {"property":"remoteMinCount", "value":this.latestCL}];
+
+    const query = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID":"initialize"};  // create object to send to server
+
+    xhttp2.open("POST", this.destination);
+    xhttp2.send(JSON.stringify(query));         // send request to server
+  }
+
   // gets a list of node labels from the source DB, or the local DB if there is no source. Then calls startRels.
   startNodes() {
     var xhttp = new XMLHttpRequest();
@@ -141,7 +190,9 @@ class copy {
     };
 
     xhttp.open("POST", this.source);
-    const steps = "MATCH (n) unwind labels(n) as L RETURN  distinct L, count(L) as count"
+    const steps = `MATCH (n) where n.M_CreateChangeLog <= ${this.latestCL}
+                   and not labels(n)[0] in['M_ChangeLog', 'M_Browser', 'M_Session']
+                   unwind labels(n) as L RETURN distinct L, count(L) as count`;
     const obj = {"server": "neo4j", "query": steps};  // create object to send to server
 
     xhttp.send(JSON.stringify(obj));         // send request to server
@@ -155,18 +206,31 @@ class copy {
     xhttp.onreadystatechange = function() {
       // call back function when state of send changes
       if (this.readyState == 4 && this.status == 200) {
-      copy.rels = JSON.parse(this.responseText);
-      for (let i = 0; i < copy.rels.length; i++) {
-        copy.relsDone[i] = 0;
-        copy.progress.innerHTML +=
-        `<tr><td>Relation</td><td>${copy.rels[i].type}</td><td id="relCount${i}">0</td><td>${copy.rels[i].count.low}</td></tr>`;
-      }
-      copy.downloadNodes(0, 0);
+        copy.rels = JSON.parse(this.responseText);
+        for (let i = 0; i < copy.rels.length; i++) {
+          copy.relsDone[i] = 0;
+          copy.progress.innerHTML +=
+          `<tr><td>Relation</td><td>${copy.rels[i].type}</td><td id="relCount${i}">0</td><td>${copy.rels[i].count.low}</td></tr>`;
+        }
+
+        // If there are nodes to download, start downloading them
+        if (copy.nodes.length > 0) {
+          copy.downloadNodes(0, 0);
+        }
+
+        // If not, there can't be relations either (no nodes for them to be between), so skip to the end
+        else {
+          copy.progress.innerHTML += "Done!";
+          copy.source = "";
+          copy.destination = "";
+        }
       }
     };
 
     xhttp.open("POST", this.source);
-    const steps =   "MATCH (a)-[r]->(b) return distinct type(r) as type, count(r) as count order by type";
+    const steps =   `MATCH (a)-[r]->(b) where r.M_CreateChangeLog <= ${this.latestCL}
+                     and not type(r) in['User', 'Request']
+                     return distinct type(r) as type, count(r) as count order by type`;
     const obj = {"server": "neo4j", "query": steps};  // create object to send to server
 
     xhttp.send(JSON.stringify(obj));         // send request to server
@@ -188,9 +252,9 @@ class copy {
     };
 
     xhttp.open("POST", this.source);
-    let where = "";
+    let where = `where n.M_CreateChangeLog <= ${this.latestCL}`;
     if (minimum > 0) {
-      where = `where ID(n) > ${minimum}`;
+      where += ` and ID(n) > ${minimum}`;
     }
     const steps = `match (n: ${copy.nodes[typeIndex].L}) ${where} return n order by ID(n) limit ${copy.nodeBlocksize}`;
     const obj = {"server": "neo4j", "query": steps};  // crearte object to send to server
@@ -222,11 +286,21 @@ class copy {
           typeIndex++;
         }
 
+        // If there are more nodes to download, keep downloading them
         if (typeIndex < copy.nodes.length) {
           copy.downloadNodes(typeIndex, minimum);
         }
-        else {
+
+        // If not, if there are any rels to download, start downloading them
+        else if (copy.rels.length > 0) {
           copy.downloadRels(0, 0);
+        }
+
+        // If the nodes are finished and there are no rels, skip to the end
+        else {
+          copy.progress.innerHTML += "Done!";
+          copy.source = "";
+          copy.destination = "";
         }
       }
     };
@@ -280,9 +354,9 @@ class copy {
     };
 
     xhttp.open("POST", this.source);
-    let where = "";
+    let where = `where r.M_CreateChangeLog <= ${this.latestCL}`;
     if (minimum > 0) {
-      where = `where ID(r) > ${minimum}`;
+      where += ` and ID(r) > ${minimum}`;
     }
 
     const steps = `match (a)-[r:${copy.rels[typeIndex].type}]->(b) ${where} return a, b, r order by ID(r) limit ${copy.relBlocksize}`;
@@ -319,8 +393,10 @@ class copy {
         if (typeIndex < copy.rels.length) {
           copy.downloadRels(typeIndex, minimum);
         }
-        else { // done with copying; alert the user, reset variables, and create M_DataSharePartner node
-          copy.getMin();
+        else { // done with copying; alert the user and reset variables
+          copy.progress.innerHTML += "Done!";
+          copy.source = "";
+          copy.destination = "";
         }
       }
     };
@@ -361,57 +437,6 @@ class copy {
       alert ("Error: Tried to upload an empty set of relations");
     }
   }
-
-  // Get the latest changeLog number from the source - the DB being copied from.
-  // (It should match the destination since the destination was just copied from the source.)
-  // Then call setMin.
-  getMin() {
-    const xhttp2 = new XMLHttpRequest();
-    const copy = this;
-
-    xhttp2.onreadystatechange = function() {
-      // call back function when state of send changes
-      if (this.readyState == 4 && this.status == 200) {
-        const data = JSON.parse(this.responseText);
-        let num = -1;
-        if (data.length > 0) {
-          num = data[0].max.low;
-        }
-        copy.setMin(num);
-      }
-    };
-
-    let steps = `match (n:M_ChangeLog) return coalesce(max(n.number), 0) as max`;
-    const obj = {"server": "neo4j", "query": steps};  // create object to send to server
-
-    xhttp2.open("POST", this.source);
-    xhttp2.send(JSON.stringify(obj));         // send request to server
-  }
-
-  // Create or update the DataSharePartner node in the destination referring to the source. Then report "Done" and reset variables.
-  setMin(num) {
-    const xhttp2 = new XMLHttpRequest();
-    const copy = this;
-
-    xhttp2.onreadystatechange = function() {
-      // call back function when state of send changes
-      if (this.readyState == 4 && this.status == 200) {
-        copy.progress.innerHTML += "Done!";
-        copy.source = "";
-        copy.destination = "";
-      }
-    };
-
-    const obj = {};
-    obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.source}, "merge":true};
-    obj.changes = [{"property":"localMinCount", "value":num}, {"property":"remoteMinCount", "value":num}];
-
-    const query = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID":"initialize"};  // create object to send to server
-
-    xhttp2.open("POST", this.destination);
-    xhttp2.send(JSON.stringify(query));         // send request to server
-  }
-
   //------------------------------------Backup code--------------------------
 
   startBackup(copy) {

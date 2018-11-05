@@ -198,13 +198,14 @@ class widgetTableNodes {
     // build header
     let addText = "";
     if (this.queryObjectName !== "all") {
-      addText = `<input type="button" value="Add" idr = "addButton" onclick="app.widget('addNode',this)">`;
+      addText = `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="Add" idr = "addButton" onclick="app.widget('addNode',this)">`;
     }
     const html = `${app.widgetHeader('widgetTableNodes')}
-    <b>${this.queryObject.nodeLabel}:${this.queryObjectName}</b>${addText}
+    <b>${this.queryObject.nodeLabel}:${this.queryObjectName}</b>
     <input type="button" value="Search" idr="searchButton" onclick="app.widgetSearch(this)">
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
-    limit <input value ="${this.limitDefault}" idr="limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
+    # To Display <input value ="${this.limitDefault}" idr="limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
+    ${addText}
     </span>
     <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
     </div>

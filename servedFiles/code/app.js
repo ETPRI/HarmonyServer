@@ -384,8 +384,8 @@ menuNodes(name, criteria) {
 	}
 }
 
-// displays meta-data on nodes, keysNodes, relations, keysRelations, and all nodes that have been trashed.
-// If the user is logged in, will also show them the nodes they, personally, have trashed, as well as their reasons.
+// displays meta-data on nodes, keysNodes, relations, keysRelations, all nodes that have been trashed, or all nodes the user has trashed.
+// Also creates databrowsers to explore the DB and allows syncing with a remote DB.
 menuDBstats(dropDown){
 	// Get the value from the metadata dropdown.
 	const value = dropDown.options[dropDown.selectedIndex].value;
@@ -593,7 +593,7 @@ widgetFullScreen(widgetElement) {
 	}
 }
 
-// Escapes special character in a string. Stringifying it and then removing the outer quotes is a good shortcut.
+// Escapes special characters in a string. Stringifying it and then removing the outer quotes is a good shortcut.
 stringEscape(text) {
 	let string = JSON.stringify(text);
 	string = string.substring(1, string.length-1);
