@@ -771,7 +771,7 @@ untrashNode() {
 }
 
 ////////////////////////////////////////////////////////////////////
-updateMetaData(newFields, propFieldsChanged) {
+updateMetaData(tempMetaData, newFields, propFieldsChanged) {
   const metadataObj = {};
   metadataObj.from = {"id":app.login.userID, "return":false};
   metadataObj.rel = {"type":"Settings", "merge":true, "return":false};
@@ -780,11 +780,14 @@ updateMetaData(newFields, propFieldsChanged) {
 
   const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy', 'fields'];
   for (let i = 0; i < propertyNames.length; i++) {
-    const change = {};
-    change.item = "rel";
-    change.property = propertyNames[i];
-    change.value = app.stringEscape(JSON.stringify(this[propertyNames[i]]));
-    metadataObj.changes.push(change);
+    if (JSON.stringify(this[propertyNames[i]]) !== JSON.stringify(tempMetaData[propertyNames[i]])) {
+      const change = {};
+      change.item = "rel";
+      change.property = propertyNames[i];
+      change.value = app.stringEscape(JSON.stringify(tempMetaData[propertyNames[i]]));
+      metadataObj.changes.push(change);
+      this[propertyNames[i]] = tempMetaData[propertyNames[i]];
+    }
   }
 
   app.sendQuery(metadataObj, "changeRelation", "Updating metadata", this.widgetDOM, null, null, this.updateFields.bind(this), newFields, propFieldsChanged);
@@ -808,13 +811,20 @@ updateMetaData(newFields, propFieldsChanged) {
   // xhttp.send(request);         // send request to server
 }
 
-updateFields(data, newFields, propFieldsChanged) { // should contain only the metadata node, under the name "metadata"
+// data should contain only the metadata node, under the name "metadata"
+// newFields is an object where each key is a new fieldName and each value is a label
+// propFieldsChanged is a boolean which is true if the list of proposed fields has changed
+updateFields(data, newFields, propFieldsChanged) {
   // Need to update fields if there are any new fields.
   // Need to update proposedFields if the list of proposed fields has changed.
+
   if (Object.keys(newFields).length > 0 || propFieldsChanged) {
+    let updateFields = false;
+
     let fields = JSON.parse(data[0].metadata.properties.fields);
-    for (let fieldName in newFields) { // Add all new fields to the fields object
+    for (let fieldName in newFields) { // Add any new fields to the fields object
       fields[fieldName] = newFields[fieldName];
+      updateFields = true;
     }
 
     let propFields = JSON.parse(data[0].metadata.properties.proposedFields);
@@ -832,8 +842,14 @@ updateFields(data, newFields, propFieldsChanged) { // should contain only the me
 
     const obj = {};
     obj.node = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
-    obj.changes = [{"property":"fields", "value":app.stringEscape(JSON.stringify(fields))}
-                  ,{"property":"proposedFields", "value":app.stringEscape(JSON.stringify(propFields))}];
+    obj.changes = [];
+
+    if (updateFields) {
+      obj.changes.push({"property":"fields", "value":app.stringEscape(JSON.stringify(fields))});
+    }
+    if (propFieldsChanged) {
+      obj.changes.push({"property":"proposedFields", "value":app.stringEscape(JSON.stringify(propFields))});
+    }
 
     app.sendQuery(obj, "changeNode", "Updating metadata", this.widgetDOM);
 
@@ -919,15 +935,21 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     data = [];
   }
 
+  let tempMetaData = {};
+  const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy', 'fields'];
+  for (let i = 0; i < propertyNames.length; i++) {
+    tempMetaData[propertyNames[i]] = JSON.parse(JSON.stringify(this[propertyNames[i]]));
+  } // copy of metadata
+
   let newFields = {};
   let reordered = false;
   let currentFields = [];
 
   const label = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeTypeLabel');
   const labelText = label.textContent;
-  const renamed = (labelText != this.nodeLabel);
+  const renamed = (labelText != tempMetaData.nodeLabel);
   if (renamed) { // update metadata nodeLabel object
-    this.nodeLabel = labelText;
+    tempMetaData.nodeLabel = labelText;
     this.queryObject.nodeLabel = labelText;
   }
 
@@ -955,10 +977,10 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
         const fieldName = name.replace(/\s/g, "").replace(/\(/g, "").replace(/\)/g, "");
 
         if (app.login.permissions === "Admin") {
-          // Add new fields to object. this.fields and app.metadata[name].fields reference the same object so should only have to change one.
-          this.fields[fieldName] = {"label": name, "description":desc};
+          // Add new fields to object.
+          tempMetaData.fields[fieldName] = {"label": name, "description":desc};
           newFields[fieldName] = {"label": name, "description":desc};
-          this.formFieldsDisplayed.push(fieldName);
+          tempMetaData.formFieldsDisplayed.push(fieldName);
           currentFields.push(fieldName);
         }
         else {
@@ -973,17 +995,23 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     else if (idr && idr.slice(0,2) === 'tr') {
       currentFields.push(inp.getAttribute("db"));
       const fieldName = inp.getAttribute("db");
-      if (this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.name === "textarea") {
-        this.fields[fieldName].input.height = inp.clientHeight;
-        this.fields[fieldName].input.width = inp.clientWidth; // Update local metadata object
+      if (tempMetaData.fields[fieldName] &&
+          tempMetaData.fields[fieldName].input &&
+          tempMetaData.fields[fieldName].input.name === "textarea") {
+            tempMetaData.fields[fieldName].input.height = inp.clientHeight
+                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-top'))
+                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-bottom'));
+            tempMetaData.fields[fieldName].input.width = inp.clientWidth
+                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-left'))
+                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-right'));
       }
 
       if(buttonValue == "Save" && inp.getAttribute("class") === "changedData") {
         // create a set for this field
-        if (fieldName in this.fields) {
+        if (fieldName in tempMetaData.fields) {
           const change = {};
           change.property = fieldName;
-          if (this.fields[fieldName].type === "number") {
+          if (tempMetaData.fields[fieldName].type === "number") {
             change.value = inp.value;
             change.string = false;
           } else {
@@ -1008,9 +1036,9 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
         if (name != "" && currentFields.indexOf(name) == -1) { // If the field has been filled in, and that name didn't already exist
           const fieldName = name.replace(/\s/g, "").replace(/\(/g, "").replace(/\)/g, "");
 
-          this.fields[fieldName] = {"label": name, "description":desc};
+          tempMetaData.fields[fieldName] = {"label": name, "description":desc};
           newFields[fieldName] = {"label": name, "description":desc};
-          this.formFieldsDisplayed.push(fieldName);
+          tempMetaData.formFieldsDisplayed.push(fieldName);
           currentFields.push(fieldName);
           delete this.proposedFields[fieldName];
           propFieldsChanged = true;
@@ -1024,7 +1052,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   // Build a string listing the fields from the form (done above) and a string listing the fields from the field object.
   // If they don't match, need to update the order of fields in fields, fieldsDisplayed and formFieldsDisplayed.
   let oldFields = [];
-  for (let fieldName in this.fields) {
+  for (let fieldName in tempMetaData.fields) {
     oldFields.push(fieldName);
   }
   reordered = (JSON.stringify(oldFields) != JSON.stringify(currentFields));
@@ -1034,28 +1062,28 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     let formFieldsDisplayed = [];
     for (let i = 0; i < currentFields.length; i++) {
       const fieldName = currentFields[i];
-      if (this.fieldsDisplayed.indexOf(fieldName) !== -1) {
+      if (tempMetaData.fieldsDisplayed.indexOf(fieldName) !== -1) {
         fieldsDisplayed.push(fieldName);
       }
       // If this field is in this.formFieldsDisplayed (so should also be in formFieldsDisplayed) and isn't a duplicate
-      if (this.formFieldsDisplayed.indexOf(fieldName) !== -1 && formFieldsDisplayed.indexOf(fieldName) === -1) {
+      if (tempMetaData.formFieldsDisplayed.indexOf(fieldName) !== -1 && formFieldsDisplayed.indexOf(fieldName) === -1) {
         formFieldsDisplayed.push(fieldName);
       }
-      fields[fieldName] = this.fields[fieldName];
+      fields[fieldName] = tempMetaData.fields[fieldName];
     }
-    this.fields = fields;
+    tempMetaData.fields = fields;
     app.metaData.node[this.queryObjectName].fields = fields;
-    this.fieldsDisplayed = fieldsDisplayed;
+    tempMetaData.fieldsDisplayed = fieldsDisplayed;
     app.metaData.node[this.queryObjectName].fieldsDisplayed = fieldsDisplayed;
-    this.formFieldsDisplayed = formFieldsDisplayed;
+    tempMetaData.formFieldsDisplayed = formFieldsDisplayed;
     app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
   }
 
   // I used to make this optional - done only if a change needed to be made -
   // but as more and more possible changes appear, that gets less practical.
   // I think I'll just go ahead and update the settings every time.
-  this.lastSaveFFD = this.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save
-  this.updateMetaData(newFields, propFieldsChanged);
+  this.lastSaveFFD = tempMetaData.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save
+  this.updateMetaData(tempMetaData, newFields, propFieldsChanged);
 
   if (data.length == 0) { //This should only ever come up when saving - both because adding uses an object, not an array, for data and because adding should add every field to data every time.
     if (trashUntrash) { // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.

@@ -158,7 +158,7 @@ class sync {
     obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.partnerIP}, "return":false, "merge":true};
     obj.changes = [{"property":`${phase}MinCount`, "value":number}];
 
-    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, null, null, function(data, IP, phase) {
+    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, "upkeep", "", function(data, IP, phase) {
       if (phase == "local") {
         this.getLatestCL(this.partnerIP, "remote");
       }

@@ -232,7 +232,7 @@ class widgetLogin {
       obj.rel = {"type":"User", "return":false};
       obj.to = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}, "return":false};
 
-      app.sendQuery(obj, "createRelation", "Linking session", this.loginDiv, null, null, function() {
+      app.sendQuery(obj, "createRelation", "Linking session", this.loginDiv, "upkeep", null, function() {
         this.getMetaData();
         this.getFavorites();
       }.bind(this));
