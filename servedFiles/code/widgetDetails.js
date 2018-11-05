@@ -787,6 +787,7 @@ updateMetaData(tempMetaData, newFields, propFieldsChanged) {
       change.value = app.stringEscape(JSON.stringify(tempMetaData[propertyNames[i]]));
       metadataObj.changes.push(change);
       this[propertyNames[i]] = tempMetaData[propertyNames[i]];
+      this.queryObject[propertyNames[i]] = tempMetaData[propertyNames[i]];
     }
   }
 
@@ -950,7 +951,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   const renamed = (labelText != tempMetaData.nodeLabel);
   if (renamed) { // update metadata nodeLabel object
     tempMetaData.nodeLabel = labelText;
-    this.queryObject.nodeLabel = labelText;
+    // this.queryObject.nodeLabel = labelText;
   }
 
   /* goes through all rows - that is, all fields.
@@ -1072,11 +1073,11 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       fields[fieldName] = tempMetaData.fields[fieldName];
     }
     tempMetaData.fields = fields;
-    app.metaData.node[this.queryObjectName].fields = fields;
+    // app.metaData.node[this.queryObjectName].fields = fields;
     tempMetaData.fieldsDisplayed = fieldsDisplayed;
-    app.metaData.node[this.queryObjectName].fieldsDisplayed = fieldsDisplayed;
+    // app.metaData.node[this.queryObjectName].fieldsDisplayed = fieldsDisplayed;
     tempMetaData.formFieldsDisplayed = formFieldsDisplayed;
-    app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
+    // app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
   }
 
   // I used to make this optional - done only if a change needed to be made -

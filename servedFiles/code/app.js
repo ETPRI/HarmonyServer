@@ -1285,7 +1285,7 @@ setUpPopup(JSobj) {
 	                 {"item":"rel", "property":"fieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
 	                 {"item":"rel", "property":"formFieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
-		app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
+		this.app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
 		// const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.app.login.userGUID};
 		// const request = JSON.stringify(queryObject);
