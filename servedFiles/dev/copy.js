@@ -191,7 +191,7 @@ class copy {
 
     xhttp.open("POST", this.source);
     const steps = `MATCH (n) where n.M_CreateChangeLog <= ${this.latestCL}
-                   and not labels(n)[0] in['M_ChangeLog', 'M_Browser', 'M_Session']
+                   and not labels(n)[0] in['M_ChangeLog', 'M_Browser', 'M_Session', 'M_DataSharePartner']
                    unwind labels(n) as L RETURN distinct L, count(L) as count`;
     const obj = {"server": "neo4j", "query": steps};  // create object to send to server
 
@@ -314,12 +314,15 @@ class copy {
         // If the property is an object with a low and high value, take the low one
         let value = props[propName];
         if (typeof value.low !== "undefined") {
-          value = JSON.stringify(value.low);
+          value = value.low;
         }
         else if (typeof value !== "string") {
-          value = JSON.stringify(value);
+          value = `"${copy.stringEscape(JSON.stringify(value))}"`;
         }
-        properties += `${propName}: '${copy.stringEscape(value)}', `;
+        else { // If the type IS string, don't bother stringifying it
+          value = `"${copy.stringEscape(value)}"`;
+        }
+        properties += `${propName}: ${value}, `;
       }
       if (properties.length > 0) {
         properties = properties.slice(0, properties.length - 2); // remove the last ", "

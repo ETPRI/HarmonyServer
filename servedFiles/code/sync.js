@@ -252,9 +252,20 @@ class sync {
             CRUD = "createNode";
             break;
           case 'change':
+            let value = log.properties.value;
+            if (typeof value.low !== "undefined") {
+              value = value.low;
+            }
+            else if (typeof value !== "string") {
+              value = `"${app.stringEscape(JSON.stringify(value))}"`;
+            }
+            else { // If the type IS string, don't bother stringifying it
+              value = `"${app.stringEscape(value)}"`;
+            }
+
             obj = {};
             obj.node = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
-            obj.changes = [{"property":log.properties.attribute, "value":app.stringEscape(log.properties.value)}]
+            obj.changes = [{"property":log.properties.attribute, "value":value}]
             CRUD = "changeNode";
             break;
           case 'delete':
@@ -276,11 +287,22 @@ class sync {
             CRUD = "createRelation";
             break;
           case 'change':
+            let value = log.properties.value;
+            if (typeof value.low !== "undefined") {
+              value = value.low;
+            }
+            else if (typeof value !== "string") {
+              value = `"${app.stringEscape(JSON.stringify(value))}"`;
+            }
+            else { // If the type IS string, don't bother stringifying it
+              value = `"${app.stringEscape(value)}"`;
+            }
+
             obj = {};
             obj.to = {"return":false};
             obj.from = {"return":false};
             obj.rel = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
-            obj.changes = [{"item":"rel", "property":log.properties.attribute, "value":app.stringEscape(log.properties.value)}];
+            obj.changes = [{"item":"rel", "property":log.properties.attribute, "value":value}];
             CRUD = "changeRelation";
             break;
           case 'delete':
@@ -384,7 +406,7 @@ class sync {
         timeString += `${seconds} seconds`;
         break;
     }
-    
+
     const span = app.domFunctions.getChildByIdr(this.widgetDOM, 'timeTaken');
     span.textContent = timeString;
   }
