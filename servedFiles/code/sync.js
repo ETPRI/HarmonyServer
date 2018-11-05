@@ -32,7 +32,7 @@ class sync {
     const html = app.widgetHeader('widgetSync') + `<b>Syncing - Progress</b></span>
     <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)"></div>
     <div class="widgetBody freezable">
-      Time taken so far: <span id="timeTaken">0 seconds</span>
+      Time taken so far: <span idr="timeTaken">0 seconds</span>
       <table>
         <tbody idr="progress">
           <tr><th>Item</th><th>To do</th><th>Downloaded</th><th>Processed</th></tr>
@@ -126,43 +126,12 @@ class sync {
       const num = app.getProp(data, 0, "node", "properties", "number");
       if (num) {
         this[`${phase}MaxCount`] = num; // may be localMaxCount or remoteMaxCount
-        // if (phase == "local") {
-        //   this.localMaxCount = num;
-        // }
-        // else {
-        //   this.remoteMaxCount = num;
-        // }
-        this.setLatestCL(num, IP, phase);
       }
-      else if (phase == "local") {
-        this.getLatestCL(this.partnerIP, "remote");
-      }
-      else {
-        this.countRemote();
-      }
-    }.bind(this), IP, phase);
-  }
 
-  // Updates or creates the M_DataSharePartner node corresponding to this.partnerIP. Sets the minimum local or remote
-  // (depending on the IP address passed in) changeLog number to check on the next sync. Then calls getMin or finish.
-  setLatestCL(number, IP, phase) {
-    // let property = "";
-    // if (phase === "local") {
-    //   property = "localMinCount";
-    // }
-    // else if (phase === 'remote') {
-    //   property = "remoteMinCount";
-    // }
-
-    const obj = {};
-    obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.partnerIP}, "return":false, "merge":true};
-    obj.changes = [{"property":`${phase}MinCount`, "value":number}];
-
-    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, "upkeep", "", function(data, IP, phase) {
       if (phase == "local") {
         this.getLatestCL(this.partnerIP, "remote");
       }
-      else if (phase === 'remote') {
+      else {
         this.countRemote();
       }
     }.bind(this), IP, phase);
@@ -233,7 +202,7 @@ class sync {
           this.downloadChangeLogs("push"); // done pulling; start pushing
         }
         else {
-          this.finish(); // done pushing; finish sync
+          this.setLatestCL(this.partnerIP, 'local'); // done pushing; update M_DataSharePartner node and finish sync
         }
       } // end else (no data; done with this phase)
     }.bind(this));
@@ -344,6 +313,25 @@ class sync {
       this.downloadChangeLogs(phase);
     }
   } // end method (processChangeLogs)
+
+  // Updates or creates the M_DataSharePartner node corresponding to this.partnerIP. Sets the minimum local or remote
+  // (depending on the phase passed in) changeLog number to check on the next sync (which is the same as the MAXIMUM
+  // from this sync - we'll pick up where we left off). Then calls setLatestCL again or finish.
+  setLatestCL(IP, phase) {
+    const obj = {};
+    obj.node = {"type":"M_DataSharePartner", "properties":{"IPaddress":this.partnerIP}, "return":false, "merge":true};
+    obj.changes = [{"property":`${phase}MinCount`, "value":this[`${phase}MaxCount`]}];
+
+    app.sendQuery(obj, "changeNode", "Updating sync records", this.widgetDOM, "upkeep", "", function(data, IP, phase) {
+      if (phase == "local") {
+        this.setLatestCL(this.partnerIP, "remote");
+      }
+      else if (phase === 'remote') {
+        this.finish();
+      }
+    }.bind(this), IP, phase);
+  }
+
 
   // At this point, all database functions are done - all that's left is to tell the user that the sync has finished and unhide the close button
   finish() {
