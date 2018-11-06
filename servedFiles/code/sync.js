@@ -222,19 +222,22 @@ class sync {
             break;
           case 'change':
             let value = log.properties.value;
+            let string = true;
+
             if (typeof value.low !== "undefined") {
               value = value.low;
+              string = false;
             }
-            else if (typeof value !== "string") {
-              value = `"${app.stringEscape(JSON.stringify(value))}"`;
+            else if (typeof value !== "string") { // If it's neither a string nor a number, stringify it
+              value = app.stringEscape(JSON.stringify(value));
             }
             else { // If the type IS string, don't bother stringifying it
-              value = `"${app.stringEscape(value)}"`;
+              value = app.stringEscape(value);
             }
 
             obj = {};
             obj.node = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
-            obj.changes = [{"property":log.properties.attribute, "value":value}]
+            obj.changes = [{"property":log.properties.attribute, "value":value, "string":string}];
             CRUD = "changeNode";
             break;
           case 'delete':
@@ -257,21 +260,24 @@ class sync {
             break;
           case 'change':
             let value = log.properties.value;
-            if (typeof value.low !== "undefined") {
+            let string = true;
+
+            if (typeof value.low !== "undefined") { // If it's a number, store it as a number
               value = value.low;
+              string = false;
             }
-            else if (typeof value !== "string") {
-              value = `"${app.stringEscape(JSON.stringify(value))}"`;
+            else if (typeof value !== "string") { // If it's neither a string nor a number, stringify it
+              value = app.stringEscape(JSON.stringify(value));
             }
             else { // If the type IS string, don't bother stringifying it
-              value = `"${app.stringEscape(value)}"`;
+              value = app.stringEscape(value);
             }
 
             obj = {};
             obj.to = {"return":false};
             obj.from = {"return":false};
             obj.rel = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
-            obj.changes = [{"item":"rel", "property":log.properties.attribute, "value":value}];
+            obj.changes = [{"item":"rel", "property":log.properties.attribute, "value":value, "string":string}];
             CRUD = "changeRelation";
             break;
           case 'delete':

@@ -287,7 +287,8 @@ module.exports = class CRUD {
     }
 
     const query = `match (${from}), (${to}) ${strings.where}
-                   create (from)-[${rel}]->(to), ${changeLogs} set rel.M_GUID = "${uuid}" ${strings.ret}, rel.createChangeLog = ${createChangeNumber}`;
+                   create (from)-[${rel}]->(to), ${changeLogs} set rel.M_GUID = "${uuid}", rel.M_CreateChangeLog = ${createChangeNumber} ${strings.ret}`;
+
     this.sendQuery(query, response);
   }
 

@@ -203,7 +203,9 @@ class widgetTableNodes {
       addText = `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="Add" idr = "addButton" onclick="app.widget('addNode',this)">`;
       buttonHTML = `<input type="button" value="Field Select" onclick="app.widget('fieldSelect', this)">`;
     }
-    const html = `${app.widgetHeader('widgetTableNodes')}
+    const html = `${app.widgetHeader('widgetTableNodes')
+      .replace('draggable="true" ondragstart="app.drag(this, event)"', "")
+      .replace('ondrop="app.drop(this, event)" ondragover="event.preventDefault()', "")} 
     <b>${this.queryObject.nodeLabel}:${this.queryObjectName}</b>
     <input type="button" value="Search" idr="searchButton" onclick="app.widgetSearch(this)">
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
