@@ -8,10 +8,17 @@
 </div>
 <div class="widgetBody freezable">
   <div class="statusBar">
+    <input type="button" id="clearRequests2" value="Clear" onclick="app.REST.clearRequests()">
+    <p id="available2">Server Requests</p>
+    <ul style="list-style-type:none" id="ongoing2" hidden></ul>
+  </div>
+
+  <div class="statusBar">
     <input type="button" id="clearRequests" value="Clear" onclick="app.clearRequests()">
     <p id="available">Server Requests</p>
     <ul style="list-style-type:none" id="ongoing" hidden></ul>
-  </div>
+  </div>  
+
   <p>Username: <input id="userName" onblur="app.regression.logText(this)">
     Password: <input type="password" id="password" onblur="app.regression.logText(this)"
                      onkeydown="app.widget('loginOnEnter', this, event)">

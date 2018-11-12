@@ -240,6 +240,18 @@ initNodeData() { // move to DB in the future
     ,proposedFields:{}
   }
 
+  this.node.file = {
+    nodeLabel: "file"
+    ,orderBy: [{"name":"name"}, {"name":"type"}, {"name":"comment"}]
+    ,fieldsDisplayed: ["name", "type", "comment"]
+    ,formFieldsDisplayed: ["name", "type", "comment"]
+    ,fields: {
+      "name": {label: "Name"}
+      ,"type": {label: "Type", editable:false, type:"array"}
+      ,"comment": {label: "Comment", input:{name:"textarea"}}
+    }
+  }
+
   this.node.all = {
     nodeLabel:"All Nodes"
     ,orderBy: [{"name":"name"}, {"name":"comment"}]

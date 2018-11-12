@@ -317,6 +317,8 @@ class copy {
           value = value.low;
         }
         else if (typeof value !== "string") {
+          const stringify = JSON.stringify(value);
+          const stringEscape = copy.stringEscape(stringify);
           value = `"${copy.stringEscape(JSON.stringify(value))}"`;
         }
         else { // If the type IS string, don't bother stringifying it

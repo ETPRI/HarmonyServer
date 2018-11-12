@@ -62,27 +62,12 @@ class widgetTableNodes {
       } // end for (every item in the criteria array)
     } // end if (search criteria were passed in)
 
-    app.sendQuery(this.buildQuery(), "tableNodeSearch", `Searching for ${this.queryObject.nodeLabel}`, this.widgetDOM, null, null, function(data) {
+    let userRequest = app.REST.startUserRequest(`Search for ${this.queryObject.nodeLabel}`);
+
+    app.REST.sendQuery(this.buildQuery(), "tableNodeSearch", `Searching for ${this.queryObject.nodeLabel}`, userRequest, this.widgetDOM, null, null, function(data) {
       this.data = data;
       this.refresh();
     }.bind(this));
-
-    // const xhttp = new XMLHttpRequest();
-    // const nodes = this;
-    // const queryObject = {"server": "CRUD", "function": "tableNodeSearch", "query": this.buildQuery(), "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    // const update = app.startProgress(this.widgetDOM, `Searching for ${this.queryObject.nodeLabel}`, request.length);
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-    //     nodes.data = JSON.parse(this.responseText);
-    //     nodes.refresh();
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
   }
 
   searchOnEnter(input, evnt) { // Makes hitting enter run a search
@@ -205,7 +190,7 @@ class widgetTableNodes {
     }
     const html = `${app.widgetHeader('widgetTableNodes')
       .replace('draggable="true" ondragstart="app.drag(this, event)"', "")
-      .replace('ondrop="app.drop(this, event)" ondragover="event.preventDefault()', "")} 
+      .replace('ondrop="app.drop(this, event)" ondragover="event.preventDefault()', "")}
     <b>${this.queryObject.nodeLabel}:${this.queryObjectName}</b>
     <input type="button" value="Search" idr="searchButton" onclick="app.widgetSearch(this)">
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
@@ -305,22 +290,6 @@ class widgetTableNodes {
 
     app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-    // const table = this;
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
-
     this.fieldSelectPopup.hidden = true;
     this.refresh();
   }
@@ -342,11 +311,6 @@ class widgetTableNodes {
     <option value="<=">&lt;=</option>
     <option value="<">&lt;</option>
     </select></th>`;
-
-    // let buttonHTML = '';
-    // if (this.queryObjectName != 'all') {
-    //   buttonHTML = `<input type="button" value="Field Select" onclick="app.widget('fieldSelect', this)">`;
-    // }
 
     let headerSearch = app.domFunctions.getChildByIdr(this.widgetDOM, 'headerSearch');
     let searchCells = Array.from(headerSearch.children);
@@ -646,21 +610,6 @@ class widgetTableNodes {
 
         app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-        // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-        // const request = JSON.stringify(queryObject);
-        //
-        // const xhttp = new XMLHttpRequest();
-        // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-        // const table = this;
-        //
-        // xhttp.onreadystatechange = function() {
-        //   if (this.readyState == 4 && this.status == 200) {
-        //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
-        //   }
-        // };
-        //
-        // xhttp.open("POST","");
-        // xhttp.send(request);         // send request to server
         this.refresh();
       }
     }
@@ -751,23 +700,6 @@ class widgetTableNodes {
 
     app.sendQuery(obj, "changeRelation", "Checking permissions", this.widgetDOM, null, null, this.checkPermission.bind(this), GUID, button, toAdd);
 
-    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const nodes = this;
-    // const update = app.startProgress(this.widgetDOM, "Checking permissions", request.length);
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     const data = JSON.parse(this.responseText);
-    //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-    //     nodes.checkPermission(data, GUID, button, toAdd);
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
   }
 
   checkPermission(oldData, GUID, button, toAdd) {
@@ -780,23 +712,6 @@ class widgetTableNodes {
       app.sendQuery(obj, "deleteRelation", "Deleting old permissions", this.widgetDOM, null, null, function(data, oldData, button, toAdd, GUID) {
         this.givePermission(button, toAdd, GUID, oldData[0].rel.properties.username, oldData[0].rel.properties.password);
       }.bind(this), oldData, button, toAdd, GUID);
-
-      // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-      // const request = JSON.stringify(queryObject);
-      //
-      // const xhttp = new XMLHttpRequest();
-      // const nodes = this;
-      // const update = app.startProgress(this.widgetDOM, "Deleting old permissions", request.length);
-      //
-      // xhttp.onreadystatechange = function() {
-      //   if (this.readyState == 4 && this.status == 200) {
-      //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-      //     nodes.givePermission(button, toAdd, GUID, data[0].rel.properties.username, data[0].rel.properties.password);
-      //   }
-      // };
-      //
-      // xhttp.open("POST","");
-      // xhttp.send(request);         // send request to server
     }
 
     else { // If there was no relation to delete, need to ask for a new username and password
@@ -838,24 +753,6 @@ class widgetTableNodes {
       app.sendQuery(obj, "createRelation", "Setting permission", this.widgetDOM, null, null, function() {
         this.search();
       }.bind(this));
-
-      // const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-      // const request = JSON.stringify(queryObject);
-      //
-      // const xhttp = new XMLHttpRequest();
-      // const nodes = this;
-      // const update = app.startProgress(this.widgetDOM, "Setting permissions", request.length);
-      //
-      // xhttp.onreadystatechange = function() {
-      //   if (this.readyState == 4 && this.status == 200) {
-      //     const data = JSON.parse(this.responseText);
-      //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-      //     nodes.search(data);
-      //   }
-      // };
-      //
-      // xhttp.open("POST","");
-      // xhttp.send(request);         // send request to server
     }
   }
 
@@ -871,22 +768,5 @@ class widgetTableNodes {
     app.sendQuery(obj, "deleteRelation", "Removing permissions", this.widgetDOM, null, null, function() {
       this.search();
     }.bind(this));
-
-    // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const nodes = this;
-    // const update = app.startProgress(this.widgetDOM, "Removing permissions", request.length);
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     app.stopProgress(nodes.widgetDOM, update, this.responseText.length);
-    //     nodes.search();
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(JSON.stringify(queryObject));         // send request to server
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes

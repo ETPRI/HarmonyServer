@@ -41,6 +41,7 @@ buildApp() {
 	this.login 					= new widgetLogin();
 	this.regression 		= new regressionTesting();
 	this.checkEmpty 		= new checkEmpty();
+	this.REST						= new REST();
 
 	// Add the regression header and login div to the list of widgets
 	this.widgets.regressionHeader = this.regression;
@@ -76,20 +77,6 @@ checkMetaData() {
 	obj.node = {"type":"M_MetaData"};
 
 	this.sendQuery(obj, "changeNode", "Looking for metadata nodes", null, null, null, this.addMetaData.bind(this));
-
-	// const xhttp = new XMLHttpRequest();
-	// const appObj = this;
-  //
-	// xhttp.onreadystatechange = function() {
-	// 	if (this.readyState == 4 && this.status == 200) {
-	// 		const data = JSON.parse(this.responseText);
-	// 		appObj.addMetaData(data);
-	// 	}
-	// };
-  //
-	// xhttp.open("POST","");
-	// const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-	// xhttp.send(JSON.stringify(queryObject));         // send request to server
 }
 
 addMetaData(data) { // data should be all metadata nodes, for both nodes and relations
@@ -104,12 +91,6 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 			obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
 
 			this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
-
-			// const xhttp = new XMLHttpRequest();
-      //
-	    // xhttp.open("POST","");
-			// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-			// xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 
 		for (type in this.metaData.relation) { // and all relation metadata
@@ -120,12 +101,6 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 			obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
 
 			this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
-
-			// const xhttp = new XMLHttpRequest();
-      //
-			// xhttp.open("POST","");
-			// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-			// xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 	} // end if (no data were returned; no metadata nodes were found)
 
@@ -174,12 +149,6 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 				}
 
 				this.sendQuery(obj, "changeNode", `Updating metadata node ${name}`);
-
-				// const xhttp = new XMLHttpRequest();
-        //
-				// xhttp.open("POST","");
-				// const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": "setup"};
-				// xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
 			node.name = name; // put the name back for the next step
 		} // end for (every metadata node that was found)
@@ -196,12 +165,6 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 				obj.properties.formFieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.node[type].formFieldsDisplayed));
 
 				this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
-
-				// const xhttp = new XMLHttpRequest();
-        //
-				// xhttp.open("POST","");
-				// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-				// xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
 		}
 
@@ -215,12 +178,6 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 				obj.properties.fieldsDisplayed = this.stringEscape(JSON.stringify(this.metaData.relation[type].fieldsDisplayed));
 
 				this.sendQuery(obj, "createNode", `Adding metadata node ${type}`);
-
-				// const xhttp = new XMLHttpRequest();
-        //
-				// xhttp.open("POST","");
-				// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": "setup"};
-				// xhttp.send(JSON.stringify(queryObject));         // send request to server
 			}
 		}
 	}
@@ -783,23 +740,6 @@ checkOwner(type, newItem, domElement, object, method, name) {
 			this.setOwner(domElement, object, method, data);
 		}.bind(this), domElement, object, method);
 
-		// const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": this.login.userGUID};
-		// const request = JSON.stringify(queryObject);
-    //
-		// const xhttp = new XMLHttpRequest();
-		// const app = this;
-		// const update = this.startProgress(domElement, "Creating node", request.length);
-    //
-		// xhttp.onreadystatechange = function() {
-		// 	if (this.readyState == 4 && this.status == 200) {
-		// 		const data = JSON.parse(this.responseText);
-		// 		app.stopProgress(domElement, update, this.responseText.length);
-		// 		app.setOwner(domElement, object, method, data); // If this is a new item or a new copy, it belongs to the user who made it
-		// 	}
-		// };
-    //
-		// xhttp.open("POST","");
-		// xhttp.send(request);         // send request to server
 	}
 	else {
 		if (object.owner) { // If the node already has an owner (which should be the user at this point), it still belongs to them - no need to update
@@ -830,26 +770,6 @@ setOwner(domElement, object, method, data) { // If there is data, this was calle
 			object[method](data);
 		}
 	}.bind(this), object, method);
-
-	// const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": this.login.userGUID};
-	// const request = JSON.stringify(queryObject);
-  //
-	// const xhttp = new XMLHttpRequest();
-	// const app = this;
-	// const update = this.startProgress(domElement, "Setting owner", request.length);
-  //
-	// xhttp.onreadystatechange = function() {
-	// 	if (this.readyState == 4 && this.status == 200) {
-	// 		const data = JSON.parse(this.responseText);
-	// 		app.stopProgress(domElement, update, this.responseText.length);
-	// 		if (object && method) {
-	// 			object[method](data);
-	// 		}
-	// 	}
-	// };
-  //
-	// xhttp.open("POST","");
-	// xhttp.send(request);         // send request to server
 }
 
 error(message) {
@@ -1085,32 +1005,6 @@ showHelp(widgetType, button, nodeType) {
 			this.error("Multiple help nodes found");
 		}
 	}.bind(this), button);
-
-	// const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": this.login.userGUID};
-	// const request = JSON.stringify(queryObject);
-  //
-	// const xhttp = new XMLHttpRequest();
-	// const update = this.startProgress(null, `Searching for help on ${widgetType}`, request.length);
-	// const app = this;
-  //
-	// xhttp.onreadystatechange = function() {
-	// 	if (this.readyState == 4 && this.status == 200) {
-	// 		const data = JSON.parse(this.responseText);
-	// 		app.stopProgress(null, update, this.responseText.length);
-	// 		if (data.length == 0) {
-	// 			app.error("Help could not be found or created");
-	// 		}
-	// 		else if (data.length == 1) {
-	// 			new widgetNode(button, "M_Widget", data[0].node.properties.M_GUID);
-	// 		}
-	// 		else {
-	// 			app.error("Multiple help nodes found");
-	// 		}
-	// 	}
-	// };
-  //
-	// xhttp.open("POST","");
-	// xhttp.send(request);         // send request to server
 }
 
 createLIS(dataArray, compFunction) {
@@ -1286,22 +1180,6 @@ setUpPopup(JSobj) {
 	                 {"item":"rel", "property":"formFieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
 		this.app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
-
-		// const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": this.app.login.userGUID};
-		// const request = JSON.stringify(queryObject);
-    //
-	  // const xhttp = new XMLHttpRequest();
-	  // const update = this.app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-	  // const details = this;
-    //
-	  // xhttp.onreadystatechange = function() {
-	  //   if (this.readyState == 4 && this.status == 200) {
-	  //     details.app.stopProgress(details.widgetDOM, update, this.responseText.length);
-	  //   }
-	  // };
-    //
-	  // xhttp.open("POST","");
-	  // xhttp.send(request);         // send request to server
 
 	  // close popup
 	  this.fieldPopup.hidden = true;

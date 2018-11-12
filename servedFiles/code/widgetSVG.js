@@ -330,7 +330,6 @@ class widgetSVG {
     }
 
     else if (evnt.dataTransfer.files.length > 0) {
-      const test = evnt.dataTransfer.items[0].getAsFile();
       data.name = evnt.dataTransfer.files[0].name;
       data.nodeID = null;
       data.type = "file";

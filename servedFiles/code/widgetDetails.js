@@ -59,24 +59,6 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
       obj.rel = {"name":"r", "type":"Trash", "direction":"left"};// (n)<-[rel]-(a)
 
       app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.finishConstructor.bind(this));
-
-      // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-      // const request = JSON.stringify(queryObject);
-      //
-      // const xhttp = new XMLHttpRequest();
-      // const details = this;
-      // const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
-      //
-      // xhttp.onreadystatechange = function() {
-      //   if (this.readyState == 4 && this.status == 200) {
-      //     const data = JSON.parse(this.responseText);
-      //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-      //     details.finishConstructor(data);
-      //   }
-      // };
-      //
-      // xhttp.open("POST","");
-      // xhttp.send(request);         // send request to server
     }
     else { // If no ID was passed in
        this.finishConstructor();
@@ -87,6 +69,15 @@ finishConstructor(data) {
   if (data) { // If data were passed in, add them to the table, and set this.id
     this.id = data[0].n.id;
     this.GUID = data[0].n.properties.M_GUID;
+    for (let prop in data[0].n.properties) {
+      // strings can stay strings and numbers are already stored as numbers.
+      // Anything else was stored as a string and needs to be parsed.
+      let type = app.getProp(this.fields, prop, "type");
+      if (type && type !== "string" && type !== "number") {
+        data[0].n.properties[prop] = JSON.parse(data[0].n.properties[prop]);
+      }
+    }
+
     this.savedData = data[0].n;
     this.currentData = JSON.parse(JSON.stringify(this.savedData)); // makes a copy
 
@@ -127,29 +118,9 @@ finishConstructor(data) {
 
     app.sendQuery(obj, "changeRelation", "Searching for owner", this.widgetDOM, null, null, function(data) {
       if (data.length == 1) {
-        this.owner = {"name":data[0].to.properties.name, "id":data[0].to.id};
+        this.owner = {"name":data[0].to.properties.name, "id":data[0].to.id, "GUID":data[0].to.properties.M_GUID};
       }
     }.bind(this));
-
-    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const details = this;
-    // const update = app.startProgress(this.widgetDOM, "Searching for owner", request.length);
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     const data = JSON.parse(this.responseText);
-    //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-    //     if (data.length == 1) {
-    //       details.owner = {"name":data[0].to.properties.name, "id":data[0].to.id};
-    //     }
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
   }
 }
 
@@ -342,7 +313,7 @@ refresh() {   // put in one field label and input row for each field - includes 
   const trashHTML = `<b>Trash Node</b>
                 <input type="checkbox" onclick="app.widget('toggleReason', this)" idr="trashCheck">
                 <b idr="reasonText" hidden="true">Reason: </b>
-                <input type="text" hidden="true" onblur="app.widget('changed', this)" idr="trashReason" db="reason">`;
+                <input type="text" hidden="true" onblur="app.widget('changed', this.parentElement)" idr="trashReason" db="reason">`;
 
   this.trashRow = document.createElement('div');
   mainCell.appendChild(this.trashRow);
@@ -377,15 +348,15 @@ addRow(fieldName, fieldCount, proposed) {
 
   // Create a table row (in dragDrop table - all "this" references in HTML are to dragDrop)
   const row = document.createElement('tr');
-  if (!proposed) {
+  if (proposed) {
+    row.setAttribute('idr', `propRow${fieldName}`);
+  }
+  else {
     row.setAttribute('ondrop', "app.widget('drop', this, event)");
     row.setAttribute("ondragover", "event.preventDefault()");
     row.setAttribute('ondragstart', "app.widget('drag', this, event)");
     row.setAttribute('draggable', "true");
     row.setAttribute('idr', `tr${fieldName}`);
-  }
-  else {
-    row.setAttribute('idr', `propRow${fieldName}`);
   }
 
   this.tBodyDOM.appendChild(row);
@@ -396,7 +367,11 @@ addRow(fieldName, fieldCount, proposed) {
 
   let label = "";
   let data = "";
-  if (!proposed) {
+  if (proposed) {
+    label = this.proposedFields[fieldName].label;
+    data = this.proposedFields[fieldName].description;
+  }
+  else {
     label = this.fields[fieldName].label;
     if (this.currentData) {
       const d=this.currentData.properties;
@@ -404,15 +379,15 @@ addRow(fieldName, fieldCount, proposed) {
       if (typeof data === "string") { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
         data = data.replace(/"/g, "&quot;");
       }
-      else {
+      else if (data === null || data == undefined) {
         data = "";
+      }
+
+      else { // If actual data that is NOT a string, stringify it first
+        data = JSON.stringify(data);
       }
     }
   } // end if (not a proposed field)
-  else {
-    label = this.proposedFields[fieldName].label;
-    data = this.proposedFields[fieldName].description;
-  }
 
   if (proposed && app.login.permissions === "Admin") {
     const approve = document.createElement('input');
@@ -430,11 +405,18 @@ addRow(fieldName, fieldCount, proposed) {
 
   // Create the second cell, a td cell which will normally contain
   // an input which has an idr, an onChange event, and a value which may be an empty string
-  // If this is a proposed field, the cell will just contain text instead.
+  // If this is a proposed field, or a non-editable field, the cell will just contain text instead.
   const dataField = document.createElement('td');
   row.appendChild(dataField);
 
-  if (!proposed) {
+  if (proposed || this.fields[fieldName].editable === false) {
+    const textParagraph = document.createElement('p');
+    const text = document.createTextNode(data);
+    textParagraph.appendChild(text);
+    dataField.appendChild(textParagraph);
+  }
+
+  else {
     let inputType = "input";
     if (this.fields[fieldName] && this.fields[fieldName].input && this.fields[fieldName].input.name) {
       inputType = this.fields[fieldName].input.name;
@@ -464,19 +446,13 @@ addRow(fieldName, fieldCount, proposed) {
 
     input.setAttribute("db", fieldName);
     input.setAttribute("idr", `input${fieldCount}`);
-    input.setAttribute("onchange", "app.widget('changed',this)");
+    input.setAttribute("onchange", "app.widget('changed',this.parentElement, true)");
     input.value = data;
     input.setAttribute("onfocus", "this.parentNode.parentNode.draggable = false;");
     input.setAttribute("onblur", "this.parentNode.parentNode.draggable = true;");
 
-    this.changed(input); // Check whether the input is different from the saved version; highlight it if so
   } // end if (not a proposed field)
-  else {
-    const descPar = document.createElement('p');
-    const desc = document.createTextNode(data);
-    descPar.appendChild(desc);
-    dataField.appendChild(descPar);
-  }
+  this.changed(dataField); // Check whether the new value is different from the saved version; highlight it if so
 
   return row;
 }
@@ -628,13 +604,13 @@ addField(name, value) { // If name and value don't exist, we're adding a blank r
   row.appendChild(nameCell);
   const nameIn = document.createElement('input');
   nameCell.appendChild(nameIn);
-  nameIn.outerHTML = `<input type = "text" idr = "newFieldName${this.newFields}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkDuplicateField', this); app.widget('checkNewField', this)" value = "${name}">`
+  nameIn.outerHTML = `<input type = "text" idr = "newFieldName${this.newFields}" onChange = "app.widget('changed',this.parentElement)" onblur = "app.widget('checkDuplicateField', this); app.widget('checkNewField', this)" value = "${name}">`
 
   const valueCell = document.createElement('td');
   row.appendChild(valueCell);
   const valueIn = document.createElement('input');
   valueCell.appendChild(valueIn);
-  valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this)" onblur = "app.widget('checkNewField', this)" value = "${value}">`
+  valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this.parentElement)" onblur = "app.widget('checkNewField', this)" value = "${value}">`
 }
 
 saveAdd(widgetElement) { // Saves changes or adds a new node
@@ -684,24 +660,6 @@ trashNode() {
   obj.rel = {"type":"Trash", "merge":true, "properties":{"reason":app.stringEscape(reason)}, "return":false};
 
   app.sendQuery(obj, "changeRelation", "Trashing node", this.widgetDOM, null, null, this.save.bind(this), "Save");
-
-  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSon.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const details = this;
-  // const update = app.startProgress(this.widgetDOM, "Trashing node", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-  //     details.save(data, "Save");
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 updateReason() {
@@ -720,23 +678,6 @@ updateReason() {
 
   app.sendQuery(obj, "changeRelation", "Updating reason", this.widgetDOM, null, null, this.save.bind(this), "Save");
 
-  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const details = this;
-  // const update = app.startProgress(this.widgetDOM, "Updating reason", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-  //     details.save(data, "Save");
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 untrashNode() {
@@ -751,23 +692,6 @@ untrashNode() {
 
   app.sendQuery(obj, "deleteRelation", "Restoring node", this.widgetDOM, null, null, this.save.bind(this), "Save");
 
-  // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const details = this;
-  // const update = app.startProgress(this.widgetDOM, "Restoring node", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-  //     details.save(data, "Save");
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -793,23 +717,6 @@ updateMetaData(tempMetaData, newFields, propFieldsChanged) {
 
   app.sendQuery(metadataObj, "changeRelation", "Updating metadata", this.widgetDOM, null, null, this.updateFields.bind(this), newFields, propFieldsChanged);
 
-  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": metadataObj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const details = this;
-  // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-  //     details.updateFields(data, newFields, propFieldsChanged);
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 // data should contain only the metadata node, under the name "metadata"
@@ -854,27 +761,23 @@ updateFields(data, newFields, propFieldsChanged) {
 
     app.sendQuery(obj, "changeNode", "Updating metadata", this.widgetDOM);
 
-    // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-    // const details = this;
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
   }
 }
 
 addComplete(data) { // Refreshes the node table and logs that addSave was clicked
+  for (let prop in data[0].n.properties) {
+    // strings can stay strings and numbers are already stored as numbers.
+    // Anything else was stored as a string and needs to be parsed.
+    let type = app.getProp(this.fields, prop, "type");
+    if (type && type !== "string" && type !== "number") {
+      data[0].n.properties[prop] = JSON.parse(data[0].n.properties[prop]);
+    }
+  }
+
   this.savedData = data[0].n; // takes single nodes
   this.currentData = JSON.parse(JSON.stringify(this.savedData));
+  // If the user has just added this node, it belongs to them.
+  this.owner = {"name":app.login.userName, "id":app.login.userID, "GUID":app.login.userGUID};
   this.id = this.savedData.id;
   const id = this.id;
   const name = this.savedData.properties.name;
@@ -892,40 +795,54 @@ addComplete(data) { // Refreshes the node table and logs that addSave was clicke
 
   app.setOwner(this.widgetDOM, this); // I don't mind this running asynchronously because I don't think it's needed for refresh or buildStart.
   this.refresh();
-  this.buildStart();
+  if (this.buildStart) { // If this is a standalone node with relations, call this.buildStart to show them
+    this.buildStart();
+  }
 }
 
-changed(input) { // Logs changes to fields, and highlights when they are different from saved fields
-  if (this.currentData && this.currentData.properties) { // assuming this.currentData exists
-    this.currentData.properties[input.getAttribute('db')] = input.value; // update current data
+changed(cell, edited) { // Highlights when current fields are different from saved fields
+  // Make sure we have a currentData object - if this is a new node it may need to be created
+  if (!app.getProp(this, "currentData")) {
+    this.currentData = {"properties":{}};
   }
 
-  if (!this.savedData) {
-    const obj = {};
-    obj.id = app.domFunctions.widgetGetId(input);
-    obj.idr = input.getAttribute("idr");
-    obj.value = input.value;
-    obj.action = "change";
-    app.regression.log(JSON.stringify(obj));
-    app.regression.record(obj);
-    return;  // no feedback in add mode, but do log the change
-  }
-  // give visual feedback if edit data is different than db data
-  if (input.value === this.savedData.properties[input.getAttribute('db')]) {
-    input.classList.remove('changedData');
-  } else {
-    input.classList.add('changedData');
+  // get fieldName
+  const row = cell.parentElement;
+  const idr = row.getAttribute("idr");
+  let fieldName = "";
+  if (idr.slice(0,2) === "tr") {
+    fieldName = idr.slice(2);
   }
 
-  // log
-  const obj = {};
-  obj.id = app.domFunctions.widgetGetId(input);
-  obj.idr = input.getAttribute("idr");
-  obj.value = input.value;
-  obj.action = "change";
-  app.regression.log(JSON.stringify(obj));
-  app.regression.record(obj);
-}
+  // Assuming this cell does represent a field ...
+  if (fieldName in this.fields) {
+    // Get the value
+    let value = "";
+    const input = cell.firstElementChild;
+    if (input && (input.tagName == "INPUT" || input.tagName == "TEXTAREA")) { // If this cell has an input (is editable)
+      value = input.value;
+    }
+    else {
+      value = cell.textContent;
+    }
+
+    // Update current data if the user has edited the field
+    if (edited) {
+      this.currentData.properties[fieldName] = value;
+    }
+
+    // Only bother checking data if there is saved data to compare it to
+    if (this.savedData) {
+      // give visual feedback if edit data is different than db data
+      if (value === this.savedData.properties[fieldName]) {
+        cell.classList.remove('changedData');
+      }
+      else {
+        cell.classList.add('changedData');
+      }
+    } // end if (savedData exists; we can compare it to current data)
+  } // end if (fieldName exists and is a valid field; we can set currentData)
+} // end method (changed)
 
 save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs it and passes the results to saveData() or addComplete()
   let propFieldsChanged = false;
@@ -951,7 +868,6 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   const renamed = (labelText != tempMetaData.nodeLabel);
   if (renamed) { // update metadata nodeLabel object
     tempMetaData.nodeLabel = labelText;
-    // this.queryObject.nodeLabel = labelText;
   }
 
   /* goes through all rows - that is, all fields.
@@ -965,7 +881,15 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   Also removes that field from proposedFields since it will now be an official field.
   */
   while (tr) {
-    const inp = tr.lastElementChild.firstElementChild;  // find <input> element
+    const dataCell = tr.lastElementChild;
+    const dataInput = dataCell.firstElementChild; // find <input> element if it exists
+
+    // Get the value of the attribute - the content of the cell for non-editable cells,
+    // the value of the input for editable cells (which HAVE inputs)
+    let value = dataCell.textContent;
+    if (dataInput && (dataInput.tagName === 'INPUT' || dataInput.tagName === 'TEXTAREA')) {
+      value = dataInput.value;
+    }
 
     // process new fields
     const idr = tr.getAttribute('idr');
@@ -994,35 +918,38 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
 
     // process existing fields
     else if (idr && idr.slice(0,2) === 'tr') {
-      currentFields.push(inp.getAttribute("db"));
-      const fieldName = inp.getAttribute("db");
-      if (tempMetaData.fields[fieldName] &&
-          tempMetaData.fields[fieldName].input &&
-          tempMetaData.fields[fieldName].input.name === "textarea") {
-            tempMetaData.fields[fieldName].input.height = inp.clientHeight
-                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-top'))
-                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-bottom'));
-            tempMetaData.fields[fieldName].input.width = inp.clientWidth
-                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-left'))
-                                                      - parseInt(getComputedStyle(inp).getPropertyValue('padding-right'));
+      const fieldName = idr.slice(2);
+      currentFields.push(fieldName);
+
+      if (app.getProp(tempMetaData, "fields", fieldName, "input", "name") === "textarea") {
+        tempMetaData.fields[fieldName].input.height = dataInput.clientHeight
+                                                  - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-top'))
+                                                  - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-bottom'));
+        tempMetaData.fields[fieldName].input.width = dataInput.clientWidth
+                                                  - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-left'))
+                                                  - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-right'));
       }
 
-      if(buttonValue == "Save" && inp.getAttribute("class") === "changedData") {
+      if(buttonValue == "Save" && dataCell.getAttribute("class") === "changedData") {
         // create a set for this field
         if (fieldName in tempMetaData.fields) {
           const change = {};
           change.property = fieldName;
           if (tempMetaData.fields[fieldName].type === "number") {
-            change.value = inp.value;
+            change.value = value;
             change.string = false;
-          } else {
-            change.value = app.stringEscape(inp.value);  // assume string
+          }
+          else if (value) {
+            change.value = app.stringEscape(value);  // assume string
+          }
+          else {
+            change.value = "";
           }
           data.push(change);
         }
       }
-      else if (buttonValue == "Add") {
-        data[inp.getAttribute("db")] = app.stringEscape(inp.value);
+      else if (value && buttonValue == "Add") {
+        data[fieldName] = app.stringEscape(value);
       }
     }
 
@@ -1080,14 +1007,15 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     // app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
   }
 
-  // I used to make this optional - done only if a change needed to be made -
-  // but as more and more possible changes appear, that gets less practical.
-  // I think I'll just go ahead and update the settings every time.
   this.lastSaveFFD = tempMetaData.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save
   this.updateMetaData(tempMetaData, newFields, propFieldsChanged);
 
-  if (data.length == 0) { //This should only ever come up when saving - both because adding uses an object, not an array, for data and because adding should add every field to data every time.
-    if (trashUntrash) { // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made, don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
+  // This should only ever come up when saving - both because adding uses an object, not an array, for data
+  // and because adding should add every field to data every time.
+  if (data.length == 0) {
+    // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made,
+    // don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
+    if (trashUntrash) {
       const obj = {};
       obj.id = this.idWidget;
       obj.idr = "addSaveButton";
@@ -1099,54 +1027,75 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
     this.refresh();
   }
   else {
-    // const xhttp = new XMLHttpRequest();
-    // const details = this;
-
     let obj = {};
     let CRUD = "";
     let func = null;
-    // let queryObject = {};
 
     if (buttonValue === "Save") {
       obj.node = {"name":"n", "id":this.id};
       obj.changes = data;
       CRUD = "changeNode";
       func = this.saveData.bind(this);
-      // queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
     }
     else {
       obj = {"name":"n", "type":this.queryObjectName, "properties":data};
       CRUD = "createNode";
       func = this.addComplete.bind(this);
-      // queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
     }
 
-    app.sendQuery(obj, CRUD, "Saving node", this.widgetDOM, null, null, func);
+    app.sendQuery(obj, CRUD, "Saving node", this.widgetDOM, null, null, function(data, func, app) {
+      // First, if this is a file node, and a new file has been uploaded or the node has been copied,
+      // call the server's saveFile function. Also, if a new file has been uploaded,
+      // increment this.numStoredFiles and the file counter in the widget.
+      if (this.queryObjectName === "file" && (this.fileText || (this.owner && this.owner.GUID !== app.login.userGUID))) {
+        const obj = {"userGUID":app.login.userGUID, "nodeGUID":data[0].n.properties.M_GUID};
+        if (this.fileText) {
+          obj.fileText = this.fileText;
+          obj.fileType = app.getProp(this, "currentData", "properties", "type", this.numStoredFiles++);
 
-    // const request = JSON.stringify(queryObject);
-    //
-    // const update = app.startProgress(this.widgetDOM, "Saving node", request.length);
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     const data = JSON.parse(this.responseText);
-    //     app.stopProgress(details.widgetDOM, update, this.responseText.length);
-    //     if (buttonValue === "Save") {
-    //       details.saveData(data);
-    //     }
-    //     else {
-    //       details.addComplete(data);
-    //     }
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
+          const storedCounter = app.domFunctions.getChildByIdr(this.widgetDOM, 'numStoredFiles');
+          storedCounter.textContent = this.numStoredFiles;
+        }
+
+        if ((this.owner && this.owner.GUID !== app.login.userGUID)) {
+          obj.copyNodeGUID = this.currentData.properties.M_GUID;
+          obj.copyUserGUID = this.owner.GUID;
+        }
+
+        const queryObject = {"server": "file", "function": "saveFile", "query": obj};
+        const request = JSON.stringify(queryObject);
+
+        const xhttp = new XMLHttpRequest();
+        const update = app.startProgress(this.widgetDOM, "Saving file", request.length);
+        const details = this;
+
+        xhttp.onreadystatechange = function() {
+      		if (this.readyState == 4 && this.status == 200) {
+      			const responseSize = this.responseText.length;
+      			app.stopProgress(details.widgetDOM, update, responseSize);
+      		}
+      	};
+
+        xhttp.open("POST", "");
+        xhttp.send(request);         // send request to server
+      } // end if (a file needs to be saved)
+
+      // Then call the function passed in (either saveData or addComplete)
+      func(data);
+    }.bind(this), func, app);
   }
 }
 
 saveData(data) { // Refreshes the node table and logs that addSave was clicked
-  // redo from as edit now that data is saved
+  for (let prop in data[0].n.properties) {
+    // strings can stay strings and numbers are already stored as numbers.
+    // Anything else was stored as a string and needs to be parsed.
+    let type = app.getProp(this.fields, prop, "type");
+    if (type && type !== "string" && type !== "number") {
+      data[0].n.properties[prop] = JSON.parse(data[0].n.properties[prop]);
+    }
+  }
+
   this.savedData = data[0].n;
   // Keep the trash relation shown in the table
   const text = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');

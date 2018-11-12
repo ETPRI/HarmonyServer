@@ -67,6 +67,9 @@ http.createServer(function (request, response) {
           case "CRUD":
             CRUD.runCRUD(obj, response);
             break;
+          case "file":
+            runFileRequest(obj, response);
+            break;
           default:
             console.log("Error server = %s\n", obj.server );
         }
@@ -171,6 +174,65 @@ function runNeo4j(query, response) {
           console.log(error);
         }
       });
+}
+
+function runFileRequest(obj, response) {
+  switch (obj.function) {
+    case "saveFile":
+      saveFile(obj.query, response);
+      break;
+    default:
+      console.log(`Error: File function ${obj.function} does not exist`);
+      break;
+  }
+}
+
+// Query may contain: fileText, fileType, userGUID, nodeGUID, copyUserGUID and copyNodeGUID
+function saveFile(query, response) {
+  if (query.userGUID && query.nodeGUID) {
+    const basePath = `${config.userFiles}/${query.userGUID}`;
+    const nodePath = `${basePath}/${query.nodeGUID}`;
+
+    // Create the folder for this user and for this node, if they don't already exist
+    if (!(fs.existsSync(basePath))) {
+      fs.mkdirSync(basePath);
+    }
+    if (!(fs.existsSync(nodePath))) {
+      fs.mkdirSync(nodePath);
+    }
+
+    if (query.copyUserGUID && query.copyNodeGUID) {
+      const copyUserPath = `${config.userFiles}/${query.copyUserGUID}`;
+      const copyNodePath = `${copyUserPath}/${query.copyNodeGUID}`;
+      if (fs.existsSync(copyUserPath) && fs.existsSync(copyNodePath)) {
+        fs.copyFileSync(copyNodePath, nodePath); // should copy the contents of the source folder to the new folder
+      }
+    } // end if (query included copy user GUID and copy node GUID; a folder needs to be copied)
+
+    if (query.fileText) {
+      // Get the highest numbered file currently in the folder - 0 if there are none
+      let currentFiles = fs.readdirSync(nodePath).map(str => parseInt(str));
+      let maxValue = Math.max(currentFiles);
+      if(maxValue === -Infinity || isNaN(maxValue)) {
+        maxValue = 0;
+      }
+
+      // Get the file type - default to .txt
+      let type = query.fileType;
+      if (!type) {
+        type = 'txt';
+      }
+
+      // Save the file
+      const fileName = `${nodePath}/${maxValue + 1}.${type}`;
+      fs.writeFile(fileName, query.fileText, (err) => {
+        if (err) console.log(`Error while saving file: ${err}`);
+      });
+    } // end if (the query included a file buffer)
+  } // end if (the query included a path and can be executed)
+
+  // Finally, return an empty response to the client, just so it knows the request is done
+  response.end("");
 }
 
 // ------------------------------------------ Gremlin stuff ---------
