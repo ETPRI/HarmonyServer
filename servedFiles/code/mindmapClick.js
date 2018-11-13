@@ -528,7 +528,7 @@ class mindmapClick {
       else {
         parentObj.children = [];
         parentObj.children.push(childObj);
-        alert ("The parent object had no children or _children array. A children array has been created.");
+        app.error("The parent object had no children or _children array. A children array has been created.");
       }
 
       // Make the parent the child's parent and remove the child's coordinates, which are no longer needed

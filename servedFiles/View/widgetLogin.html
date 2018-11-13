@@ -1,23 +1,27 @@
 <div class="widgetHeader">
   <span class = "freezable">
+    <div idr="requestDetails" class="hidden"></div>
     <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
     <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Harmony, Active Dev', this, 'topic')">
+    Last action: <span idr="requestName">None</span><input type="button" class="hidden" value="+" idr="showRequestDetails" onclick="app.toggleRequestDetails(this)"><br>
     <span id="userInfo">Not Logged In</span> <span id="sessionInfo"></span>
   </span>
   <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
 </div>
 <div class="widgetBody freezable">
+<!--  
   <div class="statusBar">
     <input type="button" id="clearRequests2" value="Clear" onclick="app.REST.clearRequests()">
     <p id="available2">Server Requests</p>
     <ul style="list-style-type:none" id="ongoing2" hidden></ul>
   </div>
+-->
 
   <div class="statusBar">
     <input type="button" id="clearRequests" value="Clear" onclick="app.clearRequests()">
     <p id="available">Server Requests</p>
     <ul style="list-style-type:none" id="ongoing" hidden></ul>
-  </div>  
+  </div>
 
   <p>Username: <input id="userName" onblur="app.regression.logText(this)">
     Password: <input type="password" id="password" onblur="app.regression.logText(this)"

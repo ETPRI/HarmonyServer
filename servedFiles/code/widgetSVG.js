@@ -40,24 +40,6 @@ class widgetSVG {
       obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.GUID}};
 
       app.sendQuery(obj, "findOptionalRelation", "Opening mindmap", this.widgetDOM, null, null, this.buildWidget.bind(this));
-
-      // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-      // const request = JSON.stringify(queryObject);
-      //
-      // const xhttp = new XMLHttpRequest();
-      // const SVG = this;
-      // const update = app.startProgress(this.widgetDOM, "Opening mindmap", request.length);
-      //
-      // xhttp.onreadystatechange = function() {
-      //   if (this.readyState == 4 && this.status == 200) {
-      //     const data = JSON.parse(this.responseText);
-      //     app.stopProgress(SVG.widgetDOM, update, this.responseText.length);
-      //     SVG.buildWidget(data);
-      //   }
-      // };
-      //
-      // xhttp.open("POST","");
-      // xhttp.send(request);         // send request to server
     }
 
     else {
@@ -158,7 +140,7 @@ class widgetSVG {
 
   loadComplete(data) { // Sets the roots array for the mind map to match the data that was loaded, then calls update() to draw the mind map
     if (data.length == 0) {
-      alert ("Error: Mind map not found");
+      app.error("Mind map not found");
     }
     else { // If a result was returned - which should always happen
       this.id = data[0].mindmap.id;
@@ -766,24 +748,6 @@ class widgetSVG {
         obj.to = {"id":app.login.userID, "return":false};
 
         app.sendQuery(obj, "changeRelation", "Saving mindmap", this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
-
-        // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-        // const request = JSON.stringify(queryObject);
-        //
-        // const xhttp = new XMLHttpRequest();
-        // const SVG = this;
-        // const update = app.startProgress(this.widgetDOM, "Saving mindmap", request.length);
-        //
-        // xhttp.onreadystatechange = function() {
-        //   if (this.readyState == 4 && this.status == 200) {
-        //     const data = JSON.parse(this.responseText);
-        //     app.stopProgress(SVG.widgetDOM, update, this.responseText.length);
-        //     SVG.checkNameExists(data, name, newMap);
-        //   }
-        // };
-        //
-        // xhttp.open("POST","");
-        // xhttp.send(request);         // send request to server
       }
     }
     else {
@@ -801,24 +765,6 @@ class widgetSVG {
         obj.to = {"id":app.login.userID, "return":false};
 
         app.sendQuery(obj, "changeRelation", "Checking name", this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
-
-        // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-        // const request = JSON.stringify(queryObject);
-        //
-        // const xhttp = new XMLHttpRequest();
-        // const SVG = this;
-        // const update = app.startProgress(this.widgetDOM, "Checking name", request.length);
-        //
-        // xhttp.onreadystatechange = function() {
-        //   if (this.readyState == 4 && this.status == 200) {
-        //     const data = JSON.parse(this.responseText);
-        //     app.stopProgress(SVG.widgetDOM, update, this.responseText.length);
-        //     SVG.checkNameExists(data, name, newMap);
-        //   }
-        // };
-        //
-        // xhttp.open("POST","");
-        // xhttp.send(request);         // send request to server
       }
     }
     else {
@@ -883,23 +829,6 @@ class widgetSVG {
             app.sendQuery(obj, "deleteRelation", "Removing node", this.widgetDOM, null, null, function(data, labels) {
               this.processNodes(labels);
             }.bind(this), labels);
-
-            // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-            // const request = JSON.stringify(queryObject);
-            //
-            // const xhttp = new XMLHttpRequest();
-            // const SVG = this;
-            // const update = app.startProgress(this.widgetDOM, "Removing node", request.length)
-            //
-            // xhttp.onreadystatechange = function() {
-            //   if (this.readyState == 4 && this.status == 200) {
-            //     app.stopProgress(SVG.widgetDOM, update, this.responseText.length);
-            //     SVG.processNodes(labels);
-            //   }
-            // };
-            //
-            // xhttp.open("POST","");
-            // xhttp.send(request);         // send request to server
           }
           else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
             this.processNodes(labels);
@@ -918,23 +847,6 @@ class widgetSVG {
               app.sendQuery(obj, "deleteRelation", "Updating node info", this.widgetDOM, null, null, function(data, labels) {
                 this.processNodes(labels);
               }.bind(this), labels);
-
-              // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-              // const request = JSON.stringify(queryObject);
-              //
-              // const xhttp = new XMLHttpRequest();
-              // const SVG = this;
-              // const update = app.startProgress(this.widgetDOM, "Updating node info", request.length);
-              //
-              // xhttp.onreadystatechange = function() {
-              //   if (this.readyState == 4 && this.status == 200) {
-              //     app.stopProgress(SVG.widgetDOM, update, this.responseText.length);
-              //     SVG.processNodes(labels);
-              //   }
-              // };
-              //
-              // xhttp.open("POST","");
-              // xhttp.send(request);         // send request to server
             }
             else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
               this.processNodes(labels);
@@ -950,23 +862,6 @@ class widgetSVG {
               app.sendQuery(obj, "changeRelation", "Linking node", this.widgetDOM, null, null, function(data, labels) {
                 this.processNodes(labels);
               }.bind(this), labels);
-
-              // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-              // const request = JSON.stringify(queryObject);
-              //
-              // const xhttp = new XMLHttpRequest();
-              // const SVG = this;
-              // const update = app.startProgress(this.widgetDOM, "Linking node", request.length);
-              //
-              // xhttp.onreadystatechange = function() {
-              //   if (this.readyState == 4 && this.status == 200) {
-              //     app.stopProgress(SVG.widgetDOM, update, this.responseText.length);
-              //     SVG.processNodes(labels);
-              //   }
-              // };
-              //
-              // xhttp.open("POST","");
-              // xhttp.send(request);         // send request to server
             }
             else { // If there is no new relation, no need to do anything except call processNodes.
               this.processNodes(labels);
@@ -1065,24 +960,6 @@ class widgetSVG {
                    {"property":"viewBox", "value":this.SVG_DOM.getAttribute("viewBox")}];
 
     app.sendQuery(obj, "changeNode", "Saving mindmap data", this.widgetDOM, null, null, this.d3Functions.update.bind(this.d3Functions));
-
-    // const queryObject = {"server": "CRUD", "function": "changeNode", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const SVG = this;
-    // const update = app.startProgress(this.widgetDOM, "Saving mindmap data", request.length);
-    //
-  	// xhttp.onreadystatechange = function() {
-  	// 	if (this.readyState == 4 && this.status == 200) {
-  	// 		const data = JSON.parse(this.responseText);
-    //     app.stopProgress(SVG.widgetDOM, update, this.responseText.length);
-  	// 		SVG.d3Functions.update(data);
-  	// 	}
-  	// };
-    //
-  	// xhttp.open("POST","");
-  	// xhttp.send(request);         // send request to server
 
     // Meanwhile, save information from the details pane.
     this.details.id = this.id;

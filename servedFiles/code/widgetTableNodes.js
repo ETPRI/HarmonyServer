@@ -62,7 +62,7 @@ class widgetTableNodes {
       } // end for (every item in the criteria array)
     } // end if (search criteria were passed in)
 
-    let userRequest = app.REST.startUserRequest(`Search for ${this.queryObject.nodeLabel}`);
+    let userRequest = app.REST.startUserRequest(`Search for ${this.queryObject.nodeLabel}`, this.widgetDOM);
 
     app.REST.sendQuery(this.buildQuery(), "tableNodeSearch", `Searching for ${this.queryObject.nodeLabel}`, userRequest, this.widgetDOM, null, null, function(data) {
       this.data = data;

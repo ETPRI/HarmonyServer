@@ -92,7 +92,7 @@ class widgetLogin {
 
   // Creates a session node and then calls mergeBrowser to create a browser node, if necessary.
   createSession() {
-    let userRequest = app.REST.startUserRequest("Login");
+    let userRequest = app.REST.startUserRequest("Login", this.loginDiv);
 
     // If a session is already ongoing (say, from a failed login attempt), skip straight to recording the request
     if (this.sessionGUID && this.browserGUID) {
@@ -357,15 +357,35 @@ class widgetLogin {
     row.appendChild(newCell);
     newCell.outerHTML = `<td id="faveNode${app.faveNode++}" draggable="true"
                       ondragover = "event.preventDefault()" ondragstart="app.widget('drag', this, event)"
-                      ondrop = "app.dropLink(this, event); app.widget('saveFavorite', this)"></td>`;
+                      ondrop = "app.dropLink(this, event); app.widget('saveFavorite', this, event)"></td>`;
   }
 
-  saveFavorite(input) {
-    let userRequest = app.REST.startUserRequest("Save favorite");
+  saveFavorite(input, evnt) {
+    const dataText = evnt.dataTransfer.getData("text/plain");
+    const data = JSON.parse(dataText);
+
+    // If the data came from this table, we're rearranging, not adding a new favorite. Don't bother with the DB call
+    if (data && data.sourceType == "dragDrop" && data.sourceTag == "TD" && data.sourceID == app.domFunctions.widgetGetId(input)) {
+      return;
+    }
+
+    // Otherwise, verify that the data represent a node - if not, do nothing.
+  	if (!data || !(
+  			data.sourceType == "widgetTableNodes" && data.sourceTag == "TD" ||
+  			data.sourceType == "widgetRelations" && data.sourceTag == "TR" ||
+  			data.sourceType == "widgetNode" && data.sourceTag == "B" ||
+  			data.sourceType == "dragDrop" && data.sourceTag == "TR" ||
+  			data.sourceType == "widgetSVG" && data.sourceTag == "B"
+  		)) {
+  		return;
+  	}
+
+    // If we got this far, then the data represent a node which didn't come from the favorites list. Add a favorites relation.
+    let userRequest = app.REST.startUserRequest("Save favorite", this.loginDiv);
 
     let obj = {};
     obj.from = {"id":this.userID, "return":false};
-    obj.to = {"properties":{"M_GUID":input.getAttribute("GUID")}, "return":false};
+    obj.to = {"properties":{"M_GUID":data.nodeID}, "return":false};
     obj.rel = {"type":"Favorite", "merge":true, "return":false};
 
     app.REST.sendQuery(obj, "changeRelation", "Saving favorite", userRequest, this.loginDiv);
@@ -381,7 +401,7 @@ class widgetLogin {
       }
     }
 
-    let userRequest = app.REST.startUserRequest("Update favorites");
+    let userRequest = app.REST.startUserRequest("Update favorites", this.loginDiv);
 
     const obj = {};
     obj.node = {"id":this.userID, "return":false};
@@ -395,7 +415,7 @@ class widgetLogin {
       element = element.parentElement;
     }
 
-    let userRequest = app.REST.startUserRequest("Delete favorite");
+    let userRequest = app.REST.startUserRequest("Delete favorite", this.loginDiv);
 
     let obj = {};
     obj.from = {"id":this.userID, "return":false};
@@ -406,7 +426,7 @@ class widgetLogin {
   }
 
   checkUserName(input) {
-    let userRequest = app.REST.startUserRequest("Check username availability");
+    let userRequest = app.REST.startUserRequest("Check username availability", this.loginDiv);
 
     const obj = {};
     obj.rel = {"type":"Permissions", "properties":{"username":input.value}};
@@ -441,7 +461,7 @@ class widgetLogin {
     const nameInput = app.domFunctions.getChildByIdr(popup, 'name');
     const pwInput = app.domFunctions.getChildByIdr(popup, 'password');
 
-    let userRequest = app.REST.startUserRequest("Save profile");
+    let userRequest = app.REST.startUserRequest("Save profile", this.loginDiv);
 
     const obj = {};
     obj.from = {"id":app.login.userID, "return":false};
@@ -516,7 +536,7 @@ class widgetLogin {
     this.nameInput.value = "";
     this.passwordInput.value = "";
 
-    let userRequest = app.REST.startUserRequest("Logout");
+    let userRequest = app.REST.startUserRequest("Logout", this.loginDiv);
 
     const obj = {};
     obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}, "return":false};

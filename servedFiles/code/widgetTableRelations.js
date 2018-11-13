@@ -368,22 +368,6 @@ class widgetTableRelations {
 
     app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
 
-    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-    // const table = this;
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
-
     this.fieldSelectPopup.hidden = true;
     this.refresh();
   }
@@ -631,22 +615,6 @@ class widgetTableRelations {
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
         app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
-
-        // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-        // const request = JSON.stringify(queryObject);
-        //
-        // const xhttp = new XMLHttpRequest();
-        // const update = app.startProgress(this.widgetDOM, "Updating metadata", request.length);
-        // const table = this;
-        //
-        // xhttp.onreadystatechange = function() {
-        //   if (this.readyState == 4 && this.status == 200) {
-        //     app.stopProgress(table.widgetDOM, update, this.responseText.length);
-        //   }
-        // };
-        //
-        // xhttp.open("POST","");
-        // xhttp.send(request);         // send request to server
         this.refresh();
       }
     }

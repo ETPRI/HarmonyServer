@@ -135,24 +135,6 @@ class dataBrowser {
       obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
       app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.findOuts.bind(this), GUID, "mainData");
-
-      // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-      // const request = JSON.stringify(queryObject);
-      //
-      // const xhttp = new XMLHttpRequest();
-      // const dataBrowser = this;
-      // const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
-      //
-      // xhttp.onreadystatechange = function() {
-      //   if (this.readyState == 4 && this.status == 200) {
-      //     const newData = JSON.parse(this.responseText);
-      //     app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
-      //     dataBrowser.findOuts(newData, GUID, "mainData");
-      //   }
-      // };
-      //
-      // xhttp.open("POST","");
-      // xhttp.send(request);         // send request to server
     }
   }
 
@@ -282,24 +264,6 @@ class dataBrowser {
     obj.rel = {"name":"outRel"};
 
     app.sendQuery(obj, "findOptionalRelation", "Searching for relations", this.widgetDOM, null, null, this.processData.bind(this), data, dataName);
-
-    // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const dataBrowser = this;
-    // const update = app.startProgress(this.widgetDOM, "Searching for relations", request.length)
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     const newData = JSON.parse(this.responseText);
-    //     app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
-    //     dataBrowser.processData(newData, data, dataName);
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
   }
 
   processData(outData, inData, dataName) {
@@ -401,24 +365,6 @@ class dataBrowser {
         obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
         app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.findOuts.bind(this), nodeGUID, nodeName);
-
-        // const queryObject = {"server": "CRUD", "function": "findOptionalRelation", "query": obj, "GUID": app.login.userGUID};
-        // const request = JSON.stringify(queryObject);
-        //
-        // const xhttp = new XMLHttpRequest();
-        // const dataBrowser = this;
-        // const update = app.startProgress(this.widgetDOM, "Searching for node", request.length);
-        //
-        // xhttp.onreadystatechange = function() {
-        //   if (this.readyState == 4 && this.status == 200) {
-        //     const newData = JSON.parse(this.responseText);
-        //     app.stopProgress(dataBrowser.widgetDOM, update, this.responseText.length);
-        //     dataBrowser.findOuts(newData, nodeGUID, nodeName);
-        //   }
-        // };
-        //
-        // xhttp.open("POST","");
-        // xhttp.send(request);         // send request to server
       }
     }
   }

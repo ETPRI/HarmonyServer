@@ -329,7 +329,7 @@ class widgetCalendar {
     else if (button.getAttribute("idr") == "forwardButton") {
       offset = 1; // Add 1 to the day, month or year to go forward (or add 7 to the day to go forward a week)
     }
-    else alert (`Error: something other than the forward or back buttons called the "page" method.`);
+    else app.error(`Something other than the forward or back buttons called the "page" method.`);
 
     if (this.mode == "day") {
       this.day.setDate(this.day.getDate() + offset);

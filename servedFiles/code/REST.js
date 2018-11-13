@@ -5,30 +5,42 @@ class REST {
     this.serverRequests = [];
   }
 
-  startUserRequest(text) {
-    const avail = document.getElementById("available2");
-    if (avail) {
-      avail.hidden = true;
-    }
-    const ongoing = document.getElementById("ongoing2");
-    if (ongoing) {
-      ongoing.hidden = false;
+  startUserRequest(text, DOMelement) {
+    let topWidget = null;
 
-      const row = document.createElement("LI");
+    while (DOMelement) {
+  		if (DOMelement.classList.contains("widget")) {
+  			topWidget = DOMelement;
+  		}
+  		DOMelement = DOMelement.parentElement;
+  	}
+
+    const div = app.domFunctions.getChildByIdr(topWidget, "requestDetails");
+    if (div) {
+      div.innerHTML = "";
+    }
+
+    const span = app.domFunctions.getChildByIdr(topWidget, "requestName");
+    if (span) {
+      span.innerHTML = "";
+      const request = document.createElement("SPAN");
       const status = document.createTextNode(`${this.userRequest}) ${text}`);
       const timer = document.createElement("SPAN");
       timer.innerHTML = ":  0 ms";
       timer.setAttribute('idr', 'timer');
-      row.setAttribute('id', `requestRow${this.userRequest}`);
-      row.appendChild(status);
-      row.appendChild(timer);
-      ongoing.appendChild(row);
+      request.setAttribute('id', `requestRow${this.userRequest}`);
+      request.appendChild(status);
+      request.appendChild(timer);
+      span.appendChild(request);
+
+      const toggleDetails = app.domFunctions.getChildByIdr(topWidget, "showRequestDetails");
+      toggleDetails.classList.remove("hidden");
 
       this.requestDetails[this.userRequest] = [];
       this.serverRequests[this.userRequest] = 0;
-
-      return this.userRequest++; // Return and then increment
     }
+
+    return this.userRequest++; // Return and then increment
   }
 
   // DOMelement is usually the whole widget, but it will also work if it's an element from within the widget.
@@ -37,7 +49,7 @@ class REST {
   	let topWidget = null;
   	let recordStartTime = null;
 
-  	while (DOMelement) {
+    while (DOMelement) {
   		if (DOMelement.classList.contains("widget")) {
   			topWidget = DOMelement;
   		}
@@ -46,49 +58,50 @@ class REST {
 
   	// topWidget should now be the top-level widget containing the element, or null if the element doesn't exist or isn't in a widget
   	if (topWidget) {
+
   		const freezables = topWidget.getElementsByClassName('freezable');
   		for (let i = 0; i < freezables.length; i++) {
   			freezables[i].classList.add("requestRunning");
   		}
-  		const header = topWidget.getElementsByClassName('widgetHeader');
-  		for (let i = 0; i < header.length; i++) {
-  			header[i].classList.add("grayedOut");
-  		}
+  		const header = topWidget.getElementsByClassName('widgetHeader')[0]; // There should be only one header
+  			header.classList.add("grayedOut");
+
+      // Add a row for the server request to the details div
+      const detailsDiv = app.domFunctions.getChildByIdr(header, "requestDetails");
+      const detailRow = document.createElement('P');
+      detailRow.setAttribute('idr', `requestDetail${userRequest}.${serverRequest}`);
+      detailRow.innerHTML = `${userRequest}.${serverRequest}) ${text} <span idr = 'serverTimer${serverRequest}'>:  0 ms</span>`
+      detailsDiv.appendChild(detailRow);
 
   		const cancel = app.domFunctions.getChildByIdr(topWidget, 'cancelButton');
   		cancel.classList.remove('hidden');
-  	}
 
-  	let update = null;
+      let update = null;
 
-  	const ongoing = document.getElementById("ongoing2");
-  	if (ongoing) {
-  		// ongoing.hidden = false;
+      const row = document.getElementById(`requestRow${userRequest}`);
+      const serverTimer = app.domFunctions.getChildByIdr(detailRow, `serverTimer${serverRequest}`);
+      const userTimer = app.domFunctions.getChildByIdr(row, 'timer');
 
-  		const row = document.getElementById(`requestRow${userRequest}`);
-  		if (topWidget && topWidget.id) {
-  			row.setAttribute("widget", topWidget.id);
-  		}
-  		// const status = document.createTextNode(text);
-  		const timer = app.domFunctions.getChildByIdr(row, 'timer');
-      // Subtract the time already elapsed from now to get the effective start time
-      const startTime = performance.now() - parseInt(timer.textContent.slice(3));
+      // The server action starts now - no need to subtract
+      const serverStartTime = performance.now();
+      // Subtract the time already elapsed from now to get the effective start time for the user action
+      const userStartTime = serverStartTime - parseInt(userTimer.textContent.slice(3));
 
-  		update = setInterval(function () {
+      update = setInterval(function () {
   			const currTime = performance.now();
-  			const elapsedTime = currTime - startTime;
-  			timer.innerHTML = `:  ${Math.round(elapsedTime)} ms`;
+        const serverElapsedTime = currTime - serverStartTime;
+  			const userElapsedTime = currTime - userStartTime;
+        serverTimer.innerHTML = `:  ${Math.round(serverElapsedTime)} ms`;
+  			userTimer.innerHTML = `:  ${Math.round(userElapsedTime)} ms`;
   		}, 10);
 
   		row.setAttribute("update", update);
-  	}
 
-  	const requestObj = {"timer":update};
-    recordStartTime = Date.now();
-    requestObj.startTime = recordStartTime;
+      const requestObj = {"timer":update};
+      recordStartTime = Date.now();
+      requestObj.startTime = recordStartTime;
 
-  	if (topWidget) {
-  		const id = topWidget.getAttribute('id');
+      const id = topWidget.getAttribute('id');
   		const JSinstance = app.widgets[id];
   		if (JSinstance) {
   			if (JSinstance.requests == undefined) { // make sure there's a requests array
@@ -96,34 +109,45 @@ class REST {
   			}
   			JSinstance.requests.push(requestObj);
   		}
-  	}
 
-    this.requestDetails[userRequest][serverRequest] = {
-      "userRequest":userRequest,
-      "serverRequest":serverRequest,
-      "description":text,
-      "startTime":recordStartTime,
-      "requestLength":request.length,
-      "request":JSON.parse(request)
-    };
+      this.requestDetails[userRequest][serverRequest] = {
+        "userRequest":userRequest,
+        "serverRequest":serverRequest,
+        "description":text,
+        "startTime":recordStartTime,
+        "requestLength":request.length,
+        "request":JSON.parse(request)
+      };
 
-  	if (app.login.sessionGUID && app.login.browserGUID) { // if a session is ongoing, record the request
-      requestObj.userRequest = userRequest;
-      requestObj.serverRequest = serverRequest;
+      if (app.login.sessionGUID && app.login.browserGUID) { // if a session is ongoing, record the request
+        requestObj.userRequest = userRequest;
+        requestObj.serverRequest = serverRequest;
 
-  	  const obj = {};
-  	  obj.from = {"type":"M_Session", "properties":{"M_GUID":app.login.sessionGUID}};
-  	  obj.rel = {"type":"Request",
-                 "properties": JSON.parse(JSON.stringify(this.requestDetails[userRequest][serverRequest]))};
-  	  obj.to = {"type":"M_Browser", "properties":{"M_GUID":app.login.browserGUID}};
+    	  const obj = {};
+    	  obj.from = {"type":"M_Session", "properties":{"M_GUID":app.login.sessionGUID}};
+    	  obj.rel = {"type":"Request",
+                   "properties": JSON.parse(JSON.stringify(this.requestDetails[userRequest][serverRequest]))};
+    	  obj.to = {"type":"M_Browser", "properties":{"M_GUID":app.login.browserGUID}};
 
-  	  const xhttp = new XMLHttpRequest();
+    	  const xhttp = new XMLHttpRequest();
 
-  	  xhttp.open("POST","");
-  	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep"};
-  	  xhttp.send(JSON.stringify(queryObject));         // send request to server
-  	} // end if (a session is ongoing)
-  	return requestObj; // Info stopProgress will need later
+    	  xhttp.open("POST","");
+    	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep"};
+    	  xhttp.send(JSON.stringify(queryObject));         // send request to server
+    	} // end if (a session is ongoing)
+    	return requestObj; // Info stopProgress will need later
+  	} // end if (topWidget exists)
+
+  	// const ongoing = document.getElementById("ongoing2");
+  	// if (ongoing) {
+		// ongoing.hidden = false;
+		// if (topWidget && topWidget.id) {
+		// 	row.setAttribute("widget", topWidget.id);
+		// }
+		// const status = document.createTextNode(text);
+  	// }
+  	// if (topWidget) {
+  	// }
   }
 
   stopProgress(DOMelement, obj, response, userRequest, serverRequest) {
@@ -223,29 +247,29 @@ class REST {
   	}
   }
 
-  clearRequests() {
-  	// For each row, get the update and clear the interval (just in case it's still going)
-  	const ongoing = document.getElementById("ongoing2");
-  	const rows = ongoing.children;
-  	for (let i = 0; i < rows.length; i++) {
-  		const row = rows[i];
-  		const update = row.getAttribute('update');
-  		clearInterval(update);
-  	}
-
-  	// Then remove all rows from the ongoing list, hide it and show the available text
-  	ongoing.innerHTML = "";
-  	ongoing.hidden = true;
-
-  	const avail = document.getElementById("available2");
-  	avail.hidden = false;
-
-  	const box = ongoing.parentElement;
-
-  	// Repaint the box - there's a bug (NOT in my code - a known issue) that makes it disappear when the scrollbars disappear
-  	box.parentElement.insertBefore(box, box.nextElementSibling);
-
-  }
+  // clearRequests() {
+  // 	// For each row, get the update and clear the interval (just in case it's still going)
+  // 	const ongoing = document.getElementById("ongoing2");
+  // 	const rows = ongoing.children;
+  // 	for (let i = 0; i < rows.length; i++) {
+  // 		const row = rows[i];
+  // 		const update = row.getAttribute('update');
+  // 		clearInterval(update);
+  // 	}
+  //
+  // 	// Then remove all rows from the ongoing list, hide it and show the available text
+  // 	ongoing.innerHTML = "";
+  // 	ongoing.hidden = true;
+  //
+  // 	const avail = document.getElementById("available2");
+  // 	avail.hidden = false;
+  //
+  // 	const box = ongoing.parentElement;
+  //
+  // 	// Repaint the box - there's a bug (NOT in my code - a known issue) that makes it disappear when the scrollbars disappear
+  // 	box.parentElement.insertBefore(box, box.nextElementSibling);
+  //
+  // }
 
   sendQuery(obj, CRUD, description, userRequest, DOMelement, GUID, url, onComplete, ...args) {
   	if (!GUID) {

@@ -224,7 +224,7 @@ class regressionTesting {
       }
 
     	if (fileButton.files.length == 0) { // If there were no files uploaded
-    		alert ("Select a file first!")
+    		alert("Select a file first!");
     	}
     } // end if (file is not already playing)
   } // end play method
@@ -284,22 +284,6 @@ class regressionTesting {
       obj.return = false;
 
       app.sendQuery(obj, "deleteNode", "Clearing database");
-
-      // const queryObject = {"server": "CRUD", "function": "deleteNode", "query": obj, "GUID": app.login.userGUID};
-      // const request = JSON.stringify(queryObject);
-      //
-      // const update = app.startProgress(null, "Clearing database", request.length);
-      //
-      // const xhttp = new XMLHttpRequest();
-      //
-      // xhttp.onreadystatechange = function() {
-      //   if (this.readyState == 4 && this.status == 200) {
-      //     app.stopProgress(null, update, this.responseText.length);
-      //   }
-      // };
-      //
-      // xhttp.open("POST","");
-      // xhttp.send(request);         // send request to server
 
   		// reset all variables to ensure same state every time "Clear All" is chosen
   		app.idCounter = 0; // reset ID counter

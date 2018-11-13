@@ -54,24 +54,6 @@ refresh() {
     }
 
     app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, null, null, this.processSummary.bind(this));
-
-    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const relationObj = this;
-    // const update = app.startProgress(this.containerDOM, "Finding links", request.length)
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     const data = JSON.parse(this.responseText);
-    //     app.stopProgress(relationObj.containerDOM, update, this.responseText.length);
-    //     relationObj.processSummary(data);
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
   }
 
   else if (this.nodeGUID == null) {
@@ -81,24 +63,6 @@ refresh() {
     obj.rel = {"type":"View"};
 
     app.sendQuery(obj, "changeRelation", "Finding view", this.containerDOM, null, null, this.findLinks.bind(this));
-
-    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const relation = this;
-    // const update = app.startProgress(this.containerDOM, "Finding view", request.length);
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     const data = JSON.parse(this.responseText);
-    //     app.stopProgress(relation.containerDOM, update, this.responseText.length);
-    //     relation.findLinks(data);
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
   }
 
   else {
@@ -162,24 +126,6 @@ findLinks(data) { // If data were returned, they will include the node's GUID an
   }
 
   app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, null, null, this.rComplete.bind(this));
-
-  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const relation = this;
-  // const update = app.startProgress(this.containerDOM, "Finding links", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(relation.containerDOM, update, this.responseText.length);
-  //     relation.rComplete(data);
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 // Takes the list of nodes in this user's view and begins building the widget by adding a "Save" or "Sync" button,
@@ -682,33 +628,6 @@ processNext(data, rows, prevFunction) {
           rows.push(row);
           this.processNext(null, rows);
         }.bind(this), row, rows)
-
-        // const queryObject = {"server": "CRUD", "function": "createNode", "query": obj, "GUID": app.login.userGUID};
-        // const request = JSON.stringify(queryObject);
-        //
-        // const xhttp = new XMLHttpRequest();
-        // const relations = this;
-        // const update = app.startProgress(this.containerDOM, "Creating new node", request.length);
-        //
-        // xhttp.onreadystatechange = function() {
-        //   if (this.readyState == 4 && this.status == 200) {
-        //     const data = JSON.parse(this.responseText);
-        //     app.stopProgress(relations.containerDOM, update, this.responseText.length);
-        //     const nodeIDcell = row.children[2];
-        //     nodeIDcell.textContent = data[0].node.properties.M_GUID;
-        //     const nameCell = row.children[3];
-        //     nameCell.textContent = data[0].node.properties.name;
-        //     const typeCell = row.children[4];
-        //     typeCell.textContent = data[0].node.labels[0];
-        //     row.classList.remove('changedData');
-        //     row.classList.add('newData');
-        //     rows.push(row);
-        //     relations.processNext(null, rows);
-        //   }
-        // };
-        //
-        // xhttp.open("POST","");
-        // xhttp.send(request);         // send request to server
       }
       // Otherwise, add the comment to the placeholders list and move on.
       else {
@@ -753,24 +672,6 @@ processNext(data, rows, prevFunction) {
                    {"item":"rel", "property":`${this.relationType}_placeholders`, "value":JSON.stringify(this.placeholders), "string":false}];
 
     app.sendQuery(obj, "changeRelation", "Updating view", this.containerDOM, null, null, this.findLinks.bind(this));
-
-    // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-  	// const relations = this;
-    // const update = app.startProgress(this.containerDOM, "Updating view", request.length);
-    //
-  	// xhttp.onreadystatechange = function() {
-  	// 	if (this.readyState == 4 && this.status == 200) {
-  	// 		const data = JSON.parse(this.responseText);
-    //     app.stopProgress(relations.containerDOM, update, this.responseText.length);
-  	// 		relations.findLinks(data);
-  	// 	}
-  	// };
-    //
-  	// xhttp.open("POST","");
-  	// xhttp.send(request);         // send request to server
   }
 }
 
@@ -791,24 +692,6 @@ deleteNode(row, rows) {
   app.sendQuery(obj, "deleteRelation", "Deleting link", this.containerDOM, null, null, function(data, rows) {
     this.processNext(null, rows);
   }.bind(this), rows);
-
-  // const queryObject = {"server": "CRUD", "function": "deleteRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const relation = this;
-  // const update = app.startProgress(this.containerDOM, "Deleting link", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(relation.containerDOM, update, this.responseText.length);
-  //     relation.processNext(null, rows);
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 // A workaround for the fact that Neo4j doesn't let you change the nodes a relationship is attached to.
@@ -840,24 +723,6 @@ modifyNode (row, rows) {
   obj.changes = [{"item":"rel", "property":"comment", "value":app.stringEscape(comment)}];
 
   app.sendQuery(obj, "changeRelation", "Updating link", this.containerDOM, null, null, this.processNext.bind(this), rows, "modify");
-
-  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObj);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const relation = this;
-  // const update = app.startProgress(this.containerDOM, "Updating link", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(relation.containerDOM, update, this.responseText.length);
-  //     relation.processNext(data, rows, "modify");
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 // Adds a new relation to the node being viewed. If a destination node was specified for the relation,
@@ -878,29 +743,6 @@ addNode(row, rows) {
       this.createView(row, rows);
     }
   }.bind(this), row, rows);
-
-  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const relationObj = this;
-  // const update = app.startProgress(this.containerDOM, "Searching for view", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(relationObj.containerDOM, update, this.responseText.length);
-  //     if (data.length > 0) {
-  //       relationObj.createLink(row, rows);
-  //     }
-  //     else {
-  //       relationObj.createView(row, rows);
-  //     }
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 // Create the link to the other node (at this point, the view link exists)
@@ -946,24 +788,6 @@ createLink(row, rows) {
 
     app.sendQuery(obj, "createRelation", "Adding link", this.containerDOM, null, null, this.processNext.bind(this), rows, "add");
 
-    // const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": app.login.userGUID};
-    // const request = JSON.stringify(queryObject);
-    //
-    // const xhttp = new XMLHttpRequest();
-    // const relationObj = this;
-    // const update = app.startProgress(this.containerDOM, "Adding link", request.length);
-    //
-    // xhttp.onreadystatechange = function() {
-    //   if (this.readyState == 4 && this.status == 200) {
-    //     const data = JSON.parse(this.responseText);
-    //     app.stopProgress(relationObj.containerDOM, update, this.responseText.length);
-    //     relationObj.processNext(data, rows, "add");
-    //   }
-    // };
-    //
-    // xhttp.open("POST","");
-    // xhttp.send(request);         // send request to server
-
   } // end if (there is an ID for the other node)
   else { // this should never happen, but just in case, if there's no other node ID, just call processNext.
     this.processNext(null, rows);
@@ -980,24 +804,6 @@ createView(row, rows) {
   app.sendQuery(obj, "changeRelation", "Creating view", this.containerDOM, null, null, function(data, row, rows) {
     this.createLink(row, rows);
   }.bind(this), row, rows);
-
-  // const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": app.login.userGUID};
-  // const request = JSON.stringify(queryObject);
-  //
-  // const xhttp = new XMLHttpRequest();
-  // const relationObj = this;
-  // const update = app.startProgress(this.containerDOM, "Creating view", request.length);
-  //
-  // xhttp.onreadystatechange = function() {
-  //   if (this.readyState == 4 && this.status == 200) {
-  //     const data = JSON.parse(this.responseText);
-  //     app.stopProgress(relationObj.containerDOM, update, this.responseText.length);
-  //     relationObj.createLink(row, rows);
-  //   }
-  // };
-  //
-  // xhttp.open("POST","");
-  // xhttp.send(request);         // send request to server
 }
 
 // Fires when a row from any relations table - whether it's the fully interactive table for a logged-in user,

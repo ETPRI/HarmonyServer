@@ -389,10 +389,12 @@ widgetHeader(widgetType, tag){
 	<hr>
 	<div idr="header" class="widgetHeader" draggable="true" ondragstart="app.drag(this, event)">
 		<span class="freezable">
+			<div idr="requestDetails" class="hidden"></div>
 			<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
 			<input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
 			<input type="button" value = "<>" idr="fullScreenButton" onclick = "app.widgetFullScreen(this)">
 			<input type="button" value="?" idr="helpButton" onclick="app.showHelp('${widgetType}', app.domFunctions.widgetGetId(this))">
+			Last action: <span idr="requestName">None</span><input type="button" class="hidden" value="+" idr="showRequestDetails" onclick="app.toggleRequestDetails(this)"><br>
 		`)
 }
 
@@ -550,6 +552,23 @@ widgetFullScreen(widgetElement) {
 	}
 }
 
+toggleRequestDetails(button) { // The toggle button should be a sibling of the request details div
+	const header = button.parentElement;
+	const detailsDiv = this.domFunctions.getChildByIdr(header, 'requestDetails');
+
+	if (button.value === '+') {
+		detailsDiv.classList.remove("hidden");
+		button.value = "__";
+	}
+	else if (button.value === "__") {
+		detailsDiv.classList.add("hidden");
+		button.value = "+";
+	}
+	else {
+		app.error(`Toggle details button should display "+" or "__", but instead displays "${button.value}"`);
+	}
+}
+
 // Escapes special characters in a string. Stringifying it and then removing the outer quotes is a good shortcut.
 stringEscape(text) {
 	let string = JSON.stringify(text);
@@ -658,7 +677,7 @@ dropLink(input, evnt) {
 	const data = JSON.parse(dataText);
 
 	// If this came from a draggable TD in the same widget, it should be from rearranging tds in a draggable row.
-	// Call dragdrop.drag to handle it.
+	// Call dragdrop.drop to handle it.
 	if (data && data.sourceType == "dragDrop" && data.sourceTag == "TD" && data.sourceID == this.domFunctions.widgetGetId(input)) {
 		this.widget('drop', input, evnt);
 		return;

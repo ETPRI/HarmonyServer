@@ -339,7 +339,7 @@ class copy {
       xhttp2.send(JSON.stringify(obj));         // send request to server
     }
     else { // this should never happen - but may as well prepare for it
-      alert ("Error: Tried to upload an empty set of nodes");
+      app.error("Tried to upload an empty set of nodes");
     }
   }
 
@@ -439,7 +439,7 @@ class copy {
       xhttp2.send(JSON.stringify(obj));         // send request to server
     }
     else { // this should never happen - but may as well prepare for it
-      alert ("Error: Tried to upload an empty set of relations");
+      app.error("Tried to upload an empty set of relations");
     }
   }
   //------------------------------------Backup code--------------------------
