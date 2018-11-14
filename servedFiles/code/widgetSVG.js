@@ -35,19 +35,20 @@ class widgetSVG {
     this.notesText = null;
     this.notesLabel = null;
 
-    if (this.GUID) {
-      const obj = {};
-      obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.GUID}};
+    // if (this.GUID) {
+    //   const obj = {};
+    //   obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.GUID}};
+    //
+    //   const userRequest = app.REST.startUserRequest("Opening mindmap", this.widgetDOM);
+    //   app.REST.sendQuery(obj, "findOptionalRelation", "Opening mindmap", userRequest, this.widgetDOM, null, null, this.buildWidget.bind(this));
+    // }
 
-      app.sendQuery(obj, "findOptionalRelation", "Opening mindmap", this.widgetDOM, null, null, this.buildWidget.bind(this));
-    }
-
-    else {
+    // else {
       this.buildWidget();
-    }
+    // }
   } // end constructor
 
-  buildWidget(data) { // create blank mind map, then if data was passed in, call loadComplete
+  buildWidget() { // create blank mind map, then if a GUID was passed in, search and pass to loadComplete
     if (!this.name) {
       this.name = "Untitled mind map";  // The name starts off untitled; it can change later
     }
@@ -125,11 +126,20 @@ class widgetSVG {
     this.detailsPane = document.getElementById('detailsPane');
     this.mindmapDetails = document.getElementById('mindmapDetails');
     this.containedWidgets.push(app.idCounter);
-    this.details = new widgetDetails('mindmap', this.mindmapDetails, this.GUID);
 
-    if (data) {
-      this.loadComplete(data);
+    const userRequest = app.REST.startUserRequest("Opening mindmap", this.widgetDOM);
+    this.details = new widgetDetails('mindmap', this.mindmapDetails, this.GUID, null, null, userRequest);
+
+    if (this.GUID) {
+      const obj = {};
+      obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.GUID}};
+
+      app.REST.sendQuery(obj, "findOptionalRelation", "Opening mindmap", userRequest, this.widgetDOM, null, null, this.loadComplete.bind(this));
     }
+
+    // if (data) {
+    //   this.loadComplete(data);
+    // }
 
     if (app.activeWidget) {
       app.activeWidget.classList.remove("activeWidget");
@@ -732,6 +742,8 @@ class widgetSVG {
   // Check whether a new node is needed (because the map has never been saved before, or the user clicked "Save As").
   // If so, create the new node and call setOwner. If not, call setOwner if the map has no owner, or startNodes if it has an owner.
   startSave(button) {
+    const userRequest = app.REST.startUserRequest("Saving mindmap", this.widgetDOM);
+
     let name = app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent;
     const id = this.id;
     let newMap = false;
@@ -747,15 +759,15 @@ class widgetSVG {
         obj.rel = {"type":"Owner", "return":false};
         obj.to = {"id":app.login.userID, "return":false};
 
-        app.sendQuery(obj, "changeRelation", "Saving mindmap", this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
+        app.REST.sendQuery(obj, "changeRelation", "Saving mindmap", userRequest, this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
       }
     }
     else {
-      app.checkOwner("mindmap", newMap, this.widgetDOM, this, 'startNodes', name);
+      app.checkOwner("mindmap", newMap, this.widgetDOM, this, 'startNodes', name, userRequest);
     }
   }
 
-  checkNameExists(data, name, newMap) {
+  checkNameExists(data, userRequest, name, newMap) {
     if (data && data.length > 0) {
       name = prompt("Sorry, you already have a map with that name. Please choose another", name);
       if (name != null) {
@@ -764,27 +776,27 @@ class widgetSVG {
         obj.rel = {"type":"Owner", "return":false};
         obj.to = {"id":app.login.userID, "return":false};
 
-        app.sendQuery(obj, "changeRelation", "Checking name", this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
+        app.REST.sendQuery(obj, "changeRelation", "Checking name", userRequest, this.widgetDOM, null, null, this.checkNameExists.bind(this), name, newMap);
       }
     }
     else {
       // Update name in title
       app.domFunctions.getChildByIdr(this.widgetDOM, "name").textContent = name;
-      app.checkOwner("mindmap", newMap, this.widgetDOM, this, 'startNodes', name);
+      app.checkOwner("mindmap", newMap, this.widgetDOM, this, 'startNodes', name, userRequest);
     }
   }
 
-  startNodes() {
+  startNodes(data, userRequest) {
     const objsCopy = Array.from(this.d3Functions.objects);
     for (let i = 0; i < objsCopy.length; i++) {
       if (objsCopy[i] && objsCopy[i].JSobj) {
         objsCopy[i] = this.stripInstances(objsCopy[i].JSobj); // No need for instances or DOM elements
       }
     }
-    this.processNodes(objsCopy);
+    this.processNodes(objsCopy, userRequest);
   }
 
-  processNodes(labels) {
+  processNodes(labels, userRequest) {
     if (labels.length > 0) { // As long as there are more labels to process
       let label = labels.pop();
       while (label == undefined && labels.length > 0) {
@@ -826,12 +838,12 @@ class widgetSVG {
             obj.to = {"properties":{"M_GUID":saved.nodeID}, "return":false};
             obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "return":false};
 
-            app.sendQuery(obj, "deleteRelation", "Removing node", this.widgetDOM, null, null, function(data, labels) {
-              this.processNodes(labels);
+            app.REST.sendQuery(obj, "deleteRelation", "Removing node", userRequest, this.widgetDOM, null, null, function(data, userRequest, labels) {
+              this.processNodes(labels, userRequest);
             }.bind(this), labels);
           }
           else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
-            this.processNodes(labels);
+            this.processNodes(labels, userRequest);
           }
         } // end if (the label was deleted)
         else { // If this label was NOT deleted
@@ -844,12 +856,12 @@ class widgetSVG {
               obj.to = {"properties":{"M_GUID":saved.nodeID}, "return":false};
               obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "return":false};
 
-              app.sendQuery(obj, "deleteRelation", "Updating node info", this.widgetDOM, null, null, function(data, labels) {
-                this.processNodes(labels);
+              app.REST.sendQuery(obj, "deleteRelation", "Updating node info", userRequest, this.widgetDOM, null, null, function(data, userRequest, labels) {
+                this.processNodes(labels, userRequest);
               }.bind(this), labels);
             }
             else { // If there was already a relation, and the same node is still attached, no need to do anything except call processNodes.
-              this.processNodes(labels);
+              this.processNodes(labels, userRequest);
             }
           }
           else { // If the mindmap does NOT already have a relation, check whether to CREATE one instead.
@@ -859,26 +871,26 @@ class widgetSVG {
               obj.to = {"properties":{"M_GUID":label.nodeID}, "return":false};
               obj.rel = {"type":"MapNode", "properties":{"id":label.id}, "merge":true, "return":false};
 
-              app.sendQuery(obj, "changeRelation", "Linking node", this.widgetDOM, null, null, function(data, labels) {
-                this.processNodes(labels);
+              app.REST.sendQuery(obj, "changeRelation", "Linking node", userRequest, this.widgetDOM, null, null, function(data, userRequest, labels) {
+                this.processNodes(labels, userRequest);
               }.bind(this), labels);
             }
             else { // If there is no new relation, no need to do anything except call processNodes.
-              this.processNodes(labels);
+              this.processNodes(labels, userRequest);
             }
           } // end else (no existing relation)
         } // end else (the label was not deleted)
       } // end if (a valid label was found)
       else {
-        this.setAttributes();
+        this.setAttributes(userRequest);
       }
     } // end if (there are more labels)
     else {
-      this.setAttributes();
+      this.setAttributes(userRequest);
     }
   }
 
-  setAttributes() {
+  setAttributes(userRequest) {
     const id = this.id;  // This should definitely exist by now, because if it didn't exist when startSave was called, it was created then.
 
     // Create array of parents (starts empty)
@@ -959,11 +971,11 @@ class widgetSVG {
                    {"property":"M_count", "value":this.d3Functions.count},
                    {"property":"viewBox", "value":this.SVG_DOM.getAttribute("viewBox")}];
 
-    app.sendQuery(obj, "changeNode", "Saving mindmap data", this.widgetDOM, null, null, this.d3Functions.update.bind(this.d3Functions));
+    app.REST.sendQuery(obj, "changeNode", "Saving mindmap data", userRequest, this.widgetDOM, null, null, this.d3Functions.update.bind(this.d3Functions));
 
     // Meanwhile, save information from the details pane.
     this.details.id = this.id;
-    this.details.saveAdd();
+    this.details.saveAdd(null, userRequest);
   }
 
   lookForEnter(input, evnt) { // Makes hitting enter do the same thing as blurring (e. g. inserting a new node or changing an existing one)

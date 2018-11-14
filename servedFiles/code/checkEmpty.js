@@ -1,13 +1,21 @@
 // This class is used to check whether the DB is empty before running tests that require an empty DB.
 class checkEmpty {
-  constructor() {}
+  constructor(button) {
+    this.button = button; // The check empty button - useful for finding the widget this request is related to
+  }
 
   // Runs a query to see all nodes in the database, then passes the results to verifyEmpty.
   checkEmpty() {
     const obj = {};
     obj.node = {};
 
-    app.sendQuery(obj, "changeNode", "Looking for nodes", null, null, null, this.verifyEmpty.bind(this));
+    if (button) {
+      const userRequest = app.REST.startUserRequest("Checking whether database is empty", button);
+      app.REST.sendQuery(obj, "changeNode", "Looking for nodes", userRequest, button, null, null, this.verifyEmpty.bind(this));
+    }
+    else {
+      app.sendQuery(obj, "changeNode", "Looking for nodes", null, null, null, this.verifyEmpty.bind(this));
+    }
   }
 
   // Checks whether any nodes were found. If so, alert the user that an empty database is needed,

@@ -21,7 +21,9 @@ constructor (nameQueryObject, id) {
   this.widgetDOM       = null;
   this.requests        = [];
 
-  app.sendQuery(nameQueryObject, "getMetaData", "Searching for metadata", this.widgetDOM, null, null, this.queryComplete.bind(this));
+  const userRequest = app.REST.startUserRequest("Searching for metadata", this.widgetDOM);
+
+  app.REST.sendQuery(nameQueryObject, "getMetaData", "Searching for metadata", userRequest, this.widgetDOM, null, null, this.queryComplete.bind(this));
 }
 
 queryComplete(data) {
@@ -192,7 +194,9 @@ showReasons(element) {
   obj.to = {"name":"node", "properties":{"M_GUID":GUID}};
   obj.rel = {"type":"Trash"};
 
-  app.sendQuery(obj, "changeRelation", "Searching for details", this.widgetDOM, null, null, this.buildReasons.bind(this));
+  const userRequest = app.REST.startUserRequest("Searching for details", this.widgetDOM);
+
+  app.REST.sendQuery(obj, "changeRelation", "Searching for details", userRequest, this.widgetDOM, null, null, this.buildReasons.bind(this));
 }
 
 buildReasons(data) {

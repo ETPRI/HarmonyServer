@@ -16,7 +16,7 @@ input: label
 
 
 class widgetDetails {
-constructor(label, container, GUID, name, callerID) { // Label: the type of node described. ID: the ID of the node. Container: Where to put it
+constructor(label, container, GUID, name, callerID, userRequest) { // Label: the type of node described. ID: the ID of the node. Container: Where to put it
     // DOM pointers to data that will change, just make place holders
     this.widgetDOM   = container;
     this.tableDOM    = {};
@@ -58,14 +58,18 @@ constructor(label, container, GUID, name, callerID) { // Label: the type of node
       obj.optional = {"id":app.login.userID, "return":false};
       obj.rel = {"name":"r", "type":"Trash", "direction":"left"};// (n)<-[rel]-(a)
 
-      app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.finishConstructor.bind(this));
+      if (!userRequest) {
+        userRequest = app.REST.startUserRequest("Searching for node", this.widgetDOM);
+      }
+
+      app.REST.sendQuery(obj, "findOptionalRelation", "Searching for node", userRequest, this.widgetDOM, null, null, this.finishConstructor.bind(this));
     }
     else { // If no ID was passed in
        this.finishConstructor();
      }
   }
 
-finishConstructor(data) {
+finishConstructor(data, userRequest) {
   if (data) { // If data were passed in, add them to the table, and set this.id
     this.id = data[0].n.id;
     this.GUID = data[0].n.properties.M_GUID;
@@ -116,7 +120,7 @@ finishConstructor(data) {
     obj.rel = {"type":"Owner", "return":"false"};
     obj.to = {};
 
-    app.sendQuery(obj, "changeRelation", "Searching for owner", this.widgetDOM, null, null, function(data) {
+    app.REST.sendQuery(obj, "changeRelation", "Searching for owner", userRequest, this.widgetDOM, null, null, function(data) {
       if (data.length == 1) {
         this.owner = {"name":data[0].to.properties.name, "id":data[0].to.id, "GUID":data[0].to.properties.M_GUID};
       }
@@ -613,15 +617,22 @@ addField(name, value) { // If name and value don't exist, we're adding a blank r
   valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this.parentElement)" onblur = "app.widget('checkNewField', this)" value = "${value}">`
 }
 
-saveAdd(widgetElement) { // Saves changes or adds a new node
+saveAdd(widgetElement, userRequest) { // Saves changes or adds a new node
+  // userRequest may be already set if setOwner was called (and called this again afterwards),
+  // or if the details widget is NOT a standalone widget and the save button was clicked elsewhere
+  // (like in a mindmap). Otherwise it needs to be set.
+  if (!userRequest) {
+    userRequest = app.REST.startUserRequest("Saving node", this.widgetDOM);
+  }
+
   // If the node didn't exist (so there was an Add button) or was owned by someone else, create a new node
   if ((widgetElement && widgetElement.value === "Add") || (this.owner && this.owner.id !== app.login.userID)) {
-    this.save(null, "Add");
+    this.save(null, userRequest, "Add");
   }
 
   // If the node existed but had no owner, make this user its owner, then call saveAdd again to save it
   else if (!(this.owner)) {
-    app.setOwner(this.widgetDOM, this, 'saveAdd');
+    app.setOwner(this.widgetDOM, userRequest, this, 'saveAdd');
   }
 
   // If the node existed, had an owner but was not owned by someone else, then it was already owned by this user - just keep moving.
@@ -629,24 +640,24 @@ saveAdd(widgetElement) { // Saves changes or adds a new node
     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
     // If the node was trashed and now shouldn't be
     if (this.savedData && this.savedData.properties._trash === true && checkbox.checked === false) {
-      this.untrashNode();
+      this.untrashNode(userRequest);
     }
     // If the node was not trashed and now should be. I used negation here, rather than checking for === false, because _trash could be undefined.
     else if (this.savedData && !(this.savedData.properties._trash === true) && checkbox.checked === true) {
-      this.trashNode();
+      this.trashNode(userRequest);
     }
     // If the node was and should stay trashed, but the reason has changed
     else if (this.savedData && this.savedData.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData")) {
-      this.updateReason();
+      this.updateReason(userRequest);
     }
     // If the node's trash status isn't changing, only the data, go straight to save();
     else {
-      this.save(null, "Save");
+      this.save(null, userRequest, "Save");
     }
   } // end else (the node was already owned by this user)
 }
 
-trashNode() {
+trashNode(userRequest) {
   this.savedData.properties._trash = true;
   const user = app.login.userID;
   const node = this.id;
@@ -659,10 +670,10 @@ trashNode() {
   obj.to = {"id":node, "return":false};
   obj.rel = {"type":"Trash", "merge":true, "properties":{"reason":app.stringEscape(reason)}, "return":false};
 
-  app.sendQuery(obj, "changeRelation", "Trashing node", this.widgetDOM, null, null, this.save.bind(this), "Save");
+  app.REST.sendQuery(obj, "changeRelation", "Trashing node", userRequest, this.widgetDOM, null, null, this.save.bind(this), "Save");
 }
 
-updateReason() {
+updateReason(userRequest) {
   const user = app.login.userID;
   const node = this.id;
   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
@@ -676,11 +687,11 @@ updateReason() {
   obj.rel = {"type":"Trash", "return":false};
   obj.changes = [{"item":"rel", "property":"reason", "value":app.stringEscape(reason)}];
 
-  app.sendQuery(obj, "changeRelation", "Updating reason", this.widgetDOM, null, null, this.save.bind(this), "Save");
+  app.REST.sendQuery(obj, "changeRelation", "Updating reason", userRequest, this.widgetDOM, null, null, this.save.bind(this), "Save");
 
 }
 
-untrashNode() {
+untrashNode(userRequest) {
   this.savedData.properties._trash = false;
   const user = app.login.userID;
   const node = this.id;
@@ -690,12 +701,12 @@ untrashNode() {
   obj.to = {"id":node, "return":false};
   obj.rel = {"type":"Trash", "return":false};
 
-  app.sendQuery(obj, "deleteRelation", "Restoring node", this.widgetDOM, null, null, this.save.bind(this), "Save");
+  app.REST.sendQuery(obj, "deleteRelation", "Restoring node", userRequest, this.widgetDOM, null, null, this.save.bind(this), "Save");
 
 }
 
 ////////////////////////////////////////////////////////////////////
-updateMetaData(tempMetaData, newFields, propFieldsChanged) {
+updateMetaData(tempMetaData, newFields, propFieldsChanged, userRequest) {
   const metadataObj = {};
   metadataObj.from = {"id":app.login.userID, "return":false};
   metadataObj.rel = {"type":"Settings", "merge":true, "return":false};
@@ -715,14 +726,14 @@ updateMetaData(tempMetaData, newFields, propFieldsChanged) {
     }
   }
 
-  app.sendQuery(metadataObj, "changeRelation", "Updating metadata", this.widgetDOM, null, null, this.updateFields.bind(this), newFields, propFieldsChanged);
+  app.REST.sendQuery(metadataObj, "changeRelation", "Updating settings", userRequest, this.widgetDOM, null, null, this.updateFields.bind(this), newFields, propFieldsChanged);
 
 }
 
 // data should contain only the metadata node, under the name "metadata"
 // newFields is an object where each key is a new fieldName and each value is a label
 // propFieldsChanged is a boolean which is true if the list of proposed fields has changed
-updateFields(data, newFields, propFieldsChanged) {
+updateFields(data, userRequest, newFields, propFieldsChanged) {
   // Need to update fields if there are any new fields.
   // Need to update proposedFields if the list of proposed fields has changed.
 
@@ -759,12 +770,13 @@ updateFields(data, newFields, propFieldsChanged) {
       obj.changes.push({"property":"proposedFields", "value":app.stringEscape(JSON.stringify(propFields))});
     }
 
-    app.sendQuery(obj, "changeNode", "Updating metadata", this.widgetDOM);
-
+    if (obj.changes.length > 0) {
+      app.REST.sendQuery(obj, "changeNode", "Updating metadata", userRequest, this.widgetDOM);
+    }
   }
 }
 
-addComplete(data) { // Refreshes the node table and logs that addSave was clicked
+addComplete(data, userRequest) { // Refreshes the node table and logs that addSave was clicked
   for (let prop in data[0].n.properties) {
     // strings can stay strings and numbers are already stored as numbers.
     // Anything else was stored as a string and needs to be parsed.
@@ -781,8 +793,8 @@ addComplete(data) { // Refreshes the node table and logs that addSave was clicke
   this.id = this.savedData.id;
   const id = this.id;
   const name = this.savedData.properties.name;
-  const nodeLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeLabel");
-  nodeLabel.textContent=`${this.nodeLabel}#${id}: ${name}`;
+  const nameLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "name");
+  nameLabel.textContent=`: ${name}`;
 
   const obj = {};
   obj.id = this.idWidget;
@@ -793,10 +805,10 @@ addComplete(data) { // Refreshes the node table and logs that addSave was clicke
   app.regression.log(JSON.stringify(obj));
   app.regression.record(obj);
 
-  app.setOwner(this.widgetDOM, this); // I don't mind this running asynchronously because I don't think it's needed for refresh or buildStart.
+  app.setOwner(this.widgetDOM, userRequest, this); // I don't mind this running asynchronously because I don't think it's needed for refresh or buildStart.
   this.refresh();
   if (this.buildStart) { // If this is a standalone node with relations, call this.buildStart to show them
-    this.buildStart();
+    this.buildStart(userRequest);
   }
 }
 
@@ -844,7 +856,7 @@ changed(cell, edited) { // Highlights when current fields are different from sav
   } // end if (fieldName exists and is a valid field; we can set currentData)
 } // end method (changed)
 
-save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs it and passes the results to saveData() or addComplete()
+save(trashUntrash, userRequest, buttonValue) { // Builds query to add or update a node, runs it and passes the results to saveData() or addComplete()
   let propFieldsChanged = false;
   let tr = this.tBodyDOM.firstElementChild;
 
@@ -1008,7 +1020,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
   }
 
   this.lastSaveFFD = tempMetaData.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save
-  this.updateMetaData(tempMetaData, newFields, propFieldsChanged);
+  this.updateMetaData(tempMetaData, newFields, propFieldsChanged, userRequest);
 
   // This should only ever come up when saving - both because adding uses an object, not an array, for data
   // and because adding should add every field to data every time.
@@ -1043,7 +1055,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       func = this.addComplete.bind(this);
     }
 
-    app.sendQuery(obj, CRUD, "Saving node", this.widgetDOM, null, null, function(data, func, app) {
+    app.REST.sendQuery(obj, CRUD, "Saving node", userRequest, this.widgetDOM, null, null, function(data, userRequest, func, app) {
       // First, if this is a file node, and a new file has been uploaded or the node has been copied,
       // call the server's saveFile function. Also, if a new file has been uploaded,
       // increment this.numStoredFiles and the file counter in the widget.
@@ -1065,14 +1077,16 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
         const queryObject = {"server": "file", "function": "saveFile", "query": obj};
         const request = JSON.stringify(queryObject);
 
+        const serverRequest = app.REST.serverRequests[userRequest]++; // record the current server request and then increment
+
         const xhttp = new XMLHttpRequest();
-        const update = app.startProgress(this.widgetDOM, "Saving file", request.length);
+        const update = app.REST.startProgress(this.widgetDOM, "Saving file", request.length, userRequest, serverRequest);
         const details = this;
 
         xhttp.onreadystatechange = function() {
       		if (this.readyState == 4 && this.status == 200) {
       			const responseSize = this.responseText.length;
-      			app.stopProgress(details.widgetDOM, update, responseSize);
+      			app.REST.stopProgress(details.widgetDOM, update, responseSize, userRequest, serverRequest);
       		}
       	};
 
@@ -1081,7 +1095,7 @@ save(trashUntrash, buttonValue) { // Builds query to add or update a node, runs 
       } // end if (a file needs to be saved)
 
       // Then call the function passed in (either saveData or addComplete)
-      func(data);
+      func(data, userRequest);
     }.bind(this), func, app);
   }
 }

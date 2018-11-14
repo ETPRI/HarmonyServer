@@ -283,14 +283,15 @@ class regressionTesting {
       const obj = {};
       obj.return = false;
 
-      app.sendQuery(obj, "deleteNode", "Clearing database");
+      let userRequest = app.REST.startUserRequest("Clear database", this.regHeader);
+
+      app.REST.sendQuery(obj, "deleteNode", "Clearing database", userRequest, this.regHeader);
 
   		// reset all variables to ensure same state every time "Clear All" is chosen
   		app.idCounter = 0; // reset ID counter
   		if (this.recording) {
   			this.recordToggle(document.getElementById("Record")); // make sure app is not recording
   		}
-    //  		log = document.getElementById('log');
   		if (!this.logField.hidden) { // If the log is active...
   			this.logToggle(document.getElementById("LogButton")); // deactivate it
   		}

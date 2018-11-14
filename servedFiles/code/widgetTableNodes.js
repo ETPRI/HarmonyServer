@@ -39,7 +39,7 @@ class widgetTableNodes {
   }
 
   ////////////////////////////////////////////////////////////////////
-  search(criteria) { // public - call when data changes
+  search(criteria, userRequest) { // public - call when data changes
     if (criteria && criteria.length > 0) { // if search criteria were passed in, process them first
       this.reset(); // clear all existing search criteria
       for (let i = 0; i < criteria.length; i++) {
@@ -62,7 +62,9 @@ class widgetTableNodes {
       } // end for (every item in the criteria array)
     } // end if (search criteria were passed in)
 
-    let userRequest = app.REST.startUserRequest(`Search for ${this.queryObject.nodeLabel}`, this.widgetDOM);
+    if (!userRequest) {
+      userRequest = app.REST.startUserRequest(`Search for ${this.queryObject.nodeLabel}`, this.widgetDOM);
+    }
 
     app.REST.sendQuery(this.buildQuery(), "tableNodeSearch", `Searching for ${this.queryObject.nodeLabel}`, userRequest, this.widgetDOM, null, null, function(data) {
       this.data = data;
@@ -288,7 +290,9 @@ class widgetTableNodes {
 	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
 	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
-    app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
+    const userRequest = app.REST.startUserRequest("Updating displayed fields", this.widgetDOM);
+
+    app.REST.sendQuery(obj, "changeRelation", "Updating metadata", userRequest, this.widgetDOM);
 
     this.fieldSelectPopup.hidden = true;
     this.refresh();
@@ -608,7 +612,9 @@ class widgetTableNodes {
     	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
-        app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
+        const userRequest = app.REST.startUserRequest("Rearranging fields", this.widgetDOM);
+
+        app.REST.sendQuery(obj, "changeRelation", "Updating metadata", userRequest, this.widgetDOM);
 
         this.refresh();
       }
@@ -698,19 +704,21 @@ class widgetTableNodes {
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions"};
 
-    app.sendQuery(obj, "changeRelation", "Checking permissions", this.widgetDOM, null, null, this.checkPermission.bind(this), GUID, button, toAdd);
+    const userRequest = app.REST.startUserRequest("Updating permissions", this.widgetDOM);
+
+    app.REST.sendQuery(obj, "changeRelation", "Checking permissions", userRequest, this.widgetDOM, null, null, this.checkPermission.bind(this), GUID, button, toAdd);
 
   }
 
-  checkPermission(oldData, GUID, button, toAdd) {
+  checkPermission(oldData, userRequest, GUID, button, toAdd) {
     if (oldData.length > 0 && oldData[0].rel.properties.username && oldData[0].rel.properties.password) { // If a relation to delete was found
       const obj = {};
       obj.rel = {"id":oldData[0].rel.id, "return":false};
       obj.to = {"return":false};
       obj.from = {"return":false};
 
-      app.sendQuery(obj, "deleteRelation", "Deleting old permissions", this.widgetDOM, null, null, function(data, oldData, button, toAdd, GUID) {
-        this.givePermission(button, toAdd, GUID, oldData[0].rel.properties.username, oldData[0].rel.properties.password);
+      app.REST.sendQuery(obj, "deleteRelation", "Deleting old permissions", userRequest, this.widgetDOM, null, null, function(data, userRequest, oldData, button, toAdd, GUID) {
+        this.givePermission(button, toAdd, GUID, oldData[0].rel.properties.username, oldData[0].rel.properties.password, userRequest);
       }.bind(this), oldData, button, toAdd, GUID);
     }
 
@@ -723,12 +731,12 @@ class widgetTableNodes {
 
       // If they entered data, create a link from them to the Admin table
       if (username && password) {
-        this.givePermission(button, toAdd, GUID, username, password);
+        this.givePermission(button, toAdd, GUID, username, password, userRequest);
       }
     }
   }
 
-  givePermission(button, toAdd, GUID, name, password) {
+  givePermission(button, toAdd, GUID, name, password, userRequest) {
     if (!(toAdd && GUID && name && password)) { // if all information needed was NOT passed in
       const row = button.parentElement.parentElement;
       GUID = row.children[1].textContent;
@@ -750,8 +758,12 @@ class widgetTableNodes {
       obj.to = {"type":"M_LoginTable", "properties":{"name":toAdd}, "return":false};
       obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
 
-      app.sendQuery(obj, "createRelation", "Setting permission", this.widgetDOM, null, null, function() {
-        this.search();
+      if (!userRequest) {
+        userRequest = app.REST.startUserRequest("Setting permission", this.widgetDOM);
+      }
+
+      app.REST.sendQuery(obj, "createRelation", "Setting permission", userRequest, this.widgetDOM, null, null, function(data, userRequest) {
+        this.search(null, userRequest);
       }.bind(this));
     }
   }
@@ -765,8 +777,10 @@ class widgetTableNodes {
     obj.to = {"type":"M_LoginTable", "return":false};
     obj.rel = {"type":"Permissions", "return":false};
 
-    app.sendQuery(obj, "deleteRelation", "Removing permissions", this.widgetDOM, null, null, function() {
-      this.search();
+    const userRequest = app.REST.startUserRequest("Removing permission", this.widgetDOM);
+
+    app.REST.sendQuery(obj, "deleteRelation", "Removing permissions", userRequest, this.widgetDOM, null, null, function(data, userRequest) {
+      this.search(null, userRequest);
     }.bind(this));
   }
 } ////////////////////////////////////////////////////// end class widgetTableNodes

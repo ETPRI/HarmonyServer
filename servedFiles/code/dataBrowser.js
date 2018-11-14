@@ -134,7 +134,9 @@ class dataBrowser {
       obj.optional = {"name":"in"};
       obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
-      app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.findOuts.bind(this), GUID, "mainData");
+      let userRequest = app.REST.startUserRequest("Search for node and relations", this.widgetDOM);
+
+      app.REST.sendQuery(obj, "findOptionalRelation", "Searching for node", userRequest, this.widgetDOM, null, null, this.findOuts.bind(this), GUID, "mainData");
     }
   }
 
@@ -257,16 +259,16 @@ class dataBrowser {
     return html;
   }
 
-  findOuts(data, GUID, dataName) { // query the DB about outgoing relations, and pass along the incoming ones that were already found
+  findOuts(data, userRequest, GUID, dataName) { // query the DB about outgoing relations, and pass along the incoming ones that were already found
     const obj = {};
     obj.required = {"name":"n", "properties":{"M_GUID":GUID}};
     obj.optional = {"name":"out"};
     obj.rel = {"name":"outRel"};
 
-    app.sendQuery(obj, "findOptionalRelation", "Searching for relations", this.widgetDOM, null, null, this.processData.bind(this), data, dataName);
+    app.REST.sendQuery(obj, "findOptionalRelation", "Searching for relations", userRequest, this.widgetDOM, null, null, this.processData.bind(this), data, dataName);
   }
 
-  processData(outData, inData, dataName) {
+  processData(outData, userRequest, inData, dataName) {
     const data = {};
     // There will always be at least one entry in inData and one in outData
     // (even if there are no relations, there will be an entry with n and "null" for everything else).
@@ -364,7 +366,9 @@ class dataBrowser {
         obj.optional = {"name":"in"};
         obj.rel = {"name":"inRel", "direction":"left"}; // (required)<-[rel]-(optional)
 
-        app.sendQuery(obj, "findOptionalRelation", "Searching for node", this.widgetDOM, null, null, this.findOuts.bind(this), nodeGUID, nodeName);
+        let userRequest = app.REST.startUserRequest("Search for node and relations", this.widgetDOM);
+
+        app.REST.sendQuery(obj, "findOptionalRelation", "Searching for node", userRequest, this.widgetDOM, null, null, this.findOuts.bind(this), nodeGUID, nodeName);
       }
     }
   }

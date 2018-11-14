@@ -7,7 +7,7 @@
 // object and objectMethod: Kludges enabling this class to call methods from another class once it's finished its queries.
 // objectMethod is the method and object is the object that contains it. I may remove these.
 class widgetRelations {
-constructor(containerDOM, nodeID, viewGUID, relationType, object, objectMethod) {
+constructor(containerDOM, nodeID, viewGUID, relationType, userRequest, object, objectMethod) {
   // data to be displayed
   this.containerDOM = containerDOM;
   this.dragDrop     = null;
@@ -30,11 +30,15 @@ constructor(containerDOM, nodeID, viewGUID, relationType, object, objectMethod) 
   app.widgets[app.idCounter++] = this;
   this.containedWidgets = [];
 
-  this.refresh()
+  this.refresh(userRequest);
 }
 
 // Refreshes the widget by running the query to get all nodes in this user's view, then calling this.findLinks().
-refresh() {
+refresh(userRequest) {
+  if (!userRequest) {
+    userRequest = app.REST.startUserRequest("Building view", this.containerDOM);
+  }
+
   if (this.viewGUID == "summary") {
     // search for all ViewLinks from this node to another, or from another node to this one, according to the relation type
     const obj = {};
@@ -53,20 +57,21 @@ refresh() {
       obj.to = thisNode;
     }
 
-    app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, null, null, this.processSummary.bind(this));
+    app.REST.sendQuery(obj, "changeRelation", "Finding links", userRequest, this.containerDOM, null, null, this.processSummary.bind(this));
   }
 
+  // If nodeGUID is null, then we have NOT already searched for the view of this node - so search for it now
   else if (this.nodeGUID == null) {
     const obj = {};
     obj.from = {"properties":{"M_GUID":this.viewGUID}, "return":false};
     obj.to = {"id":this.nodeID};
     obj.rel = {"type":"View"};
 
-    app.sendQuery(obj, "changeRelation", "Finding view", this.containerDOM, null, null, this.findLinks.bind(this));
+    app.REST.sendQuery(obj, "changeRelation", "Finding view", userRequest, this.containerDOM, null, null, this.findLinks.bind(this));
   }
 
   else {
-    this.findLinks();
+    this.findLinks(null, userRequest);
   }
 }
 
@@ -94,7 +99,7 @@ processSummary(data) {
   this.rComplete(processedData);
 }
 
-findLinks(data) { // If data were returned, they will include the node's GUID and the "order" and "placeholders" arrays from the view
+findLinks(data, userRequest) { // If data were returned, they will include the node's GUID and the "order" and "placeholders" arrays from the view
   if (data && data[0] && data[0].to) {
     this.nodeGUID = data[0].to.properties.M_GUID;
     if (data[0].rel.properties[`${this.relationType}_order`]) {
@@ -125,7 +130,7 @@ findLinks(data) { // If data were returned, they will include the node's GUID an
     app.error("Relation type is neither 'start' nor 'end'");
   }
 
-  app.sendQuery(obj, "changeRelation", "Finding links", this.containerDOM, null, null, this.rComplete.bind(this));
+  app.REST.sendQuery(obj, "changeRelation", "Finding links", userRequest, this.containerDOM, null, null, this.rComplete.bind(this));
 }
 
 // Takes the list of nodes in this user's view and begins building the widget by adding a "Save" or "Sync" button,
@@ -556,6 +561,8 @@ saveSync(button) {
   app.regression.log(JSON.stringify(obj));
   app.regression.record(obj);
 
+  const userRequest = app.REST.startUserRequest("Saving relations", this.containerDOM);
+
   // If this is the user's view, save all changed data, then refresh. If it's anyone else's, just refresh.
   if (app.login.userGUID && app.login.userGUID == this.viewGUID) {
 
@@ -575,10 +582,10 @@ saveSync(button) {
 
     // Call this.processNext() to deal with the first row. Each time processNext runs, it either calls itself on the next row,
     // or calls a function which eventually calls processNext() on the next row, so that eventually all rows are processed.
-    this.processNext(null, rows);
+    this.processNext(null, userRequest, rows);
   } // end if (user is logged in and looking at their own view)
   else {
-    this.refresh();
+    this.refresh(userRequest);
   }
 }
 
@@ -586,7 +593,7 @@ saveSync(button) {
 // replace it in the DB (needed for changing the node - relations can't change their endpoints), edit it or nothing.
 // Then calls the appropriate function - deleteNode(), addNode(), replaceNode(), modifyNode(), or processNext()
 // to skip a row that doesn't need to change the DB. (All other functions this can call eventually call processNext() again).
-processNext(data, rows, prevFunction) {
+processNext(data, userRequest, rows, prevFunction) {
   // The only processing function that returns data is addNode, which returns a relation.
   // If processNext gets data, it is the relation from an addNode call. Extract the GUID and add it to the order array.
   if (prevFunction == "add") {
@@ -597,7 +604,7 @@ processNext(data, rows, prevFunction) {
   if (rows.length >0) { // If there are more rows to process...
     const row = rows.pop();
     if (row.classList.contains("deletedData")) { // If the relation has been marked for deletion, delete it. No need to add to order array.
-      this.deleteNode(row, rows);
+      this.deleteNode(row, rows, userRequest);
     }
     // if this is a placeholder relation, add it to the placeholders array. Doesn't matter whether it's changed or not,
     // as long as it's not deleted. Add to order array as well.
@@ -616,7 +623,7 @@ processNext(data, rows, prevFunction) {
         // Create node, return, then update fields and add "newData" class and call processNext
         const obj = {"type":type, "properties":{"name":app.stringEscape(row.children[5].textContent)}};
 
-        app.sendQuery(obj, "createNode", "Creating new node", this.containerDOM, null, null, function(data, row, rows) {
+        app.REST.sendQuery(obj, "createNode", "Creating new node", userRequest, this.containerDOM, null, null, function(data, userRequest, row, rows) {
           const nodeIDcell = row.children[2];
           nodeIDcell.textContent = data[0].node.properties.M_GUID;
           const nameCell = row.children[3];
@@ -626,28 +633,28 @@ processNext(data, rows, prevFunction) {
           row.classList.remove('changedData');
           row.classList.add('newData');
           rows.push(row);
-          this.processNext(null, rows);
+          this.processNext(null, userRequest, rows);
         }.bind(this), row, rows)
       }
       // Otherwise, add the comment to the placeholders list and move on.
       else {
         this.placeholders.push(app.stringEscape(row.children[5].textContent)); // add comment to array
         this.order.push(`p${this.placeholders.length-1}`); // add index to order array, prefaced by "p" for "placeholder"
-        this.processNext(null, rows);
+        this.processNext(null, userRequest, rows);
       }
     }
     else if (row.classList.contains("newData")) { // If the relation is new, add it. Can't add to order array yet - that will be done once a relation ID is assigned.
-      this.addNode(row, rows);
+      this.addNode(row, rows, userRequest);
     }
     else if (row.children[2].classList.contains("changedData")) { // If the node ID has been changed, replace the relation. ID will be added to array after the new relation ID is assigned.
-      this.replaceNode(row, rows);
+      this.replaceNode(row, rows, userRequest);
     }
     else if (row.children[5].classList.contains("changedData")) { // If the comment has been changed, modify the relation. Go ahead and add ID now - it won't change.
       const cells = row.children;
       const idCell = cells[1];
       const id = idCell.textContent;
       this.order.push(id);
-      this.modifyNode(row, rows);
+      this.modifyNode(row, rows, userRequest);
     }
     else { // If the row doesn't need any processing, just add its ID to order and move on
       const cells = row.children;
@@ -656,7 +663,7 @@ processNext(data, rows, prevFunction) {
       if (id) { // Don't push ID if it doesn't exist (that will happen when the insert row is processed)
         this.order.push(id);
       }
-      this.processNext(null, rows);
+      this.processNext(null, userRequest, rows);
     }
   }
   else { // when all rows are processed
@@ -671,13 +678,13 @@ processNext(data, rows, prevFunction) {
     obj.changes = [{"item":"rel", "property":`${this.relationType}_order`, "value":JSON.stringify(this.order), "string":false},
                    {"item":"rel", "property":`${this.relationType}_placeholders`, "value":JSON.stringify(this.placeholders), "string":false}];
 
-    app.sendQuery(obj, "changeRelation", "Updating view", this.containerDOM, null, null, this.findLinks.bind(this));
+    app.REST.sendQuery(obj, "changeRelation", "Updating view", userRequest, this.containerDOM, null, null, this.findLinks.bind(this));
   }
 }
 
 // Delete the relation represented by the given row from the DB.
 // Then call processNext() on the array of remaining rows.
-deleteNode(row, rows) {
+deleteNode(row, rows, userRequest) {
   // Get the ID of the relation to delete
   const cells = row.children;
   const idCell = cells[1];
@@ -689,8 +696,8 @@ deleteNode(row, rows) {
   obj.rel = {"properties":{"M_GUID":id}, "return":false};
   obj.from = {"return":false};
 
-  app.sendQuery(obj, "deleteRelation", "Deleting link", this.containerDOM, null, null, function(data, rows) {
-    this.processNext(null, rows);
+  app.REST.sendQuery(obj, "deleteRelation", "Deleting link", userRequest, this.containerDOM, null, null, function(data, userRequest, rows) {
+    this.processNext(null, userRequest, rows);
   }.bind(this), rows);
 }
 
@@ -700,15 +707,15 @@ deleteNode(row, rows) {
 // Because pop() returns the item that was pushed most recently, this row will be processed a second time
 // before anything else is, preserving the ordering. The second time it will be handled by addNode, and
 // the relation will be added with its new endpoint.
-replaceNode (row, rows) {
+replaceNode (row, rows, userRequest) {
   row.classList.remove("changedData");
   row.classList.add("newData");
   rows.push(row);
-  this.deleteNode(row, rows);
+  this.deleteNode(row, rows, userRequest);
 }
 
 // Simply updates a relation in the DB to include a new comment, then calls processNext() again.
-modifyNode (row, rows) {
+modifyNode (row, rows, userRequest) {
   // Get the ID of the relation to update and the new comment to include
   const cells = row.children;
   const idCell = cells[1];
@@ -722,31 +729,31 @@ modifyNode (row, rows) {
   obj.to = {"return":false};
   obj.changes = [{"item":"rel", "property":"comment", "value":app.stringEscape(comment)}];
 
-  app.sendQuery(obj, "changeRelation", "Updating link", this.containerDOM, null, null, this.processNext.bind(this), rows, "modify");
+  app.REST.sendQuery(obj, "changeRelation", "Updating link", userRequest, this.containerDOM, null, null, this.processNext.bind(this), rows, "modify");
 }
 
 // Adds a new relation to the node being viewed. If a destination node was specified for the relation,
 // adds a relation between the user's view of the node and the destination node.
 // If no other node was specified, a placeholder relation is added to the original node.
-addNode(row, rows) {
+addNode(row, rows, userRequest) {
   // Start the query by searching for this user's view of this node.
   const obj = {};
   obj.from = {"properties":{"M_GUID":app.login.userGUID}, "return":false};
   obj.to = {"properties":{"M_GUID":this.nodeGUID}, "return":false};
   obj.rel = {"type":"View"};
 
-  app.sendQuery(obj, "changeRelation", "Searching for view", this.containerDOM, null, null, function(data, row, rows) {
+  app.REST.sendQuery(obj, "changeRelation", "Searching for view", userRequest, this.containerDOM, null, null, function(data, userRequest, row, rows) {
     if (data.length > 0) {
-      this.createLink(row, rows);
+      this.createLink(row, rows, userRequest);
     }
     else {
-      this.createView(row, rows);
+      this.createView(row, rows, userRequest);
     }
   }.bind(this), row, rows);
 }
 
 // Create the link to the other node (at this point, the view link exists)
-createLink(row, rows) {
+createLink(row, rows, userRequest) {
   let attributes = {"userGUID":app.login.userGUID};
   let otherNodeGUID = null;
 
@@ -786,23 +793,23 @@ createLink(row, rows) {
     obj.rel = {"type":"ViewLink", "properties":attributes, "name":"link"};
     obj.to = {"properties":{"M_GUID":endGUID}, "return":false};
 
-    app.sendQuery(obj, "createRelation", "Adding link", this.containerDOM, null, null, this.processNext.bind(this), rows, "add");
+    app.REST.sendQuery(obj, "createRelation", "Adding link", userRequest, this.containerDOM, null, null, this.processNext.bind(this), rows, "add");
 
   } // end if (there is an ID for the other node)
   else { // this should never happen, but just in case, if there's no other node ID, just call processNext.
-    this.processNext(null, rows);
+    this.processNext(null, userRequest, rows);
   }
 }
 
 // Create the user's view of the node
-createView(row, rows) {
+createView(row, rows, userRequest) {
   const obj = {};
   obj.from = {"properties":{"M_GUID":app.login.userGUID}, "return":false};
   obj.to = {"properties":{"M_GUID":this.nodeGUID}, "return":false};
   obj.rel = {"type":"View", "merge":true, "return":false};
 
-  app.sendQuery(obj, "changeRelation", "Creating view", this.containerDOM, null, null, function(data, row, rows) {
-    this.createLink(row, rows);
+  app.REST.sendQuery(obj, "changeRelation", "Creating view", userRequest, this.containerDOM, null, null, function(data, userRequest, row, rows) {
+    this.createLink(row, rows, userRequest);
   }.bind(this), row, rows);
 }
 

@@ -4,7 +4,9 @@ class widgetView {
   // relationType: Whether this view is of start, end or peer (not implemented) relations
   // object and objectMethod: Kludgy code enabling the widgetView to call a function in another class after running a query.
   // objectMethod is the method to call and object is the object containing it. I may eliminate these.
-  constructor(containerDOM, nodeID, relationType, object, objectMethod) {
+  // userRequest is the number of the user request which created the widgetNode which originally created this widgetView.
+  // It is therefore also the number of the user request which should be associated with this view's initial queries.
+  constructor(containerDOM, nodeID, relationType, userRequest, object, objectMethod, ...args) {
     this.relations = {}; // Will store GUIDs as keys and DOM objects as values
     this.activeDOM = null; // Will store the DOM object for the relation currently shown
     this.activeToggle = null; // Will store the toggle button for the relation currently shown
@@ -14,6 +16,7 @@ class widgetView {
     this.containerDOM = containerDOM;
     this.object = object;
     this.objectMethod = objectMethod;
+    this.args = args;
 
     this.id = app.idCounter++;  // Add to app.widgets
     app.widgets[this.id] = this;
@@ -33,12 +36,12 @@ class widgetView {
     obj.rel = {"type":"View", "return":false};
     obj.to = {"id":nodeID, "return":false};
 
-    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, null, null, this.buildViews.bind(this));
+    app.REST.sendQuery(obj, "changeRelation", "Searching for views", userRequest, this.containerDOM, null, null, this.buildViews.bind(this));
   }
 
   // Adds the view widget to the page: A list of views, possibly an active view,
   // and an "Add Me" button that may or may not be visible.
-  buildViews(data) {
+  buildViews(data, userRequest) {
     // Log data first, so if any relations are created this will show up first
     const obj = {};
     obj.data=JSON.parse(JSON.stringify(data));
@@ -178,7 +181,7 @@ class widgetView {
         nameCell.setAttribute("ondrop", "app.widget('drop', this, event)")  // give the cell with their name an ondrop, so data can be dropped in...
         nameCell.setAttribute("ondragover", "event.preventDefault()"); // and an ondragover, so data can be dropped...
         this.add.classList.add("hidden");                            // hide the "Add Me" button because the user is already shown...
-        this.toggleRelation(button);                                 // and automatically show their view.
+        this.toggleRelation(button, userRequest);                                 // and automatically show their view.
       }
 
       this.rows++; // update the number of rows shown in the table
@@ -188,7 +191,7 @@ class widgetView {
       this.toggle(); // Default is to hide end relations
     }
     if (this.object && this.objectMethod) { // If an object and object method were passed in, run them, then delete them so they don't run a second time.
-      this.object[this.objectMethod]();
+      this.object[this.objectMethod](userRequest, ...this.args);
       this.object = null;
       this.objectMethod = null;
     }
@@ -196,7 +199,7 @@ class widgetView {
 
   // Toggles the relation represented by the button.
   // If a relation was already visible and this method is used to show a new one, the first one is hidden.
-  toggleRelation(button) {
+  toggleRelation(button, userRequest) {
     if (button.value == "+") { // we are opening a relation
       button.value = "__";
       // Hide any relation that's already active
@@ -225,7 +228,11 @@ class widgetView {
         const relDOM = document.createElement('div');
         this.relCell.appendChild(relDOM);
         this.containedWidgets.push(app.idCounter);
-        new widgetRelations(relDOM, this.nodeID, GUID, this.relationType); // Creates a new widgetRelations object in relDOM
+
+        if (!userRequest) {
+          userRequest = app.REST.startUserRequest("Saving node", this.containerDOM);
+        }
+        new widgetRelations(relDOM, this.nodeID, GUID, this.relationType, userRequest); // Creates a new widgetRelations object in relDOM
         this.relations[GUID] = relDOM;
         this.activeDOM = relDOM;
       }
@@ -260,7 +267,7 @@ class widgetView {
 
   // refreshes the widget by removing all existing relations,
   // querying the database again to get up-to-date information on who has a view, and rebuilding the table.
-  refresh() {
+  refresh(data, userRequest) {
     this.relations = {}; // reset list of existing relation DOM objects
     // Get the IDs and names of all the people with views of this node, and pass them to buildViews.
     const obj = {};
@@ -268,7 +275,11 @@ class widgetView {
     obj.rel = {"type":"View", "return":false};
     obj.to = {"id":this.nodeID, "return":false};
 
-    app.sendQuery(obj, "changeRelation", "Searching for views", this.containerDOM, null, null, this.buildViews.bind(this));
+    if (!userRequest) {
+      userRequest = app.REST.startUserRequest("Refreshing view", this.containerDOM);
+    }
+
+    app.REST.sendQuery(obj, "changeRelation", "Searching for views", userRequest, this.containerDOM, null, null, this.buildViews.bind(this));
   }
 
   // Expands or collapses the whole widget.
@@ -383,7 +394,9 @@ class widgetView {
     obj.to = {"id":this.nodeID};
     obj.rel = {"type":"View", "merge":true};
 
-    app.sendQuery(obj, "changeRelation", "Adding your view", this.containerDOM, null, null, this.refresh.bind(this));
+    const userRequest = app.REST.startUserRequest("Adding your view", this.containerDOM);
+
+    app.REST.sendQuery(obj, "changeRelation", "Adding your view", userRequest, this.containerDOM, null, null, this.refresh.bind(this));
 
     // Log click
     const recordObj = {};
@@ -416,7 +429,9 @@ class widgetView {
       const relDOM = document.createElement('div');
       this.relCell.appendChild(relDOM);
       this.containedWidgets.push(app.idCounter);
-      new widgetRelations(relDOM, this.nodeID, 'summary', this.relationType); // Creates a new widgetRelations object in relDOM
+
+      const userRequest = app.REST.startUserRequest("Saving node", this.containerDOM);
+      new widgetRelations(relDOM, this.nodeID, 'summary', this.relationType, userRequest); // Creates a new widgetRelations object in relDOM
       this.relations.summary = relDOM;
       this.activeDOM = relDOM;
     }

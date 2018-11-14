@@ -366,7 +366,9 @@ class widgetTableRelations {
 	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
 	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
-    app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
+    userRequest = app.REST.startUserRequest("Updating displayed fields", this.widgetDOM);
+
+    app.REST.sendQuery(obj, "changeRelation", "Updating metadata", userRequest, this.widgetDOM);
 
     this.fieldSelectPopup.hidden = true;
     this.refresh();
@@ -614,7 +616,9 @@ class widgetTableRelations {
     	  obj.to = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
     	  obj.changes = [{"item":"rel", "property":"fieldsDisplayed", "value":app.stringEscape(JSON.stringify(this.fieldsDisplayed))}];
 
-        app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
+        const userRequest = app.REST.startUserRequest("Rearranging fields", this.widgetDOM);
+
+        app.REST.sendQuery(obj, "changeRelation", "Updating metadata", userRequest, this.widgetDOM);
         this.refresh();
       }
     }

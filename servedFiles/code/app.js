@@ -751,27 +751,27 @@ deleteLink(input) {
 	row.removeChild(cell);
 }
 
-checkOwner(type, newItem, domElement, object, method, name) {
+checkOwner(type, newItem, domElement, object, method, name, userRequest, ...args) {
 	if (newItem || (object.owner && object.owner.id !== this.login.userID)) { // If the user asked for a new item, or the node is owned by someone else
 		const obj = {"type":type, "properties":{"name":name}};
 
-		this.sendQuery(obj, "createNode", "Creating node", domElement, null, null, function(data, domElement, object, method) {
-			this.setOwner(domElement, object, method, data);
-		}.bind(this), domElement, object, method);
+		this.REST.sendQuery(obj, "createNode", "Creating node", userRequest, domElement, null, null, function(data, userRequest, domElement, object, method, ...args) {
+			this.setOwner(domElement, userRequest, object, method, data, ...args);
+		}.bind(this), domElement, object, method, ...args);
 
 	}
 	else {
 		if (object.owner) { // If the node already has an owner (which should be the user at this point), it still belongs to them - no need to update
-			object[method]();
+			object[method](null, userRequest, ...args); // method should be prepared to take data and userRequest as the first two args
 		}
 		else {
-			this.setOwner(domElement, object, method); // This should rarely happen - but if the node already existed and DIDN'T have an owner, it belongs to this user (for now).
+			this.setOwner(domElement, userRequest, object, method, null, ...args); // This should rarely happen - but if the node already existed and DIDN'T have an owner, it belongs to this user (for now).
 		}
 	}
 }
 
 // Make the logged-in user the owner of this node
-setOwner(domElement, object, method, data) { // If there is data, this was called after creating a new node. Set the ID accordingly.
+setOwner(domElement, userRequest, object, method, data, ...args) { // If there is data, this was called after creating a new node. Set the ID accordingly.
 	if (data) {
 		object.id = data[0].node.id;
 		object.GUID = data[0].node.properties.M_GUID;
@@ -784,11 +784,11 @@ setOwner(domElement, object, method, data) { // If there is data, this was calle
 	obj.to = {"id":this.login.userID};
 	obj.rel = {"type":"Owner"};
 
-	this.sendQuery(obj, "createRelation", "Setting owner", domElement, null, null, function(data, object, method) {
+	this.REST.sendQuery(obj, "createRelation", "Setting owner", userRequest, domElement, null, null, function(data, userRequest, object, method, ...args) {
 		if (object && method) {
-			object[method](data);
+			object[method](data, userRequest, ...args);
 		}
-	}.bind(this), object, method);
+	}.bind(this), object, method, ...args);
 }
 
 error(message) {
@@ -1189,7 +1189,9 @@ setUpPopup(JSobj) {
 		// update widget
 		this.refresh();
 
-	  // create or update link
+		// create or update link
+		let userRequest = this.app.REST.startUserRequest("Update metadata settings", this.widgetDOM);
+
 	  const obj = {};
 	  obj.from = {"id":this.app.login.userID, "return":false};
 	  obj.rel = {"type":"Settings", "merge":true, "return":false};
@@ -1198,7 +1200,7 @@ setUpPopup(JSobj) {
 	                 {"item":"rel", "property":"fieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.fieldsDisplayed))},
 	                 {"item":"rel", "property":"formFieldsDisplayed", "value":this.app.stringEscape(JSON.stringify(this.formFieldsDisplayed))}];
 
-		this.app.sendQuery(obj, "changeRelation", "Updating metadata", this.widgetDOM);
+		this.app.REST.sendQuery(obj, "changeRelation", "Updating metadata", userRequest, this.widgetDOM);
 
 	  // close popup
 	  this.fieldPopup.hidden = true;
