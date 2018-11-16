@@ -104,9 +104,16 @@ findLinks(data, userRequest) { // If data were returned, they will include the n
     this.nodeGUID = data[0].to.properties.M_GUID;
     if (data[0].rel.properties[`${this.relationType}_order`]) {
       this.order = data[0].rel.properties[`${this.relationType}_order`];
+      if (typeof this.order === "string") {
+        this.order = JSON.parse(this.order);
+      }
     }
+
     if (data[0].rel.properties[`${this.relationType}_placeholders`]) {
       this.placeholders = data[0].rel.properties[`${this.relationType}_placeholders`];
+      if (typeof this.placeholders === "string") {
+        this.placeholders = JSON.parse(this.placeholders);
+      }
     }
   }
 
@@ -675,8 +682,8 @@ processNext(data, userRequest, rows, prevFunction) {
     obj.to = {"properties":{"M_GUID":this.nodeGUID}};
     obj.rel = {"type":"View"};
     // obj.node = {"name":"view", "id":this.viewNodeID};
-    obj.changes = [{"item":"rel", "property":`${this.relationType}_order`, "value":JSON.stringify(this.order), "string":false},
-                   {"item":"rel", "property":`${this.relationType}_placeholders`, "value":JSON.stringify(this.placeholders), "string":false}];
+    obj.changes = [{"item":"rel", "property":`${this.relationType}_order`, "value":app.stringEscape(JSON.stringify(this.order))},
+                   {"item":"rel", "property":`${this.relationType}_placeholders`, "value":app.stringEscape(JSON.stringify(this.placeholders))}];
 
     app.REST.sendQuery(obj, "changeRelation", "Updating view", userRequest, this.containerDOM, null, null, this.findLinks.bind(this));
   }
