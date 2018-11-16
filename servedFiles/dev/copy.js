@@ -502,7 +502,10 @@ class copy {
           else if (typeof value !== "string") {
             value = JSON.stringify(value);
           }
-          rProperties += `${propName}: '${copy.stringEscape(value)}', `;
+          else {
+            value = JSON.stringify(value);
+          }
+          rProperties += `${propName}: ${value}, `;
         }
         if (rProperties.length > 0) {
           rProperties = rProperties.slice(0, rProperties.length - 2); // remove the last ", "
