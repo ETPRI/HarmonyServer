@@ -399,6 +399,7 @@ class widgetTableNodes {
       cell.outerHTML = `<td hidden>${r[i].n.properties.M_GUID}</td>`;
 
       if (this.queryObjectName === "all") {
+        row.setAttribute("type", r[i].n.labels[0]);
         r[i].n.properties.type = r[i].n.labels[0];
       }
 
@@ -594,8 +595,9 @@ class widgetTableNodes {
     const id = idCell.innerHTML; // the id is in the next (hidden) cell
 
     let type = this.queryObjectName;
-    if (type === "all") { // If this is an "all" table, extract the type from the type cell (the first visible one after the row number)
-      type = idCell.nextElementSibling.innerHTML;
+    if (type === "all") { // If this is an "all" table, extract the type from the row
+      const row = idCell.parentElement;
+      type = row.getAttribute("type");
     }
 
     if (type == 'mindmap') {
