@@ -289,12 +289,6 @@ class widgetLogin {
     buttons.innerHTML = "";
     adminButtons.innerHTML = "";
 
-    // Create a button for this nodeType
-    let button = document.createElement('input');
-    buttons.append(button);
-
-    button.outerHTML = `<input type="button" value="${app.metaData.node.all.nodeLabel}" onclick="app.menuNodes('all')">`;
-
     // data should be an array of objects, each of which contains:
     // a) a metadata object containing the name of the metadata object to update, and maybe
     // b) a settings object whose properties are used to update metadata
@@ -323,11 +317,8 @@ class widgetLogin {
       }
 
       if (app.metaData.node[name]) { // if this is metadata for a node, not a relation
-        // Create a widgetTableNodes widget for this node type
-        // app.widgets[name] = new widgetTableNodes(name, null);
-
         // Create a button for this nodeType
-        button = document.createElement('input');
+        const button = document.createElement('input');
         if (name.slice(0,2) === "M_") { // If this button represents a metadata node type, only admins should see it
           adminButtons.append(button);
         }

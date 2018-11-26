@@ -275,6 +275,7 @@ initNodeData() { // move to DB in the future
     nodeLabel:"All Nodes"
     ,orderBy: [{"name":"name"}, {"name":"comment"}]
     ,fieldsDisplayed:["type", "name", "comment"]
+    ,formFieldsDisplayed:["type", "name", "comment"]
     ,fields: {
       "type": {label:"Type"}
       ,"name": {label:"Name"}
@@ -320,9 +321,9 @@ initNodeData() { // move to DB in the future
     ,fields: {
       "name": {label: "DB name"}
       ,"nodeLabel": {label: "Display name"}
-      ,"fields": {label: "All fields"}
-      ,"fieldsDisplayed": {label: "Table fields"}
-      ,"formFieldsDisplayed": {label: "Form fields"}
+      ,"fields": {label: "All fields", input:{name:"textarea"}}
+      ,"fieldsDisplayed": {label: "Table fields", input:{name:"textarea"}}
+      ,"formFieldsDisplayed": {label: "Form fields", input:{name:"textarea"}}
       ,"orderBy": {label: "Order by"}
       ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
@@ -365,7 +366,7 @@ initNodeData() { // move to DB in the future
   }
 
   this.node.M_DataSharePartner = {
-    nodeLabel:"Data Share Partner"
+    nodeLabel:"M_Data Share Partner"
     ,orderBy: [{"name":"IPaddress"}]
     ,fieldsDisplayed: ["IPaddress", "localLastChange", "partnerLastChange", "comment"]
     ,formFieldsDisplayed: ["IPaddress", "localLastChange", "partnerLastChange", "comment"]

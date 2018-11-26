@@ -156,7 +156,7 @@ addMetaData(data) { // data should be all metadata nodes, for both nodes and rel
 		let type;
 		for (type in this.metaData.node) { // for every entry in this.metaData.node...
 			let DBNode = data.find(x => x.node.properties.name === type); // look for a matching DB metadata node.
-			if (!DBNode && type !== "all") { // If there is no such node, create one (except for "all", which doesn't get a node).
+			if (!DBNode) { // If there is no such node, create one.
 				const obj = {"type":"M_MetaData", "properties":{"name":type}, "return":false};
 				obj.properties.nodeLabel = this.stringEscape(JSON.stringify(this.metaData.node[type].nodeLabel));
 				obj.properties.orderBy = this.stringEscape(JSON.stringify(this.metaData.node[type].orderBy));
