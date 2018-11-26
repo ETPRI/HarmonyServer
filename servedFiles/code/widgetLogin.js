@@ -96,7 +96,7 @@ class widgetLogin {
 
     // If a session is already ongoing (say, from a failed login attempt), skip straight to recording the request
     if (this.sessionGUID && this.browserGUID) {
-      this.login();
+      this.login(userRequest);
     }
     else { // Otherwise, create a session and browser node first, then record the request
       const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
