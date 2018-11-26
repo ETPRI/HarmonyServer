@@ -240,6 +240,25 @@ initNodeData() { // move to DB in the future
     ,proposedFields:{}
   }
 
+  this.node.calendarEvent = {
+     nodeLabel: "calendarEvent"
+     ,orderBy: [{"name":"year"}, {"name":"month"}, {"name":"day"}, {"name":"hour"}, {"name":"minute"},]
+     ,fieldsDisplayed: ["name", "description"]
+     ,formFieldsDisplayed: ["name", "description"]
+     ,fields: {
+       "name": {label: "Name"}    // name of event
+       ,"comment":    {label: "Comment", input: {name:"textarea"}}
+       ,"year": {label: "Year"}    // YYYY
+       ,"month": {label: "Month"}  // integer 1-12
+       ,"day": {label: "Day"}      // 1 to 28-31 depending on the month
+       ,"hour": {label: "Hour"}  // military time
+       ,"minute": {label: "Minute"}
+       ,"duration": {label: "Duration"}  // in minutes
+       // Add more here later - probably search criteria (each calendar is like a different search for events)
+     }
+     ,proposedFields:{}
+   }
+
   this.node.file = {
     nodeLabel: "file"
     ,orderBy: [{"name":"name"}, {"name":"type"}, {"name":"comment"}]

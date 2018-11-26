@@ -90,6 +90,53 @@ class widgetLogin {
     }
   }
 
+  // loginPromiseMain() {
+  //
+  //   .then(this.loginPromise)
+  //   .then(this.loginCompletePromise)
+  //   .then(function(loginSuccessful) {
+  //     if(loginSuccessful) {
+  //       this.getMetaDataPromise()
+  //       .then(this.updateMetaData);
+  //       this.getFavoritesPromise()
+  //       .then(this.loadFavorites);
+  //     }
+  //   }.bind(this);
+  // }
+
+  // checkSessionPromise() {
+  //   return new Promise(function(resolve, reject) {
+  //     if (!(this.sessionGUID && this.browserGUID)) {
+  //       this.createSessionPromise()
+  //       .then(this.MergeBrowserPromise)
+  //       .then(resolve)
+  //     }
+  //     else resolve();
+  //   }.bind(this))
+  // }
+
+  // createSessionPromise(loginObj) {
+  //   return new Promise(function(resolve, reject) {
+  //     let userRequest = loginObj.app.REST.startUserRequest("Login", loginObj.login.loginDiv);
+  //
+  //     // If a session is already ongoing (say, from a failed login attempt), skip straight to recording the request
+  //     if (obj.login.sessionGUID && obj.login.browserGUID) {
+  //       obj.login.login(userRequest);
+  //     }
+  //     else { // Otherwise, create a session and browser node first, then record the request
+  //       const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
+  //
+  //       app.REST.sendQuery(obj, 'createNode', "Creating Session", userRequest, this.loginDiv, null, null, function(data, userRequest) {
+  //         this.sessionGUID = data[0].node.properties.M_GUID;
+  //         this.requestCount = 0;
+  //         this.mergeBrowser(userRequest);
+  //       }.bind(this));
+  //     }
+  //
+  //   })
+  // }
+
+
   // Creates a session node and then calls mergeBrowser to create a browser node, if necessary.
   createSession() {
     let userRequest = app.REST.startUserRequest("Login", this.loginDiv);
@@ -345,12 +392,17 @@ class widgetLogin {
   }
 
   addFavoriteCell(row, cell, d) {
+    // Get the user's label for this node type
+    const DBType = d.labels[0];
+    const label = app.metaData.getNode(DBType).nodeLabel;
+
     // Fill in data for this cell...
     cell.innerHTML = `<input type="button" value="X" onclick="app.widget('deleteFavorite', this); app.deleteLink(this)">
-    <span onclick = "app.openNode('${d.labels[0]}', '${d.properties.M_GUID}')">${d.properties.name}:${d.labels[0]}</span>`;
+    <span onclick = "app.openNode('${DBType}', '${d.properties.M_GUID}')">${d.properties.name}:${label}</span>`;
     cell.setAttribute('GUID', d.properties.M_GUID);
     cell.setAttribute('name', d.properties.name);
-    cell.setAttribute('type', d.labels[0]);
+    cell.setAttribute('type', DBType);
+    cell.setAttribute('label', 'label')
 
     // Then create the next one
     const newCell = document.createElement("td");

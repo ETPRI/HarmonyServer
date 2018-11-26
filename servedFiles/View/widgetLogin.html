@@ -9,7 +9,7 @@
   <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
 </div>
 <div class="widgetBody freezable">
-<!--  
+<!--
   <div class="statusBar">
     <input type="button" id="clearRequests2" value="Clear" onclick="app.REST.clearRequests()">
     <p id="available2">Server Requests</p>
@@ -50,7 +50,7 @@
         <td id="faveNodesLabel">Favorite Nodes (Shortcuts):</td>
         <td id="faveNode0" draggable="true"
           ondragover="event.preventDefault()" ondragstart="app.widget('drag', this, event)"
-          ondrop="app.dropLink(this, event); app.widget('saveFavorite', this)"></td>
+          ondrop="app.dropLink(this, event); app.widget('saveFavorite', this, event)"></td>
       </tr>
     </tbody>
   </table>

@@ -166,18 +166,11 @@ class widgetTableNodes {
   }
 
   buildOwner() {
-    let owner = null;
-    const cell = app.domFunctions.getChildByIdr(document.getElementById(this.idWidget), 'ownerSearch');
-    if (cell) {
-      const text = cell.firstElementChild;
-      const dropDown = text.nextElementSibling;
-      if (text.value.length > 0) {
-        owner = {};
-        owner.value = text.value;
-        owner.searchType = dropDown.options[dropDown.selectedIndex].value;
-      }
+    let ownedCheck = app.domFunctions.getChildByIdr(this.widgetDOM, "owned");
+    if (ownedCheck.checked) {
+      return app.login.userGUID;
     }
-    return owner;
+    else return null;
   }
 
   ////////////////////////////////////////////////////////////////////
@@ -197,6 +190,7 @@ class widgetTableNodes {
     <input type="button" value="Search" idr="searchButton" onclick="app.widgetSearch(this)">
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
     # To Display <input value ="${this.limitDefault}" idr="limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
+    <input type="checkbox" idr="owned"> Owned
     ${buttonHTML}${addText}
     </span>
     <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
@@ -346,19 +340,6 @@ class widgetTableNodes {
         s += s1.replace('#1',fieldName).replace(`<option value="${select}">`, `<option selected value="${select}">`);
     }
 
-    if (this.queryObjectName.slice(0,2) !== 'M_') { // metadata nodes don't have owners
-      let ownerInput = app.domFunctions.getChildByIdr(this.widgetDOM, 'ownerText');
-      let ownerValue = app.login.userName;
-      if (ownerInput) { // If the owner field existed already, don't reset it
-        ownerValue = ownerInput.value;
-      }
-
-      s += `<th idr = "ownerSearch">`;
-      s += `<input idr = "ownerText" size="7" value = "${ownerValue}" onblur="app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">`
-      s += strSearch.replace('#x#', 'owner');
-      s += `</th>`;
-    }
-
     if (this.queryObjectName == 'people') {
       s += `<th colspan = "3">
             <select idr="permissionsDropdown">
@@ -379,10 +360,6 @@ class widgetTableNodes {
         f += `<th db="${fieldName}" oncontextmenu= "event.preventDefault(); app.widget('showPopup', this)" draggable="true"
         ondragstart="app.widget('dragHeader', this, event)" ondragover="event.preventDefault()" ondrop="app.widget('dropHeader', this, event)">
         ${this.fields[fieldName].label}</th>`;
-    }
-
-    if (this.queryObjectName.slice(0,2) !== 'M_') { // metadata nodes don't have owners
-      f += '<th>Owner</th>';
     }
 
     if (this.queryObjectName == 'people') {
@@ -435,17 +412,6 @@ class widgetTableNodes {
           cell.setAttribute("idr", `name${i}`);
         }
         text = document.createTextNode(r[i]["n"].properties[fieldName]);
-        cell.appendChild(text);
-        row.appendChild(cell);
-      }
-
-      if (this.queryObjectName.slice(0,2) !== 'M_') { // If this is not a metadata node, it has (or may have) an owner
-        let owner = "None";
-        if (r[i].owner) {
-          owner = r[i].owner;
-        }
-        cell = document.createElement('td');          // Make a cell showing its owner...
-        text = document.createTextNode(owner);
         cell.appendChild(text);
         row.appendChild(cell);
       }

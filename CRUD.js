@@ -832,7 +832,26 @@ module.exports = class CRUD {
     }
 
     for (let field in dataObj.where) {
-      if (dataObj.where[field].fieldType == "string") {
+      if (field === "type" && dataObj.type === "all") { // If the user has searched in an "all" table for a particular node type
+        where += `toLower(labels(${dataObj.name})[0]) `;
+        switch (dataObj.where.type.searchType) {
+          case "S":
+            where += `starts with `;
+            break;
+          case "M":
+            where += `contains `;
+            break;
+          case "E":
+            where += `ends with `;
+            break;
+          case "=":
+            where += `= `;
+            break;
+        }
+        where += `"${dataObj.where.type.value.toLowerCase()}" and `
+      }
+
+      else if (dataObj.where[field].fieldType == "string") {
         // =~: regex; (?i): case insensitive; #s# and #E#: placeholders for start and end variables
         // (start and end variables can be ".*", meaning "any string", or "", meaning "nothing")
         const w = `${dataObj.name}.${field}=~"(?i)#s#${dataObj.where[field].value}#E#" and `;
@@ -861,25 +880,8 @@ module.exports = class CRUD {
     }
 
     if (dataObj.owner) {
-      const w = `o.name=~"(?i)#s#${dataObj.owner.value}#E#" and `;
-      let w1="";
-      switch(dataObj.owner.searchType) {
-        case "S":    // start
-          // Anything can come AFTER the specified value, but nothing BEFORE it (it starts the desired string)
-          w1 = w.replace("#s#","").replace("#E#",".*");    break;
-        case "M":    // middle
-          // Anything can come before or after the specified value (as long as it appears anywhere in the string)
-          w1 = w.replace("#s#",".*").replace("#E#",".*");  break;
-        case "E":    // end
-          // Anything can come BEFORE the specified value, but nothing AFTER it (it ends the desired string)
-          w1 = w.replace("#s#",".*").replace("#E#","");    break;
-        case "=":    // equal to
-          // NOTHING can come before OR after the specified value (string must match it exactly)
-          w1 = w.replace("#s#","").replace("#E#","");      break;
-        default:
-          console.log(`Error: search type for a string field is not "S", "M", "E" or "=".`);
-      }
-      where += w1;
+      const w = `o.M_GUID="${dataObj.owner}" and `;
+      where += w;
     }
 
     if (dataObj.permissions) {

@@ -700,7 +700,7 @@ dropLink(input, evnt) {
 	let deleteCode = "app.deleteLink(this)";
 	let dragCode = "";
 	if (name === "faveNode") {
-		dropCode += "; app.widget('saveFavorite', this)";
+		dropCode += "; app.widget('saveFavorite', this, event)";
 		deleteCode = `app.widget('deleteFavorite', this); ${deleteCode}`;
 		dragCode = `draggable="true" ondragstart="app.widget('drag', this, event)"`
 	}
@@ -726,10 +726,11 @@ dropLink(input, evnt) {
 
 	// If the data represent a node, then we should have, among other things, name, type (the label) and nodeID (the GUID).
 	input.innerHTML = `<input type="button" value="X" onclick="${deleteCode}">
-	<span onclick = "app.openNode('${data.type}', '${data.nodeID}')">${data.name}:${data.type}</span>`;
+	<span onclick = "app.openNode('${data.DBType}', '${data.nodeID}')">${data.name}:${data.type}</span>`;
 	input.setAttribute('GUID', data.nodeID);
 	input.setAttribute('name', data.name);
-	input.setAttribute('type', data.type);
+	input.setAttribute('type', data.DBType);
+	input.setAttribute('label', data.type);
 }
 
 openNode(type, GUID) {
