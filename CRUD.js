@@ -832,48 +832,30 @@ module.exports = class CRUD {
     }
 
     for (let field in dataObj.where) {
-      if (field === "type" && dataObj.type === "all") { // If the user has searched in an "all" table for a particular node type
-        where += `toLower(labels(${dataObj.name})[0]) `;
-        switch (dataObj.where.type.searchType) {
-          case "S":
-            where += `starts with `;
-            break;
-          case "M":
-            where += `contains `;
-            break;
-          case "E":
-            where += `ends with `;
-            break;
-          case "=":
-            where += `= `;
-            break;
+      if (dataObj.where[field].fieldType == "string") {
+        if (field === "type" && dataObj.type === "all") { // If the user has searched in an "all" table for a particular node type
+          where += `toLower(labels(${dataObj.name})[0]) `; // Convert node label to lower case...
         }
-        where += `"${dataObj.where.type.value.toLowerCase()}" and `
-      }
+        else {
+          where += `toLower(${dataObj.name}.${field}) `; // or convert attribute to lower case...
+        }
+          switch (dataObj.where[field].searchType) {
+            case "S":
+              where += `starts with `;
+              break;
+            case "M":
+              where += `contains `;
+              break;
+            case "E":
+              where += `ends with `;
+              break;
+            case "=":
+              where += `= `;
+              break;
+          } // end switch (search type)
 
-      else if (dataObj.where[field].fieldType == "string") {
-        // =~: regex; (?i): case insensitive; #s# and #E#: placeholders for start and end variables
-        // (start and end variables can be ".*", meaning "any string", or "", meaning "nothing")
-        const w = `${dataObj.name}.${field}=~"(?i)#s#${dataObj.where[field].value}#E#" and `;
-        let w1="";
-        switch(dataObj.where[field].searchType) {
-          case "S":    // start
-            // Anything can come AFTER the specified value, but nothing BEFORE it (it starts the desired string)
-            w1 = w.replace("#s#","").replace("#E#",".*");    break;
-          case "M":    // middle
-            // Anything can come before or after the specified value (as long as it appears anywhere in the string)
-            w1 = w.replace("#s#",".*").replace("#E#",".*");  break;
-          case "E":    // end
-            // Anything can come BEFORE the specified value, but nothing AFTER it (it ends the desired string)
-            w1 = w.replace("#s#",".*").replace("#E#","");    break;
-          case "=":    // equal to
-            // NOTHING can come before OR after the specified value (string must match it exactly)
-            w1 = w.replace("#s#","").replace("#E#","");      break;
-          default:
-            console.log(`Error: search type for a string field is not "S", "M", "E" or "=".`);
-        }
-        where += w1;
-      }
+          where += `"${dataObj.where[field].value.toLowerCase()}" and `; // convert search parameter to lower case for comparison
+        } // end if (string field)
       else { // number field
         where += `${dataObj.name}.${field} ${dataObj.where[field].searchType} ${dataObj.where[field].value} and `;
       }
