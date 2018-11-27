@@ -69,7 +69,6 @@ class widgetLogin {
         app.regression.buildRegressionHeader();
         app.login.viewAdmin.push(document.getElementById("debugButton"));
         app.login.viewAdmin.push(document.getElementById("regressionButton"));
-        app.login.viewAdmin.push(document.getElementById("dataBrowserButton"));
 
         app.login.viewLoggedIn.push(document.getElementById('changeProfileButton'));
       }

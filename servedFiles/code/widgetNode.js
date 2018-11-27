@@ -106,7 +106,8 @@ class widgetNode extends widgetDetails {
     }
 
     const buttons = app.domFunctions.getChildByIdr(this.widgetDOM, "buttons");
-    buttons.innerHTML = `${addSave}${changeLogHTML}`;
+    buttons.innerHTML = `${addSave}${changeLogHTML}
+                        <input type="button" value="New Data Browser" onclick="new dataBrowser('${this.GUID}')">`;
 
     // app.idCounter--; // decrement ID counter so that the widget header will end up with the right ID
     // const html = app.widgetHeader('widgetNode') + `<b idr= "nodeTypeLabel" contentEditable="true"

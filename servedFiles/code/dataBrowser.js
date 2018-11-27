@@ -1,5 +1,5 @@
 class dataBrowser {
-  constructor () {
+  constructor (GUID) {
     this.widgetDOM = null;
     this.widgetID = app.idCounter;
     app.widgets[app.idCounter] = this; // Add to app.widgets
@@ -31,6 +31,10 @@ class dataBrowser {
     this.toToggle = null;
 
     this.buildWidget();
+    
+    if (GUID) {
+      this.search(GUID);
+    }
   }
 
   buildWidget() {

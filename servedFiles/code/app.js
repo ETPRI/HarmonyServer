@@ -339,6 +339,11 @@ menuNodes(name, criteria) {
 		this.shownTable = newTable;
 		let newTableJS = this.widgets[name];
 	}
+
+	// Search using the passed-in criteria, if any were passed in
+	if (criteria) {
+		this.widgets[name].search(criteria);
+	}
 }
 
 // displays meta-data on nodes, keysNodes, relations, keysRelations, all nodes that have been trashed, or all nodes the user has trashed.

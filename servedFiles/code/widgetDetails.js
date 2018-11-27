@@ -163,6 +163,11 @@ buildWidget() { // public - build table header
     changeLogButton.outerHTML = `<input type="button" value="Show Change Logs"
                         onclick="app.menuNodes('M_ChangeLog', [{name:'item_GUID', value:'${this.GUID}', dropDownValue:'='}])">`;
   }
+  const dataBrowserButton = document.createElement('input');
+  this.widgetDOM.insertBefore(dataBrowserButton, main);
+  dataBrowserButton.outerHTML = `<input type="button" value="New Data Browser"
+                      onclick="new dataBrowser('${this.GUID}')">`;
+
   const drag = document.createElement('b');
   this.widgetDOM.insertBefore(drag, main);
   drag.outerHTML = `<b idr = "dragButton" draggable=true ondragstart="app.widget('drag', this, event)">Drag To View</b>`;
@@ -1067,11 +1072,6 @@ save(trashUntrash, userRequest, buttonValue) { // Builds query to add or update 
 
           const storedCounter = app.domFunctions.getChildByIdr(this.widgetDOM, 'numStoredFiles');
           storedCounter.textContent = this.numStoredFiles;
-        }
-
-        if (this.fileBinary) {
-          obj.fileBinary = this.fileBinary;
-          obj.fileType = app.getProp(this, "currentData", "properties", "type", this.numStoredFiles++);
         }
 
         if ((this.owner && this.owner.GUID !== app.login.userGUID)) {
