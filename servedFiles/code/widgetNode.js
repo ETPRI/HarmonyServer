@@ -205,6 +205,11 @@ class widgetNode extends widgetDetails {
       }
       textReader.readAsText(file);
 
+      const binReader = new FileReader();
+      binReader.onload = function(evnt) {
+        node.fileBinary = evnt.target.result;
+      }
+      binReader.readAsBinaryString(file);
 
       // Update dragdrop area
       const span = app.domFunctions.getChildByIdr(this.widgetDOM, 'uploadedFile');

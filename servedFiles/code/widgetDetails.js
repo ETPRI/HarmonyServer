@@ -380,14 +380,14 @@ addRow(fieldName, fieldCount, proposed) {
     if (this.currentData) {
       const d=this.currentData.properties;
       data = d[fieldName];
-      if (typeof data === "string") { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
-        data = data.replace(/"/g, "&quot;");
-      }
-      else if (data === null || data == undefined) {
+      // if (typeof data === "string") { // No need to sanitize data that don't exist, and this can avoid errors when a value is undefined during testing
+      //   data = data.replace(/"/g, "&quot;");
+      // }
+      if (data === null || data === undefined) {
         data = "";
       }
 
-      else { // If actual data that is NOT a string, stringify it first
+      else if (typeof data !== "string"){ // If actual data that is NOT a string, stringify it first
         data = JSON.stringify(data);
       }
     }
@@ -1059,7 +1059,7 @@ save(trashUntrash, userRequest, buttonValue) { // Builds query to add or update 
       // First, if this is a file node, and a new file has been uploaded or the node has been copied,
       // call the server's saveFile function. Also, if a new file has been uploaded,
       // increment this.numStoredFiles and the file counter in the widget.
-      if (this.queryObjectName === "file" && (this.fileText || (this.owner && this.owner.GUID !== app.login.userGUID))) {
+      if (this.queryObjectName === "file" && (this.fileText || this.fileBinary || (this.owner && this.owner.GUID !== app.login.userGUID))) {
         const obj = {"userGUID":app.login.userGUID, "nodeGUID":data[0].n.properties.M_GUID};
         if (this.fileText) {
           obj.fileText = this.fileText;
@@ -1067,6 +1067,11 @@ save(trashUntrash, userRequest, buttonValue) { // Builds query to add or update 
 
           const storedCounter = app.domFunctions.getChildByIdr(this.widgetDOM, 'numStoredFiles');
           storedCounter.textContent = this.numStoredFiles;
+        }
+
+        if (this.fileBinary) {
+          obj.fileBinary = this.fileBinary;
+          obj.fileType = app.getProp(this, "currentData", "properties", "type", this.numStoredFiles++);
         }
 
         if ((this.owner && this.owner.GUID !== app.login.userGUID)) {
