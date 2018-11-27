@@ -78,18 +78,29 @@ class widgetNode extends widgetDetails {
       if (!(this.numStoredFiles)) {
         this.numStoredFiles = 0;
       }
+
+      let downloadHTML = "";
+      if (this.numStoredFiles > 0) {
+        let versionsHTML = "";
+        for (let i = 1; i <= this.numStoredFiles; i++) {
+          versionsHTML += `<option `;
+          if (i === this.numStoredFiles) {
+            versionsHTML += "selected ";
+          }
+          versionsHTML += `value=${i}>Version ${i}</option>`
+        }
+        downloadHTML = `<select idr="version">${versionsHTML}</select>
+                <input type="button" idr="download" value="Download" onclick="app.widget('downloadFile', this)"`;
+      }
+
       aboveTableHTML =
       `<div class="fileDrop" ondrop="app.widget('uploadFile', this, event)">
         Drag a file here, or click the file upload button:
         <input type="file" idr="file" onchange="app.widget('uploadFile', this, event)"><br><br><br><br>
         File uploaded this session: <span idr="uploadedFile">None</span><br>
         Existing versions: <span idr="numStoredFiles">${this.numStoredFiles}</span><br>
+        ${downloadHTML}
       </div>`
-
-      // if (app.getProp(this, "currentData", "type")) {
-      //   // The type array shows the types of all stored files, so its length is the number of stored files
-      //   this.numStoredFiles = this.currentData.type.length;
-      // }
     }
 
     const aboveSpan = app.domFunctions.getChildByIdr(this.widgetDOM, "aboveTable");
@@ -108,49 +119,6 @@ class widgetNode extends widgetDetails {
     const buttons = app.domFunctions.getChildByIdr(this.widgetDOM, "buttons");
     buttons.innerHTML = `${addSave}${changeLogHTML}
                         <input type="button" value="New Data Browser" onclick="new dataBrowser('${this.GUID}')">`;
-
-    // app.idCounter--; // decrement ID counter so that the widget header will end up with the right ID
-    // const html = app.widgetHeader('widgetNode') + `<b idr= "nodeTypeLabel" contentEditable="true"
-    //   onfocus="this.parentNode.parentNode.draggable = false;" onblur="this.parentNode.parentNode.draggable = true;">${this.nodeLabel}</b>
-    //   <b idr="nodeLabel">: ${name}</b></span>
-    //   ${aboveTableHTML}
-    //   <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)"></div>
-    //   <table class="widgetBody freezable"><tbody><tr>
-    //     <td idr="end"></td>
-    //     <td idr="main">
-    //       ${addSave}${changeLogHTML}
-    //       <b idr = "dragButton" draggable=true ondragstart="app.widget('drag', this, event)">Drag To View</b>
-    //       <table idr = "nodeTable"><tbody idr = "nodeTBody"></tbody></table>
-    //     </td>
-    //     <td idr="start"></td>
-    //   </tr></tbody></table>
-    // </div>
-    // `
-    // /*
-    // Create new element, append to the widgets div in front of existing widgets
-    // */
-    //
-    //
-    // const parent = document.getElementById('widgets');
-    // let caller = document.getElementById(this.callerID);
-    // const newWidget = document.createElement('div'); // create placeholder div
-    //
-    // // I want to insert the new widget before the TOP-LEVEL widget that called it, if that widget is in the widgets div.
-    // // The ID passed in is that of the widget that called it, but it may be in another widget. So go up the chain until
-    // // either caller's parent is the widgets div (meaning that caller is a top-level widget in the widgets div), or caller
-    // // has no parent (meaning that the original caller was NOT in the widgets div, since no ancestor in that div was found).
-    // while (caller && caller.parentElement && caller.parentElement !== parent) {
-    //   caller = caller.parentElement;
-    // }
-    //
-    // if (caller && caller.parentElement && caller.parentElement == parent) { // If the caller is, itself, in the widgets div
-    //   parent.insertBefore(newWidget, caller); // Insert the new div before the caller
-    // }
-    // else {
-    //   parent.insertBefore(newWidget, parent.firstElementChild); // Insert the new div at the top of the widgets div
-    // }
-    //
-    // newWidget.outerHTML = html; // replace placeholder with the div that was just written
 
     // By this point, the new widget div has been created by buildHeader() and added to the page by the above line
     // const widget = document.getElementById(this.idWidget);
@@ -171,6 +139,48 @@ class widgetNode extends widgetDetails {
     this.tBodyDOM   = app.domFunctions.getChildByIdr(this.widgetDOM, "nodeTBody");
     this.endDOM     = app.domFunctions.getChildByIdr(this.widgetDOM, "end");
     this.startDOM   = app.domFunctions.getChildByIdr(this.widgetDOM, "start");
+  }
+
+  downloadFile(button) {
+    const dropdown = app.domFunctions.getChildByIdr(this.widgetDOM, "version");
+    const version = dropdown.options[dropdown.selectedIndex].value;
+    alert (`Downloading version ${version}!`);
+
+    const obj = {"fileGUID":this.GUID, "version":version, "type":this.currentData.properties.type[version-1]};
+    const queryObject = {"server": "file", "function": "downloadFile", "query": obj};
+    const request = JSON.stringify(queryObject);
+
+    const userRequest = app.REST.startUserRequest("Downloading file", this.widgetDOM);
+    const serverRequest = app.REST.serverRequests[userRequest]++; // record the current server request and then increment
+
+    const xhttp = new XMLHttpRequest();
+    const update = app.REST.startProgress(this.widgetDOM, "Saving file", request.length, userRequest, serverRequest);
+    const details = this;
+    const filename = `${this.currentData.properties.name}_v${version}.${this.currentData.properties.type[version-1]}`;
+
+    xhttp.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        const responseSize = this.responseText.length;
+        app.REST.stopProgress(details.widgetDOM, update, responseSize, userRequest, serverRequest);
+
+        // copied from a function which took filename and text
+        const element = document.createElement('a');
+        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(this.responseText));
+        element.setAttribute('download', filename);
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+      }
+    };
+
+    xhttp.open("POST", "");
+    xhttp.send(request);         // send request to server
+
+
   }
 
   buildStart(userRequest) {

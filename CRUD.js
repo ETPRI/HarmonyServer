@@ -1176,11 +1176,11 @@ module.exports = class CRUD {
       .run(query)
       .subscribe({
         onNext: function (record) {
-        const obj={};
-        for (let i=0; i< record.length; i++) {
-          obj[record.keys[i]]=record._fields[i];
-        }
-        result.push(obj);
+          const obj={};
+          for (let i=0; i< record.length; i++) {
+            obj[record.keys[i]]=record._fields[i];
+          }
+          result.push(obj);
           console.log("%s/n",JSON.stringify(obj));
         },
         onCompleted: function () {

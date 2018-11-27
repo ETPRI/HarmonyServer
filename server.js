@@ -181,6 +181,8 @@ function runFileRequest(obj, response) {
     case "saveFile":
       saveFile(obj.query, response);
       break;
+    case "downloadFile":
+      downloadFile(obj.query, response);
     default:
       console.log(`Error: File function ${obj.function} does not exist`);
       break;
@@ -233,6 +235,47 @@ function saveFile(query, response) {
 
   // Finally, return an empty response to the client, just so it knows the request is done
   response.end("");
+}
+
+function downloadFile(query, response) { // For now, query includes only the file GUID - not the user GUID. Find the user first, then the file
+  const session = driver.session();
+  const findOwner = `match (n:file {M_GUID:"${query.fileGUID}"})-[:Owner]->(a) return a.M_GUID as GUID`;
+  const result = [];
+  session
+    .run(findOwner)
+    .subscribe({onNext: function(record) {
+      const obj={};
+      for (let i=0; i< record.length; i++) {
+        obj[record.keys[i]]=record._fields[i];
+      }
+      result.push(obj);
+    },
+      onCompleted: function() {
+        if (result.length === 1) {
+          const userGUID = result[0].GUID;
+
+          const basePath = `${config.userFiles}/${userGUID}`;
+          const nodePath = `${basePath}/${query.fileGUID}/${query.version}.${query.type}`;
+
+          if (fs.existsSync(nodePath)) {
+            const data = fs.readFileSync(nodePath, 'utf8');
+            response.end(data);
+            session.close();
+          }
+          else {
+            response.end("Error: File could not be found");
+            session.close();
+          }
+        }
+        else {
+          response.end("Error: File's owner could not be found");
+          session.close();
+        }
+      },
+      onError: function (error) {
+        console.log(error);
+      }
+    });
 }
 
 // ------------------------------------------ Gremlin stuff ---------

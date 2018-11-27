@@ -1064,7 +1064,7 @@ save(trashUntrash, userRequest, buttonValue) { // Builds query to add or update 
       // First, if this is a file node, and a new file has been uploaded or the node has been copied,
       // call the server's saveFile function. Also, if a new file has been uploaded,
       // increment this.numStoredFiles and the file counter in the widget.
-      if (this.queryObjectName === "file" && (this.fileText || this.fileBinary || (this.owner && this.owner.GUID !== app.login.userGUID))) {
+      if (this.queryObjectName === "file" && (this.fileText || (this.owner && this.owner.GUID !== app.login.userGUID))) {
         const obj = {"userGUID":app.login.userGUID, "nodeGUID":data[0].n.properties.M_GUID};
         if (this.fileText) {
           obj.fileText = this.fileText;
