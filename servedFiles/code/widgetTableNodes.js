@@ -505,12 +505,12 @@ class widgetTableNodes {
 
   drag(input, evnt){ // stores information about a node in the drag event. input is the thing being dragged.
     const nodeRow = input.parentElement;
-    const nameColumn = this.fieldsDisplayed.indexOf('name') + 2; // The first two cells in the table aren't included in fieldsDisplayed
-    let name = "";
-    if (nameColumn > 1) { // If that call to indexOf didn't return -1 (-1 would mean there isn't actually a name field in this table)
-      const nameCell = nodeRow.children[nameColumn];
-      name = nameCell.textContent;
+    const rowNum = input.getAttribute("idr").slice(4);
+    const name = app.getProp(this, "data", rowNum, "n", "properties", "name");
+    if (!name) {
+      name = "";
     }
+
     const IDcell = nodeRow.children[1]; // The ID will always be the second cell in the table, after the number
     const ID = IDcell.textContent;
     let type = this.queryObject.nodeLabel;

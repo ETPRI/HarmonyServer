@@ -622,6 +622,23 @@ addField(name, value) { // If name and value don't exist, we're adding a blank r
   valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this.parentElement)" onblur = "app.widget('checkNewField', this)" value = "${value}">`
 }
 
+
+
+// saveAddMain() {
+//   this.checkTrashPromise() // Will call untrashNode, trashNode, or changeReason if needed, then resolve
+//   .then(this.checkOwnerPromise) // Will call setOwner if needed, then resolve
+//   .then(this.savePromise) // Will actually save the node data
+//   .then(function() {
+//     this.updateMetaDataPromise() // Update the user's settings and the metadata fields...
+//     .then(this.updateFieldsPromise);
+//     this.saveComplete(); // and simultaneously update saved data and refresh the widget.
+//   }.bind(this));
+// }
+
+
+
+
+
 saveAdd(widgetElement, userRequest) { // Saves changes or adds a new node
   // userRequest may be already set if setOwner was called (and called this again afterwards),
   // or if the details widget is NOT a standalone widget and the save button was clicked elsewhere
@@ -1064,10 +1081,10 @@ save(trashUntrash, userRequest, buttonValue) { // Builds query to add or update 
       // First, if this is a file node, and a new file has been uploaded or the node has been copied,
       // call the server's saveFile function. Also, if a new file has been uploaded,
       // increment this.numStoredFiles and the file counter in the widget.
-      if (this.queryObjectName === "file" && (this.fileText || (this.owner && this.owner.GUID !== app.login.userGUID))) {
+      if (this.queryObjectName === "file" && (this.fileBinary || (this.owner && this.owner.GUID !== app.login.userGUID))) {
         const obj = {"userGUID":app.login.userGUID, "nodeGUID":data[0].n.properties.M_GUID};
-        if (this.fileText) {
-          obj.fileText = this.fileText;
+        if (this.fileBinary) {
+          obj.fileBinary = this.fileBinary;
           obj.fileType = app.getProp(this, "currentData", "properties", "type", this.numStoredFiles++);
 
           const storedCounter = app.domFunctions.getChildByIdr(this.widgetDOM, 'numStoredFiles');

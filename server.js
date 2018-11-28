@@ -211,7 +211,7 @@ function saveFile(query, response) {
       }
     } // end if (query included copy user GUID and copy node GUID; a folder needs to be copied)
 
-    if (query.fileText) {
+    if (query.fileBinary) {
       // Get the highest numbered file currently in the folder - 0 if there are none
       let currentFiles = fs.readdirSync(nodePath).map(str => parseInt(str));
       let maxValue = Math.max(currentFiles);
@@ -227,7 +227,13 @@ function saveFile(query, response) {
 
       // Save the file
       const fileName = `${nodePath}/${maxValue + 1}.${type}`;
-      fs.writeFile(fileName, query.fileText, (err) => {
+
+      let fileBinaryArray = [];
+      Object.keys(query.fileBinary).map(function(key){
+        fileBinaryArray[key] = query.fileBinary[key];
+      });
+
+      fs.writeFile(fileName, Buffer.from(fileBinaryArray), (err) => {
         if (err) console.log(`Error while saving file: ${err}`);
       });
     } // end if (the query included a file buffer)
@@ -258,8 +264,9 @@ function downloadFile(query, response) { // For now, query includes only the fil
           const nodePath = `${basePath}/${query.fileGUID}/${query.version}.${query.type}`;
 
           if (fs.existsSync(nodePath)) {
-            const data = fs.readFileSync(nodePath, 'utf8');
-            response.end(data);
+            const buffer = fs.readFileSync(nodePath);
+            // const data = new Uint8Array(buffer);
+            response.end(buffer);
             session.close();
           }
           else {

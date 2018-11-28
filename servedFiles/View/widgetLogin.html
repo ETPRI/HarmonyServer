@@ -27,7 +27,7 @@
     Password: <input type="password" id="password" onblur="app.regression.logText(this)"
                      onkeydown="app.widget('loginOnEnter', this, event)">
   </p>
-  <input id="loginButton" type="button" value="Log In" onclick="app.widget('createSession', this)">
+  <input id="loginButton" type="button" value="Log In" onclick="app.widget('login', this)">
   <input id="changeProfileButton" type="button" value="My Profile" onclick="app.widget('changeProfile', this)" hidden="true">
 
   <div hidden="true" class="popup" id="profilePopup">

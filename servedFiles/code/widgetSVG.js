@@ -243,7 +243,8 @@ class widgetSVG {
                 const labelObj = this.d3Functions.objects[labelID].JSobj;
                 labelObj.name = node.properties.name;
                 labelObj.nodeID = node.properties.M_GUID;
-                labelObj.type = nodeType;
+                labelObj.DBtype = nodeType;
+                labelObj.type = app.metaData.getNode(nodeType).nodeLabel;
 
                 labelObj.details = [];
 

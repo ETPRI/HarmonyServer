@@ -85,199 +85,188 @@ class widgetLogin {
   // Called when you hit a key while in the password box. If the key was "Enter", calls the login method.
   loginOnEnter(textBox, evnt) {
     if (textBox == this.passwordInput && evnt.key == "Enter") {
-      this.createSession();
+      this.login();
     }
   }
 
-  // loginPromiseMain() {
-  //
-  //   .then(this.loginPromise)
-  //   .then(this.loginCompletePromise)
-  //   .then(function(loginSuccessful) {
-  //     if(loginSuccessful) {
-  //       this.getMetaDataPromise()
-  //       .then(this.updateMetaData);
-  //       this.getFavoritesPromise()
-  //       .then(this.loadFavorites);
-  //     }
-  //   }.bind(this);
-  // }
+  login() {
+    const userRequest = app.REST.startUserRequest("Login", this.loginDiv);
+    const loginObj = {"login":this, "app":app, "userRequest":userRequest};
+    this.checkSession(loginObj) // This should check whether a session is running, create one and merge the browser if not, then resolve.
+      .then(this.tryLogin)
+      .then(this.loginComplete)
+      .then(function(loginSuccessful) {
+        if(loginSuccessful) {
+          this.getMetaData(loginObj)
+          .then(this.updateMetaData.bind(this));
+          this.getFavorites(loginObj)
+          .then(this.loadFavorites.bind(this));
+        }
+      }.bind(this));
+  }
 
-  // checkSessionPromise() {
-  //   return new Promise(function(resolve, reject) {
-  //     if (!(this.sessionGUID && this.browserGUID)) {
-  //       this.createSessionPromise()
-  //       .then(this.MergeBrowserPromise)
-  //       .then(resolve)
-  //     }
-  //     else resolve();
-  //   }.bind(this))
-  // }
+  checkSession(loginObj) {
+    return new Promise(function(resolve, reject) {
+      if (!(loginObj.login.sessionGUID && loginObj.login.browserGUID)) {
+        loginObj.login.createSession(loginObj)
+        .then(loginObj.login.mergeBrowser)
+        .then(function() {
+          resolve(loginObj);
+        });
+      }
+      else resolve(loginObj);
+    });
+  }
 
-  // createSessionPromise(loginObj) {
-  //   return new Promise(function(resolve, reject) {
-  //     let userRequest = loginObj.app.REST.startUserRequest("Login", loginObj.login.loginDiv);
-  //
-  //     // If a session is already ongoing (say, from a failed login attempt), skip straight to recording the request
-  //     if (obj.login.sessionGUID && obj.login.browserGUID) {
-  //       obj.login.login(userRequest);
-  //     }
-  //     else { // Otherwise, create a session and browser node first, then record the request
-  //       const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
-  //
-  //       app.REST.sendQuery(obj, 'createNode', "Creating Session", userRequest, this.loginDiv, null, null, function(data, userRequest) {
-  //         this.sessionGUID = data[0].node.properties.M_GUID;
-  //         this.requestCount = 0;
-  //         this.mergeBrowser(userRequest);
-  //       }.bind(this));
-  //     }
-  //
-  //   })
-  // }
-
-
-  // Creates a session node and then calls mergeBrowser to create a browser node, if necessary.
-  createSession() {
-    let userRequest = app.REST.startUserRequest("Login", this.loginDiv);
-
-    // If a session is already ongoing (say, from a failed login attempt), skip straight to recording the request
-    if (this.sessionGUID && this.browserGUID) {
-      this.login(userRequest);
-    }
-    else { // Otherwise, create a session and browser node first, then record the request
+  createSession(loginObj) {
+    return new Promise(function(resolve, reject) {
+      // Create a session
       const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
 
-      app.REST.sendQuery(obj, 'createNode', "Creating Session", userRequest, this.loginDiv, null, null, function(data, userRequest) {
-        this.sessionGUID = data[0].node.properties.M_GUID;
-        this.requestCount = 0;
-        this.mergeBrowser(userRequest);
-      }.bind(this));
-    }
-  }
+      app.REST.sendQuery(obj, 'createNode', "Creating Session", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data, userRequest) {
+        loginObj.login.sessionGUID = data[0].node.properties.M_GUID;
+        loginObj.login.requestCount = 0;
+        resolve(loginObj);
+      }); // end sendQuery call
+    }); // end promise constructor call
+  } // end method
 
-  // Merges in a browser node and calls login
-  mergeBrowser(userRequest) {
-    const obj = {};
-    obj.node = {"type":"M_Browser", "properties":{"name":navigator.userAgent}, "merge":true};
-
-    app.REST.sendQuery(obj, "changeNode", "Merging browser node", userRequest, this.loginDiv, null, null, function(data, userRequest) {
-      if (data.length === 1) {
-        this.browserGUID = data[0].node.properties.M_GUID;
-      }
-      this.login(userRequest);
-    }.bind(this));
-  }
-
-  // Checks to make sure the user entered both a name and password, then searches for a user with that name and password.
-  // Does NOT currently encrypt the password - need to fix before going public. Sends results to this.loginComplete().
-  login(userRequest) {
-  	const name = this.nameInput.value;
-    this.userHandle = name;
-    const password = this.passwordInput.value;
-
-    if (name == "" || password == "") { // If the user didn't enter a name and password, don't even bother trying to log in.
-      alert("Enter your name and password first!");
-    }
-    else {
+  mergeBrowser(loginObj) {
+    return new Promise(function(resolve, reject) {
       const obj = {};
-      obj.from = {"name":"user"};
-      obj.to = {"name":"table", "type":"M_LoginTable"};
-      obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
+      obj.node = {"type":"M_Browser", "properties":{"name":navigator.userAgent}, "merge":true};
 
-      app.REST.sendQuery(obj, "changeRelation", "Logging In", userRequest, this.loginDiv, null, null, this.loginComplete.bind(this));
-    }
+      loginObj.app.REST.sendQuery(obj, "changeNode", "Merging browser node", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data, userRequest) {
+        if (data.length === 1) {
+          loginObj.login.browserGUID = data[0].node.properties.M_GUID;
+          resolve();
+        }
+        else {
+          reject();
+        }
+      }); // end sendQuery call
+    }); // end promise constructor call
+  } // end method
+
+  tryLogin(loginObj) {
+    return new Promise(function(resolve, reject) {
+      const name = loginObj.login.nameInput.value;
+      loginObj.login.userHandle = name;
+      const password = loginObj.login.passwordInput.value;
+
+      if (name == "" || password == "") { // If the user didn't enter a name and password, don't even bother trying to log in.
+        alert("Enter your name and password first!");
+      }
+      else {
+        const obj = {};
+        obj.from = {"name":"user"};
+        obj.to = {"name":"table", "type":"M_LoginTable"};
+        obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
+
+        loginObj.app.REST.sendQuery(obj, "changeRelation", "Logging In", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data) {
+          loginObj.data = data;
+          resolve(loginObj);
+        });
+      }
+    }); // end promise constructor call
   }
 
-  // If exactly one node with the given name and password is found, logs the user in. Sets the userID, userName,
-  // and permissions to those of the logged-in user, updates the info paragraph to show that the user is logged in,
-  // then hides/reveals items and calls methods as appropriate when this user logs in. If there ISN'T exactly one
-  // node with the given name and password, produces an error message and does not log the user in.
-  loginComplete(data, userRequest) {
-  	if (data.length == 0) {
-  		alert ("No such node found");
-      this.userHandle = null;
-  	}
+  loginComplete(loginObj) {
+    return new Promise(function(resolve, reject) {
+    	if (loginObj.data.length === 0) {
+    		alert ("No such node found");
+        loginObj.login.userHandle = null;
+        resolve(false);
+    	}
 
-  	else if (data.length == 1) { // Can actually log in
-      this.userID = data[0].user.id; // Log the user in
-      this.userName = data[0].user.properties.name;
-      this.userGUID = data[0].user.properties.M_GUID;
-      this.permissions = data[0].table.properties.name;
-  		this.info.textContent = `Logged in as ${this.userName} -- Role: ${this.permissions}`;
-      this.info.classList.add('loggedIn');
-      this.sessionInfo.textContent = `Session GUID: ${this.sessionGUID}`;
+    	else if (loginObj.data.length === 1) { // Can actually log in
+        loginObj.login.userID = loginObj.data[0].user.id; // Log the user in
+        loginObj.login.userName = loginObj.data[0].user.properties.name;
+        loginObj.login.userGUID = loginObj.data[0].user.properties.M_GUID;
+        loginObj.login.permissions = loginObj.data[0].table.properties.name;
+    		loginObj.login.info.textContent = `Logged in as ${loginObj.login.userName} -- Role: ${loginObj.login.permissions}`;
+        loginObj.login.info.classList.add('loggedIn');
+        loginObj.login.sessionInfo.textContent = `Session GUID: ${loginObj.login.sessionGUID}`;
 
-      for (let i in this.viewLoggedIn) { // Show all items that are visible when logged in
-        this.viewLoggedIn[i].removeAttribute("hidden");
-      }
-
-      for (let i in this.viewLoggedOut) { // Hide all items that are visible when logged out
-        this.viewLoggedOut[i].setAttribute("hidden", "true");
-      }
-
-      if (this.permissions == "Admin") { // If the user is an admin...
-        for (let i in this.viewAdmin) { // show all items that are visible when logged in as an admin
-          this.viewAdmin[i].removeAttribute("hidden");
+        for (let i in loginObj.login.viewLoggedIn) { // Show all items that are visible when logged in
+          loginObj.login.viewLoggedIn[i].removeAttribute("hidden");
         }
-      }
 
-      for (let i in this.doOnLogin) { // Run all methods that run when a user logs in
-        const object = this.doOnLogin[i].object;
-        const method = this.doOnLogin[i].method;
-        const args = this.doOnLogin[i].args;
-        if (object) { // Assuming the object that was provided still exists...
-          object[method](...args); // run the method in the object with the args.
+        for (let i in loginObj.login.viewLoggedOut) { // Hide all items that are visible when logged out
+          loginObj.login.viewLoggedOut[i].setAttribute("hidden", "true");
         }
+
+        if (loginObj.login.permissions == "Admin") { // If the user is an admin...
+          for (let i in loginObj.login.viewAdmin) { // show all items that are visible when logged in as an admin
+            loginObj.login.viewAdmin[i].removeAttribute("hidden");
+          }
+        }
+
+        for (let i in loginObj.login.doOnLogin) { // Run all methods that run when a user logs in
+          const object = loginObj.login.doOnLogin[i].object;
+          const method = loginObj.login.doOnLogin[i].method;
+          const args = loginObj.login.doOnLogin[i].args;
+          if (object) { // Assuming the object that was provided still exists...
+            object[method](...args); // run the method in the object with the args.
+          }
+        }
+
+        // Add "myTrash" to metadata options
+        const dropDown = document.getElementById("metaData");
+        const option = document.createElement('option');
+        option.setAttribute("idr", "myTrash");
+        option.setAttribute("value", "myTrash");
+        option.appendChild(document.createTextNode("My Trashed Nodes"));
+        dropDown.appendChild(option);
+
+        // Turn login button into logout button
+        loginObj.login.loginButton.setAttribute("value", "Log Out");
+        loginObj.login.loginButton.setAttribute("onclick", "app.widget('logout', this)");
+
+        // Link the user to the session, then call the getMetaData function to search for metadata and the getFavorites function to get favorite nodes
+        const obj = {};
+        obj.from = {"properties":{"M_GUID":loginObj.login.userGUID}, "return":false};
+        obj.rel = {"type":"User", "return":false};
+        obj.to = {"type":"M_Session", "properties":{"M_GUID":loginObj.login.sessionGUID}, "return":false};
+
+        loginObj.app.REST.sendQuery(obj, "createRelation", "Linking session", loginObj.userRequest, loginObj.login.loginDiv, "upkeep", null, function() {
+          resolve(true);
+        }.bind(this));
+
+    	 // end elseif (can log in)
       }
+      else {
+        loginObj.login.userHandle = null;
+    		alert ("Multiple such nodes found");
+        resolve(false);
+    	}
+    });
+  }
 
-      // Add "myTrash" to metadata options
-      const dropDown = document.getElementById("metaData");
-      const option = document.createElement('option');
-      option.setAttribute("idr", "myTrash");
-      option.setAttribute("value", "myTrash");
-      option.appendChild(document.createTextNode("My Trashed Nodes"));
-      dropDown.appendChild(option);
-
-      // Turn login button into logout button
-      this.loginButton.setAttribute("value", "Log Out");
-      this.loginButton.setAttribute("onclick", "app.widget('logout', this)");
-
-      // Link the user to the session, then call the getMetaData function to search for metadata and the getFavorites function to get favorite nodes
+  getMetaData(loginObj) {
+    return new Promise(function(resolve, reject){
+      // Get the metadata nodes, and search for any links between them and this user
       const obj = {};
-      obj.from = {"properties":{"M_GUID":this.userGUID}, "return":false};
-      obj.rel = {"type":"User", "return":false};
-      obj.to = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}, "return":false};
+      obj.required = {"type":"M_MetaData", "name":"metadata"};
+      obj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
+      obj.optional = {"id":loginObj.login.userID, "return":false};
 
-      app.REST.sendQuery(obj, "createRelation", "Linking session", userRequest, this.loginDiv, "upkeep", null, function(data, userRequest) {
-        this.getMetaData(userRequest);
-        this.getFavorites(userRequest);
-      }.bind(this));
-
-  	 // end elseif (can log in)
-    } else {
-      this.userHandle = null;
-  		alert ("Multiple such nodes found");
-  	}
-
-    // log
-    const obj2 = {};
-    obj2.id = "loginDiv";
-    obj2.idr = "loginButton";
-    obj2.action = "click";
-    obj2.data = JSON.parse(JSON.stringify(data));
-    app.stripIDs(obj2.data);
-    app.regression.log(JSON.stringify(obj2));
-    app.regression.record(obj2);
+      loginObj.app.REST.sendQuery(obj, "findOptionalRelation", "Restoring metadata settings", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data){
+        resolve(data);
+      });
+    }); // end promise constructor call
   }
 
-  getMetaData(userRequest) {
-    // Get the metadata nodes, and search for any links between them and this user
-    const obj = {};
-    obj.required = {"type":"M_MetaData", "name":"metadata"};
-    obj.rel = {"type":"Settings", "name":"settings", "direction":"left"};
-    obj.optional = {"id":this.userID, "return":false};
+  getFavorites(loginObj) {
+    return new Promise(function(resolve, reject){
+      const obj = {};
+      obj.from = {"id":loginObj.login.userID};
+      obj.rel = {"type":"Favorite", "return":false};
 
-    app.REST.sendQuery(obj, "findOptionalRelation", "Restoring metadata settings", userRequest, this.loginDiv, null, null, this.updateMetaData.bind(this));
+      loginObj.app.REST.sendQuery(obj, "changeRelation", "Restoring favorites", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data) {
+        resolve(data);
+      });
+    }); // end promise constructor call
   }
 
   updateMetaData(data) {
@@ -329,14 +318,6 @@ class widgetLogin {
         button.outerHTML = `<input type="button" value="${app.metaData.node[name].nodeLabel}" onclick="app.menuNodes('${name}')">`
       } // end if (this is metadata for a node)
     } // end for (each metadata node)
-  }
-
-  getFavorites(userRequest) {
-    const obj = {};
-    obj.from = {"id":this.userID};
-    obj.rel = {"type":"Favorite", "return":false};
-
-    app.REST.sendQuery(obj, "changeRelation", "Restoring favorites", userRequest, this.loginDiv, null, null, this.loadFavorites.bind(this));
   }
 
   loadFavorites(data) {

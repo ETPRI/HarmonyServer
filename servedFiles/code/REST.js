@@ -137,17 +137,6 @@ class REST {
     	} // end if (a session is ongoing)
     	return requestObj; // Info stopProgress will need later
   	} // end if (topWidget exists)
-
-  	// const ongoing = document.getElementById("ongoing2");
-  	// if (ongoing) {
-		// ongoing.hidden = false;
-		// if (topWidget && topWidget.id) {
-		// 	row.setAttribute("widget", topWidget.id);
-		// }
-		// const status = document.createTextNode(text);
-  	// }
-  	// if (topWidget) {
-  	// }
   }
 
   stopProgress(DOMelement, obj, response, userRequest, serverRequest) {
@@ -246,30 +235,6 @@ class REST {
   		cancel.classList.add('hidden');
   	}
   }
-
-  // clearRequests() {
-  // 	// For each row, get the update and clear the interval (just in case it's still going)
-  // 	const ongoing = document.getElementById("ongoing2");
-  // 	const rows = ongoing.children;
-  // 	for (let i = 0; i < rows.length; i++) {
-  // 		const row = rows[i];
-  // 		const update = row.getAttribute('update');
-  // 		clearInterval(update);
-  // 	}
-  //
-  // 	// Then remove all rows from the ongoing list, hide it and show the available text
-  // 	ongoing.innerHTML = "";
-  // 	ongoing.hidden = true;
-  //
-  // 	const avail = document.getElementById("available2");
-  // 	avail.hidden = false;
-  //
-  // 	const box = ongoing.parentElement;
-  //
-  // 	// Repaint the box - there's a bug (NOT in my code - a known issue) that makes it disappear when the scrollbars disappear
-  // 	box.parentElement.insertBefore(box, box.nextElementSibling);
-  //
-  // }
 
   sendQuery(obj, CRUD, description, userRequest, DOMelement, GUID, url, onComplete, ...args) {
   	if (!GUID) {
