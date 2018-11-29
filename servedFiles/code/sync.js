@@ -213,7 +213,7 @@ class sync {
   processChangeLogs(changeLogs, phase, userRequest) {
     if (changeLogs.length > 0) {
       const log = changeLogs.shift().n;
-      let obj = null;
+      let obj = {};
       let CRUD = "";
 
       if (log.properties.itemType == "node") {
@@ -237,7 +237,6 @@ class sync {
               value = app.stringEscape(value);
             }
 
-            obj = {};
             obj.node = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
             obj.changes = [{"property":log.properties.attribute, "value":value, "string":string}];
             CRUD = "changeNode";
@@ -254,7 +253,6 @@ class sync {
       else if (log.properties.itemType == "relation") {
         switch (log.properties.action) {
           case 'create':
-            obj = {};
             obj.to = {"properties":{"M_GUID":log.properties.to_GUID}, "return":false};
             obj.rel = {"type":log.properties.label, "M_GUID":log.properties.item_GUID, "return":false};
             obj.from = {"properties":{"M_GUID":log.properties.from_GUID}, "return":false};
@@ -275,7 +273,6 @@ class sync {
               value = app.stringEscape(value);
             }
 
-            obj = {};
             obj.to = {"return":false};
             obj.from = {"return":false};
             obj.rel = {"properties":{"M_GUID":log.properties.item_GUID}, "return":false};
