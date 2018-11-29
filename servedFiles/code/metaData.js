@@ -324,7 +324,7 @@ initNodeData() { // move to DB in the future
       ,"fields": {label: "All fields", input:{name:"textarea"}}
       ,"fieldsDisplayed": {label: "Table fields", input:{name:"textarea"}}
       ,"formFieldsDisplayed": {label: "Form fields", input:{name:"textarea"}}
-      ,"orderBy": {label: "Order by"}
+      ,"orderBy": {label: "Order by", input:{name:"textarea"}}
       ,"comment":    {label: "Comment", input:{name:"textarea"}}
     }
   }
