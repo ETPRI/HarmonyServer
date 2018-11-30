@@ -115,7 +115,7 @@ class widgetNode extends widgetDetails {
       }
 
       aboveTableHTML =
-      `<div class="fileDrop" ondrop="app.widget('uploadFile', this, event)">
+      `<div class="fileDrop" ondragover="event.preventDefault()" ondrop="event.preventDefault(); app.widget('uploadFile', this, event)">
         Drag a file here, or click the file upload button:
         <input type="file" idr="file" onchange="app.widget('uploadFile', this, event)"><br><br><br><br>
         File uploaded this session: <span idr="uploadedFile">None</span><br>
