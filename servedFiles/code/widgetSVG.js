@@ -35,17 +35,7 @@ class widgetSVG {
     this.notesText = null;
     this.notesLabel = null;
 
-    // if (this.GUID) {
-    //   const obj = {};
-    //   obj.required = {"name":"mindmap", "type":"mindmap", "properties":{"M_GUID":this.GUID}};
-    //
-    //   const userRequest = app.REST.startUserRequest("Opening mindmap", this.widgetDOM);
-    //   app.REST.sendQuery(obj, "findOptionalRelation", "Opening mindmap", userRequest, this.widgetDOM, null, null, this.buildWidget.bind(this));
-    // }
-
-    // else {
-      this.buildWidget();
-    // }
+    this.buildWidget();
   } // end constructor
 
   buildWidget() { // create blank mind map, then if a GUID was passed in, search and pass to loadComplete
@@ -95,6 +85,25 @@ class widgetSVG {
     else {
       parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
     }
+
+    const widgetList = document.getElementById("widgetList"); // Get the list of widgets
+    let callerEntry = null;
+    if (caller) {
+      callerEntry = app.domFunctions.getChildByIdr(widgetList, caller.getAttribute("id"));
+    } // Find the entry on that list for the caller, assuming the caller and its entry exist
+
+    const newEntry = document.createElement("li"); // Create an entry for the new widget
+    if (callerEntry) { // If the caller's entry exists, the new widget's entry goes above it (like the new widget goes above the caller)
+      widgetList.insertBefore(newEntry, callerEntry);
+    }
+    else { // Otherwise, the new widget's entry goes at the top, like the new widget does
+      widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+    }
+
+    // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+    newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+    ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${this.widgetID}">
+    ${this.nodeLabel}: <span idr="name">${this.name}</span></li>`;
 
     newWidget.outerHTML = html; // replace placeholder with the div that was just written
     this.SVG_DOM = document.getElementById(`svg${this.widgetID}`);
@@ -212,6 +221,13 @@ class widgetSVG {
         nameText.textContent = this.name;
         const detailsName = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeLabel', true);
         detailsName.textContent = `${this.id}: ${this.name}`;
+
+        const widgetList = document.getElementById("widgetList");
+        const entry = app.domFunctions.getChildByIdr(widgetList, this.widgetID);
+        if (entry) {
+          const entryName = app.domFunctions.getChildByIdr(entry, "name");
+          entryName.innerHTML = this.name;
+        }
       }
 
       if (data[0].mindmap.properties.viewBox) {

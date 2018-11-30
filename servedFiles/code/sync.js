@@ -45,6 +45,15 @@ class sync {
     parent.insertBefore(newWidget, parent.firstElementChild);
     newWidget.outerHTML = html;
 
+    const widgetList = document.getElementById("widgetList"); // Get the list of widgets
+    const newEntry = document.createElement("li"); // Create an entry for the new widget
+    widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+
+    // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+    newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+    ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${this.idWidget}">Sync widget</li>`;
+
+
     this.widgetDOM = document.getElementById(this.idWidget);
     this.progress = app.domFunctions.getChildByIdr(this.widgetDOM, 'progress');
 

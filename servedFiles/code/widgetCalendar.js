@@ -37,6 +37,7 @@ class widgetCalendar {
     if (!this.name) {
       this.name = "Untitled calendar";  // Call it "Untitled calendar" for now - can change later
     }
+
     const html = app.widgetHeader('widgetCalendar') +
     `<b idr="name">${this.name}</b>
     <input type="button" idr="backButton" value="<" onclick="app.widget('page', this)">
@@ -79,6 +80,25 @@ class widgetCalendar {
     this.calendarDOM = document.getElementById(`calendar${this.widgetID}`);
     this.widgetDOM = document.getElementById(`${this.widgetID}`);
     this.widgetDOM.classList.add("resizeable");
+
+    const widgetList = document.getElementById("widgetList"); // Get the list of widgets
+    let callerEntry = null;
+    if (caller) {
+      callerEntry = app.domFunctions.getChildByIdr(widgetList, caller.getAttribute("id"));
+    } // Find the entry on that list for the caller, assuming the caller and its entry exist
+
+    const newEntry = document.createElement("li"); // Create an entry for the new widget
+    if (callerEntry) { // If the caller's entry exists, the new widget's entry goes above it (like the new widget goes above the caller)
+      widgetList.insertBefore(newEntry, callerEntry);
+    }
+    else { // Otherwise, the new widget's entry goes at the top, like the new widget does
+      widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+    }
+
+    // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+    newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+    ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${this.widgetID}">
+    ${this.nodeLabel}: <span idr="name">${this.name}</span></li>`;
 
     if (app.activeWidget) {
       app.activeWidget.classList.remove("activeWidget");
@@ -175,6 +195,7 @@ class widgetCalendar {
     }
 
     if (this.checkToday(this.day)) {  // If the day being displayed is the current day, display current time on the table...
+      const now = new Date();
       const rect = calendar.getBoundingClientRect();
       const minutes_in_day = 60*24;
       const minutes_so_far = now.getHours()*60 + now.getMinutes();

@@ -9,13 +9,6 @@
   <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
 </div>
 <div class="widgetBody freezable">
-<!--
-  <div class="statusBar">
-    <input type="button" id="clearRequests2" value="Clear" onclick="app.REST.clearRequests()">
-    <p id="available2">Server Requests</p>
-    <ul style="list-style-type:none" id="ongoing2" hidden></ul>
-  </div>
--->
 
   <div class="statusBar">
     <input type="button" id="clearRequests" value="Clear" onclick="app.clearRequests()">
@@ -40,8 +33,10 @@
     </div>
   </div>
 
+<!--
   <input id="debugButton" type="button" value="Show Debug Menu" onclick="app.showDebug(this)" hidden="true">
   <input id="regressionButton" type="button" value="Show Regression Menu" onclick="app.showRegression(this)" hidden="true">
+-->
 
   <table>
     <tbody>

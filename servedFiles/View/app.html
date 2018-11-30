@@ -6,7 +6,7 @@
     <link href="view/app.css" type="text/css" rel="stylesheet" />
 
     <script src="../Libs/d3.js"></script>
-    <script src="../code/app.js"></script>
+    <script src="../code/appClass.js"></script>
     <script src="../code/dragDrop.js"></script>
     <script src="../code/dragDropTable.js"></script>
     <script src="../code/widgetTableQuery.js"></script>
@@ -32,34 +32,43 @@
   </head>
 
   <body onresize = "app.resize()">
+    <div id="widgetLists" class="widgetList">
+      <p class="listHeading">Header widgets</p>
+      <div id="headerList"></div>
+      <p class="listHeading">Normal widgets</p>
+      <div id="widgetList"></div>
+      <p class="listHeading">Minimized widgets</p>
+      <div id="minimizedList"></div>
+    </div>
+
     <div id="loginDiv"></div>
     <div id="regressionHeader"></div>
     <div id="debugHeader"></div>
-    <div id="tableHeader">
-      <div id="buttonsDiv" class="widget">
-        <div class="widgetHeader">
-          <span class="freezable">
-            <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
-            <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Button Header', this)">
-            <b>Node Search Buttons</b>
-          </span>
-          <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
-        </div>
-        <div class="widgetBody">
-          <div id="buttons"></div>
-          <div id="adminButtons"></div>
-          <table>
-            <tbody>
-              <tr id="dropNodes" class = "dropNodes">
-                <td>Required Links:</td>
-                <td id="dropNode0"
-                ondragover = "event.preventDefault()"
-                ondrop = "app.dropLink(this, event)"></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <div id="buttonsDiv" class="widget">
+      <div class="widgetHeader">
+        <span class="freezable">
+          <input type="button" value="__" idr="expandCollapseButton" onclick="app.widgetCollapse(this)">
+          <input type="button" value="?" idr="helpButton" onclick="app.showHelp('Button Header', this)">
+          <b>Node Search Buttons</b>
+        </span>
+        <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">
       </div>
+      <div class="widgetBody">
+        <div id="buttons"></div>
+        <div id="adminButtons"></div>
+        <table>
+          <tbody>
+            <tr id="dropNodes" class = "dropNodes">
+              <td>Required Links:</td>
+              <td id="dropNode0"
+              ondragover = "event.preventDefault()"
+              ondrop = "app.dropLink(this, event)"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div id="tableHeader">
     </div>
     <div id="workSpace">
       <div id="widgets"> </div>
@@ -70,6 +79,6 @@
 </html>
 
 <script type="text/javascript">
-  app = new app();  // only global variable
+  app = new appClass();  // only global variable
   app.buildApp();
 </script>

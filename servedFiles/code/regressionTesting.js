@@ -22,21 +22,30 @@ class regressionTesting {
   }
 
   buildRegressionHeader() {
-    this.regHeader.setAttribute("hidden", "true");
-    this.regHeader.setAttribute("class", "widget");
+    let tempID = app.idCounter;
 
-    this.regHeader.innerHTML = `
-    <p>To run the premade scripts, make sure you are working in an empty database, then select ALL scripts and play.
-       Due to the widget numbering system, later scripts will NOT run properly unless they are run immediately after
-      the earlier ones.</p>
-    <p>Number of scripts recorded for this page so far: 0</p>
-    <input type="button" id="Record" value="Record" onclick="app.widget('recordToggle', this)">
-    Select a playback file: <input type="file" id="playback" multiple="true">
-    <input type="button" id="replay" value="Play Remaining Steps" onclick="app.widget('play', this)">
-    <input type="button" id="stepThrough" value="Play Next Step" onclick="app.widget('play', this)">
-    <input type="checkbox" id="delayOn" checked="true" onclick="app.widget('delayToggle', this)">Use delay when replaying
-    <input type="number" id="delayMS" value="500">Enter delay (in milliseconds)
-    <p id="dlink"></p><hr></div>`;
+    this.regHeader.outerHTML = app.widgetHeader('regression', 'div') +
+    `<b>Regression Testing</b></span>
+    <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)"></div>
+    <div class="widgetBody freezable">
+      <p>To run the premade scripts, make sure you are working in an empty database, then select ALL scripts and play.
+         Due to the widget numbering system, later scripts will NOT run properly unless they are run immediately after
+        the earlier ones.</p>
+      <p>Number of scripts recorded for this page so far: 0</p>
+      <input type="button" id="Record" value="Record" onclick="app.widget('recordToggle', this)">
+      Select a playback file: <input type="file" id="playback" multiple="true">
+      <input type="button" id="replay" value="Play Remaining Steps" onclick="app.widget('play', this)">
+      <input type="button" id="stepThrough" value="Play Next Step" onclick="app.widget('play', this)">
+      <input type="checkbox" id="delayOn" checked="true" onclick="app.widget('delayToggle', this)">Use delay when replaying
+      <input type="number" id="delayMS" value="500">Enter delay (in milliseconds)
+      <p id="dlink"></p><hr>
+    </div></div>`;
+
+    this.regHeader = document.getElementById(tempID);
+    this.regHeader.setAttribute("id", "regressionHeader");
+    this.regHeader.classList.add("hidden");
+    this.regHeader.classList.add("headerWidget");
+    app.domFunctions.getChildByIdr(this.regHeader, 'closeButton').classList.add("hidden"); // Hide the close button
 
     this.playDOM = document.getElementById("replay");
     this.stepDOM = document.getElementById("stepThrough");
@@ -44,12 +53,12 @@ class regressionTesting {
     this.delayOn = document.getElementById("delayOn");
     this.linkDiv = document.getElementById("dlink");
 
-    const obj = {};
-    obj.object = app;
-    obj.method = 'hideRegression';
-    const regressionButton = document.getElementById('regressionButton');
-    obj.args = [regressionButton];
-    app.login.doOnLogout.push(obj);
+    // const obj = {};
+    // obj.object = app;
+    // obj.method = 'hideRegression';
+    // const regressionButton = document.getElementById('regressionButton');
+    // obj.args = [regressionButton];
+    // app.login.doOnLogout.push(obj);
   }
 
   log(message){

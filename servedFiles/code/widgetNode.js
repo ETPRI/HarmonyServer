@@ -43,6 +43,27 @@ class widgetNode extends widgetDetails {
 
     // this.startDOM and this.endDOM are instance variables, but can't be set before super and shouldn't be reset after it
     super (queryObjectName, newWidget, GUID, name, callerID);
+
+    const widgetList = document.getElementById("widgetList"); // Get the list of widgets
+    let callerEntry = null;
+    if (caller) {
+      callerEntry = app.domFunctions.getChildByIdr(widgetList, caller.getAttribute("id"));
+    } // Find the entry on that list for the caller, assuming the caller and its entry exist
+
+    const newEntry = document.createElement("li"); // Create an entry for the new widget
+    if (callerEntry) { // If the caller's entry exists, the new widget's entry goes above it (like the new widget goes above the caller)
+      widgetList.insertBefore(newEntry, callerEntry);
+    }
+    else { // Otherwise, the new widget's entry goes at the top, like the new widget does
+      widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+    }
+
+    // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+    newEntry.outerHTML =
+    `<li idr="${this.idWidget}" onclick="app.clickWidgetEntry(this)" draggable="true"
+    ondragstart="app.drag(this, event)" ondragover="event.preventDefault()" ondrop="app.drop(this, event)">
+    ${this.nodeLabel} node: <span idr="name">${this.name}</span></li>`;
+
     this.requests = [];
   }
 
@@ -144,7 +165,6 @@ class widgetNode extends widgetDetails {
   downloadFile(button) {
     const dropdown = app.domFunctions.getChildByIdr(this.widgetDOM, "version");
     const version = dropdown.options[dropdown.selectedIndex].value;
-    alert (`Downloading version ${version}!`);
 
     const obj = {"fileGUID":this.GUID, "version":version, "type":this.currentData.properties.type[version-1]};
     const queryObject = {"server": "file", "function": "downloadFile", "query": obj};
@@ -154,18 +174,26 @@ class widgetNode extends widgetDetails {
     const serverRequest = app.REST.serverRequests[userRequest]++; // record the current server request and then increment
 
     const xhttp = new XMLHttpRequest();
+    xhttp.responseType = "arraybuffer";
     const update = app.REST.startProgress(this.widgetDOM, "Saving file", request.length, userRequest, serverRequest);
     const details = this;
     const filename = `${this.currentData.properties.name}_v${version}.${this.currentData.properties.type[version-1]}`;
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        const responseSize = this.responseText.length;
+        const responseSize = this.response.byteLength;
         app.REST.stopProgress(details.widgetDOM, update, responseSize, userRequest, serverRequest);
+
+        let dataString = "";
+        let dataArray = new Uint8Array(this.response);
+        for (let i = 0; i < dataArray.length; i++) {
+          dataString += String.fromCharCode(dataArray[i]);
+        }
+        const encodedData = window.btoa(dataString);
 
         // copied from a function which took filename and text
         const element = document.createElement('a');
-        element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(this.responseText));
+        element.setAttribute('href', `data:application/octet-stream;base64,${encodedData}`);
         element.setAttribute('download', filename);
 
         element.style.display = 'none';
@@ -218,9 +246,9 @@ class widgetNode extends widgetDetails {
 
       const binReader = new FileReader();
       binReader.onload = function(evnt) {
-        node.fileBinary = evnt.target.result;
+        node.fileBinary = new Uint8Array(evnt.target.result);
       }
-      binReader.readAsBinaryString(file);
+      binReader.readAsArrayBuffer(file);
 
       // Update dragdrop area
       const span = app.domFunctions.getChildByIdr(this.widgetDOM, 'uploadedFile');

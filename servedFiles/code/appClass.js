@@ -4,7 +4,7 @@
 
 // app.js holds the global functions and data for the application
 
-class app { ///////////////////////////////////////////////////////////////// start class
+class appClass { ///////////////////////////////////////////////////////////////// start class
 
 // called once by app.html to create the one instance
 constructor() {
@@ -30,6 +30,10 @@ constructor() {
 	this.faveNode 			= 1;
 
 	this.doOnResize			= [];
+
+	window.onerror = function(msg, url, line, col, err) {
+		app.error(msg, err);
+	};
 }
 
 // Calls all the functions which need to run at the start of a session.
@@ -212,38 +216,39 @@ keyPressed(evnt) {
 }
 
 // Makes the debug header visible, and changes the button used to show it into a "Hide Debug" button
-showDebug(button) {
-	const debugHeader = document.getElementById('debugHeader');
-	debugHeader.removeAttribute("hidden");
-	button.setAttribute("value", "Hide Debug Menu");
-	button.setAttribute("onclick", "app.hideDebug(this)");
-}
-
-// Makes the debug header invisible, and changes the button used to hide it into a "Show Debug" button
-hideDebug(button) {
-	const debugHeader = document.getElementById('debugHeader');
-	debugHeader.setAttribute("hidden", "true");
-	button.setAttribute("value", "Show Debug Menu");
-	button.setAttribute("onclick", "app.showDebug(this)");
-}
-
-// Makes the regression header visible, and changes the button used to show it into a "Hide Regression" button
-showRegression(button) {
-	const regressionHeader = document.getElementById('regressionHeader');
-	regressionHeader.removeAttribute("hidden");
-	button.setAttribute("value", "Hide Regression Menu");
-	button.setAttribute("onclick", "app.hideRegression(this)");
-}
-
-// Makes the regression header invisible, and changes the button used to show it into a "Show Regression" button
-hideRegression(button) {
-	const regressionHeader = document.getElementById('regressionHeader');
-	regressionHeader.setAttribute("hidden", "true");
-	button.setAttribute("value", "Show Regression Menu");
-	button.setAttribute("onclick", "app.showRegression(this)");
-}
+// showDebug(button) {
+// 	const debugHeader = document.getElementById('debugHeader');
+// 	debugHeader.classList.remove("hidden");
+// 	button.setAttribute("value", "Hide Debug Menu");
+// 	button.setAttribute("onclick", "app.hideDebug(this)");
+// }
+//
+// // Makes the debug header invisible, and changes the button used to hide it into a "Show Debug" button
+// hideDebug(button) {
+// 	const debugHeader = document.getElementById('debugHeader');
+// 	debugHeader.classList.add("hidden");
+// 	button.setAttribute("value", "Show Debug Menu");
+// 	button.setAttribute("onclick", "app.showDebug(this)");
+// }
+//
+// // Makes the regression header visible, and changes the button used to show it into a "Hide Regression" button
+// showRegression(button) {
+// 	const regressionHeader = document.getElementById('regressionHeader');
+// 	regressionHeader.removeAttribute("hidden");
+// 	button.setAttribute("value", "Hide Regression Menu");
+// 	button.setAttribute("onclick", "app.hideRegression(this)");
+// }
+//
+// // Makes the regression header invisible, and changes the button used to show it into a "Show Regression" button
+// hideRegression(button) {
+// 	const regressionHeader = document.getElementById('regressionHeader');
+// 	regressionHeader.setAttribute("hidden", "true");
+// 	button.setAttribute("value", "Show Regression Menu");
+// 	button.setAttribute("onclick", "app.showRegression(this)");
+// }
 
 // Removes all widgets other than the login div and regression header from both the screen and the widgets array
+// To add: Also clear the widget list of everything except the login widget, and minimize the debug and regression headers
 clearWidgets() {
 	const login = document.getElementById('loginDiv');
 	const regHeader = document.getElementById('regressionHeader');
@@ -262,6 +267,20 @@ clearWidgets() {
 			}
 		}
 	}
+
+	// Remove all items other than login widget from the widgets list
+	const headerList = document.getElementById("headerList");
+	const widgetList = document.getElementById("widgetList");
+	const minimizedList = document.getElementById("minimizedList");
+	headerList.innerHTML = `<li idr="loginDiv">Login widget</li>`;
+	widgetList.innerHTML = "";
+	minimizedList.innerHTML = "";
+
+	// Hide debug and regression widgets
+	const debug = document.getElementById("debugHeader");
+	const regression = document.getElementById("regressionHeader");
+	debug.classList.add("hidden");
+	regression.classList.add("hidden");
 }
 
 // Takes a DOM element inside a widget, a method, and a set of arguments for that method.
@@ -283,11 +302,14 @@ widget(method, widgetElement, ...args) { // args takes all the remaining argumen
 
 // Creates all the debugging features (metaData dropdown, log button, display for DB queries, etc.) in the debug header.
 createDebug() {
-	const header = document.getElementById("debugHeader");
+	const tempID = app.idCounter;
+
+	let header = document.getElementById("debugHeader");
 	if (header) {
-		header.outerHTML = `
-			<div id="debugHeader" hidden="true">
-				<p>	|-&gt; debugging</p>
+		header.outerHTML = this.widgetHeader('Debug Menu', 'div') + `
+			<b>Debugging</b></span>
+			<input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)"></div>
+			<div class="widgetBody freezable">
 				<select id="metaData" onchange="app.menuDBstats(this); this.selectedIndex = 0">
 					<option value="">MetaData</option>
 					<option value="nodes">Nodes</option>
@@ -305,22 +327,49 @@ createDebug() {
 				<p>
 					<a href="http://localhost:7474/browser/" target="_blank">Neo4j Browser</a>
 					To use this site, Neo4j Desktop must be running with a database started.
-				</p>
-				<hr>
-			</div>
-		`
+				</p><hr></div></div>	`;
 
-		const obj = {};
-		obj.object = this;
-		obj.method = 'hideDebug';
-		const debugButton = document.getElementById('debugButton');
-		obj.args = [debugButton];
-		this.login.doOnLogout.push(obj);
+		header = document.getElementById(tempID);
+		header.classList.add('hidden');
+		header.setAttribute('id', 'debugHeader');
+		app.domFunctions.getChildByIdr(header, 'closeButton').classList.add("hidden"); // Hide the close button
+
+
+		// For now, SHOULD be OK that there is no actual JS object associated with this widget -
+		// if it causes trouble later, I'll create a debug class. Maybe merge it with WTQ.
+
+		// const obj = {};
+		// obj.object = this;
+		// obj.method = 'hideDebug';
+		// const debugButton = document.getElementById('debugButton');
+		// obj.args = [debugButton];
+		// this.login.doOnLogout.push(obj);
 	}
 }
 
 // Runs when a search button is clicked. Shows the table associated with that search button. Criteria is an array of objects representing search criteria.
 menuNodes(name, criteria) {
+	// Add the new table at the bottom of the "header widgets" section if there wasn't a table open already,
+	// or in the place of the existing open table if there was one
+	let toReplace = null;
+	let headerList = document.getElementById("headerList");
+	if (this.shownTable) {
+		const replaceID = this.shownTable.getAttribute("id");
+		toReplace = this.domFunctions.getChildByIdr(headerList, replaceID);
+	}
+
+	if (toReplace) { // If there was another table already shown, and it had an entry in the widget list
+		toReplace.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+		ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${name}">Table of ${name} nodes</li>`;
+	}
+
+	else {
+		let newEntry = document.createElement('li');
+		headerList.appendChild(newEntry);
+		newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+		ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${name}">Table of ${name} nodes</li>`;
+	}
+
 	// Hide the shown table, if any
 	if (this.shownTable) {
 		this.shownTable.classList.add("hidden");
@@ -354,11 +403,11 @@ menuDBstats(dropDown){
 	// If the value is blank (placeholder is selected) do nothing; else create a new widgetTableQuery and store in this.widgets.
 	if (value==="") return;
 
-	if (value ==="dataBrowser") {
+	else if (value ==="dataBrowser") {
 		new dataBrowser();
 	}
 
-	if (value === "sync") {
+	else if (value === "sync") {
 		new sync();
 	}
 
@@ -389,10 +438,9 @@ widgetHeader(widgetType, tag){
 		tag = "div";
 	}
 	return(`
-	<${tag} id="${this.idCounter++}" class="widget fullWidth" ondrop="app.drop(this, event)" ondragover="event.preventDefault()"
-	onmousedown="app.setActiveWidget(this)">
+	<${tag} id="${this.idCounter++}" class="widget fullWidth" onmousedown="app.setActiveWidget(this)">
 	<hr>
-	<div idr="header" class="widgetHeader" draggable="true" ondragstart="app.drag(this, event)">
+	<div idr="header" class="widgetHeader">
 		<span class="freezable">
 			<div idr="requestDetails" class="hidden"></div>
 			<input type="button" value="X" idr="closeButton" onclick="app.widgetClose(this)">
@@ -417,21 +465,35 @@ widgetCollapse(domElement) {
 	}
 
 	// parent = span grandparent = header great-grandparent = widget
-	const children = Array.from(domElement.parentElement.parentElement.parentElement.children);
-	let widgetBody;
-	for (let i = 0; i < children.length; i++) {
-		if (children[i].classList.contains('widgetBody')) {
-			widgetBody = children[i];
-			break;
-		}
-	}
+	const widgetID = this.domFunctions.widgetGetId(domElement);
+	const widget = document.getElementById(widgetID);
+	const children = Array.from(widget.children);
 
-	if (widgetBody) {
-		widgetBody.hidden = !widgetBody.hidden  // toggle hidden
-		if(widgetBody.hidden) {
+	// Here is where the widget is actually hidden or shown
+	if (widget) {
+		// Get the ID of the widget
+		const widgetID = this.domFunctions.widgetGetId(domElement);
+		const minList = document.getElementById("minimizedList");
+		const allLists = document.getElementById("widgetLists");
+
+		widget.classList.toggle("hidden");
+		if(widget.classList.contains("hidden")) {
 			domElement.value = "+";
+
+			// Add this widget to the minimized list and hide its entry in the main or header list
+			const mainEntry = this.domFunctions.getChildByIdr(allLists, widgetID); // Find the entry that already exists
+			const minimizedEntry = document.createElement("li"); // Create a new entry and add it to the minimized list
+			minList.appendChild(minimizedEntry);
+			minimizedEntry.outerHTML = mainEntry.outerHTML; // Make the new entry a copy of the old one
+			mainEntry.classList.add("hidden"); // Hide the original
 		} else {
 			domElement.value = 	"__";
+
+			// Remove this widget from the minimized list and show its entry in the main or header list
+			const minimizedEntry = this.domFunctions.getChildByIdr(minList, widgetID); // Find the entry in the minimized list
+			minList.removeChild(minimizedEntry);
+			const mainEntry = this.domFunctions.getChildByIdr(allLists, widgetID); // Find the original entry in the main list
+			mainEntry.classList.remove("hidden"); // Show the original
 		}
 	}
 
@@ -459,10 +521,17 @@ widgetClose(widgetElement) {
 	const id = this.domFunctions.widgetGetId(widgetElement);
 	const widget = document.getElementById(id);
 
-	// If the widget to "close" is a table widget, just hide it.
+	// If the widget to "close" is a table widget, just hide it and remove it from the widget list.
 	if (widget.classList.contains('tableWidget')) {
 		widget.classList.add('hidden');
 		this.shownTable = null;
+
+		// Remove widget from header widget list on page
+		const widgetList = document.getElementById("headerList");
+		const entry = app.domFunctions.getChildByIdr(widgetList, id);
+		if (entry) {
+			widgetList.removeChild(entry);
+		}
 	}
 
 	else { // otherwise, actually delete it
@@ -486,6 +555,13 @@ widgetClose(widgetElement) {
 
 		// delete html2 from page
 		widget.parentElement.removeChild(widget);
+
+		// Remove widget from widget list on page
+		const widgetList = document.getElementById("widgetList");
+		const entry = app.domFunctions.getChildByIdr(widgetList, id);
+		if (entry) {
+			widgetList.removeChild(entry);
+		}
 	}
 
 	// log
@@ -605,24 +681,16 @@ stripIDs (data) { // Assume that the data is the result of a query. Each row may
 
 // Called when the user clicks and drags a widget. Sets this.activeWidget (which records which widget, if any, is being dragged)
 // to the widget that was clicked. Also stores information about the widget being dragged in dataTransfer.
-drag(widget, evnt) {
-	this.activeWidget = evnt.target;
-	while (this.activeWidget.parentNode.id != "widgets") { // Make the active node being dragged the top-level widget that the target was in
-		this.activeWidget = this.activeWidget.parentElement;
-	}
+drag(entry, evnt) {
+	this.activeWidget = null; // No widget is selected - at least, unless/until I make the widgets list a widget itself
+	this.draggingEntry = entry; // whatever item is being dragged
 
-	// Stores information about the item being dragged in dataTransfer
+	// Stores information about the item being dragged in dataTransfer - the fact that the source was a list entry, the tagname of "li", and the ID of the parent list
 	const data = {};
-	data.sourceID = this.domFunctions.widgetGetId(widget);
-	data.sourceType = "widget";
-	data.sourceTag = widget.tagName;
+	data.sourceType = "listEntry";
+	data.sourceTag = entry.tagName;
+	data.parentID = entry.parentElement.getAttribute("id");
 	evnt.dataTransfer.setData("text/plain", JSON.stringify(data));
-
-	const obj = {};
-	obj.id = this.domFunctions.widgetGetId(evnt.target);
-	obj.action = "dragstart";
-	this.regression.log(JSON.stringify(obj));
-	this.regression.record(obj);
 }
 
 // Prevents the default action of a drop so that we can write our own ondrop methods.
@@ -632,7 +700,7 @@ allowDrop(input, evnt) {
 
 // Used for rearranging. When something is dropped onto a widget, check to verify that it's another widget,
 // then insert the widget that was dragged above (if dragging up) or below (if dragging down) the one it was dropped onto.
-drop(widget, evnt) {
+drop(entry, evnt) {
 	evnt.preventDefault();
 
 	// Get the data about the object being dragged
@@ -642,30 +710,33 @@ drop(widget, evnt) {
 	  data = JSON.parse(dataText);
 	}
 
-	if (data.sourceType == "widget" && data.sourceTag == "DIV") { // Make sure the object being dragged is a widget
+	// Make sure the object being dragged is an entry from the same list as the target
+	if (data.sourceType == "listEntry" && data.parentID === entry.parentElement.getAttribute("id") && this.draggingEntry) {
+		let tableDiv = document.getElementById("tableHeader");
+
 		let target = evnt.target;
-
-		// Make sure we're dropping into a top-level widget - one whose parent is the widgets div
-		while (target.parentNode.id != "widgets") {
-			target = target.parentNode;
+		let targetID = target.getAttribute("idr");
+		let targetWidget = document.getElementById(targetID);
+		if (targetWidget.parentElement === tableDiv) {
+			targetWidget = tableDiv; // if dropping onto a WTN, treat the whole table div as the target
+		}
+		let source = this.draggingEntry;
+		let sourceID = source.getAttribute("idr");
+		let sourceWidget = document.getElementById(sourceID);
+		if (sourceWidget.parentElement === tableDiv) {
+			sourceWidget = tableDiv; // if dragging a WTN, move the whole table div
 		}
 
-		if (this.activeWidget) { // If activeWidget (the DOM element being dragged) exists
-			if (this.activeWidget.offsetTop < target.offsetTop) {  // drag down
-				target.parentNode.insertBefore(this.activeWidget, target.nextSibling); // Insert after target
-			}
-			else { // drag up
-				target.parentNode.insertBefore(this.activeWidget, target); // Insert before target
-			}
+		if (source.offsetTop < target.offsetTop) {  // drag down
+			target.parentNode.insertBefore(source, target.nextSibling); // Insert after target
+			targetWidget.parentNode.insertBefore(sourceWidget, targetWidget.nextSibling); // Insert after target widget
+		}
+		else { // drag up
+			target.parentNode.insertBefore(source, target); // Insert before target
+			targetWidget.parentNode.insertBefore(sourceWidget, targetWidget); // Insert before target widget
 		}
 
-		this.activeWidget = null; // Nothing is actively being dragged anymore - the thing that was being dragged was dropped.
-
-		const obj = {};
-		obj.id = this.domFunctions.widgetGetId(evnt.target);
-		obj.action = "drop";
-		this.regression.log(JSON.stringify(obj));
-		this.regression.record(obj);
+		this.draggingEntry = null; // Nothing is actively being dragged anymore - the thing that was being dragged was dropped.
 	}
 }
 
@@ -797,8 +868,11 @@ setOwner(domElement, userRequest, object, method, data, ...args) { // If there i
 	}.bind(this), object, method, ...args);
 }
 
-error(message) {
-	const err = new Error();
+error(message, err) {
+	if (!err) {
+		err = new Error();
+	}
+
 	const line = err.line;
 	const col = err.column;
 	const URL = err.sourceURL;
@@ -1265,6 +1339,18 @@ sendQuery(obj, CRUD, description, DOMelement, GUID, url, onComplete, ...args) {
 
 	xhttp.open("POST", url);
 	xhttp.send(request);         // send request to server
+}
+
+clickWidgetEntry(domElement) {
+	const widgetID = domElement.getAttribute("idr");
+	const widget = document.getElementById(widgetID);
+
+	if (widget && widget.classList.contains("hidden")) { // If the widget was minimized, expand it
+		const minimizeButton = this.domFunctions.getChildByIdr(widget, "expandCollapseButton");
+		this.widgetCollapse(minimizeButton);
+	}
+
+	widget.scrollIntoView();
 }
 
 // Used for testing, UI can be hard coded here to reduce amount of clicking to test code.

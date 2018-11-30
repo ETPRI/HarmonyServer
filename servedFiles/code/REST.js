@@ -15,31 +15,32 @@ class REST {
   		DOMelement = DOMelement.parentElement;
   	}
 
-    const div = app.domFunctions.getChildByIdr(topWidget, "requestDetails");
-    if (div) {
-      div.innerHTML = "";
+    if (topWidget) {
+      const div = app.domFunctions.getChildByIdr(topWidget, "requestDetails");
+      if (div) {
+        div.innerHTML = "";
+      }
+
+      const span = app.domFunctions.getChildByIdr(topWidget, "requestName");
+      if (span) {
+        span.innerHTML = "";
+        const request = document.createElement("SPAN");
+        const status = document.createTextNode(`${this.userRequest}) ${text}`);
+        const timer = document.createElement("SPAN");
+        timer.innerHTML = ":  0 ms";
+        timer.setAttribute('idr', 'timer');
+        request.setAttribute('id', `requestRow${this.userRequest}`);
+        request.appendChild(status);
+        request.appendChild(timer);
+        span.appendChild(request);
+
+        const toggleDetails = app.domFunctions.getChildByIdr(topWidget, "showRequestDetails");
+        toggleDetails.classList.remove("hidden");
+
+        this.requestDetails[this.userRequest] = [];
+        this.serverRequests[this.userRequest] = 0;
+      }
     }
-
-    const span = app.domFunctions.getChildByIdr(topWidget, "requestName");
-    if (span) {
-      span.innerHTML = "";
-      const request = document.createElement("SPAN");
-      const status = document.createTextNode(`${this.userRequest}) ${text}`);
-      const timer = document.createElement("SPAN");
-      timer.innerHTML = ":  0 ms";
-      timer.setAttribute('idr', 'timer');
-      request.setAttribute('id', `requestRow${this.userRequest}`);
-      request.appendChild(status);
-      request.appendChild(timer);
-      span.appendChild(request);
-
-      const toggleDetails = app.domFunctions.getChildByIdr(topWidget, "showRequestDetails");
-      toggleDetails.classList.remove("hidden");
-
-      this.requestDetails[this.userRequest] = [];
-      this.serverRequests[this.userRequest] = 0;
-    }
-
     return this.userRequest++; // Return and then increment
   }
 
@@ -261,6 +262,9 @@ class REST {
   		if (this.readyState == 4 && this.status == 200) {
   			const data = JSON.parse(this.responseText);
   			REST.stopProgress(DOMelement, update, this.responseText, userRequest, serverRequest);
+
+        // Put caching code here
+
   			if (onComplete) {
   				onComplete(data, userRequest, ...args);
   			}

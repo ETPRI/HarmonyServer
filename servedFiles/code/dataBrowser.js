@@ -1,5 +1,6 @@
 class dataBrowser {
-  constructor (GUID) {
+  constructor (GUID, callerID) {
+    this.callerID = callerID;
     this.widgetDOM = null;
     this.widgetID = app.idCounter;
     app.widgets[app.idCounter] = this; // Add to app.widgets
@@ -14,9 +15,7 @@ class dataBrowser {
     this.rightCell = null;
 
     this.leftData = null;
-    // this.inData = null;
     this.mainData = null;
-    // this.outData = null;
     this.rightData = null;
 
     this.highlightGUIDLeft = null;
@@ -31,7 +30,7 @@ class dataBrowser {
     this.toToggle = null;
 
     this.buildWidget();
-    
+
     if (GUID) {
       this.search(GUID);
     }
@@ -60,13 +59,58 @@ class dataBrowser {
             </tr></tbody></table>`;
 
     /*
-    Create new element, append to the widgets div in front of existing widgets
+    Create new element, append to the widgets div in front of existing widgets or before caller
     */
     const parent = document.getElementById('widgets');
-    const child = parent.firstElementChild;
+    let caller = document.getElementById(this.callerID);
     const newWidget = document.createElement('div'); // create placeholder div
-    parent.insertBefore(newWidget, child); // Insert the new div before the widget that opened it
+
+    // I want to insert the new widget before the TOP-LEVEL widget that called it, if that widget is in the widgets div.
+    // The ID passed in is that of the widget that called it, but it may be in another widget. So go up the chain until
+    // either caller's parent is the widgets div (meaning that caller is a top-level widget in the widgets div), or caller
+    // has no parent (meaning that the original caller was NOT in the widgets div, since no ancestor in that div was found).
+    while (caller && caller.parentElement && caller.parentElement !== parent) {
+      caller = caller.parentElement;
+    }
+
+    if (caller && caller.parentElement == parent) { // If the caller (or its parent widget) is, itself, in the widgets div
+      parent.insertBefore(newWidget, caller); // Insert the new div before the caller
+    }
+    else {
+      parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
+    }
+
     newWidget.outerHTML = html; // replace placeholder with the div that was just written
+
+    const widgetList = document.getElementById("widgetList"); // Get the list of widgets
+    let callerEntry = null;
+    if (caller) {
+      callerEntry = app.domFunctions.getChildByIdr(widgetList, caller.getAttribute("id"));
+    } // Find the entry on that list for the caller, assuming the caller and its entry exist
+
+    const newEntry = document.createElement("li"); // Create an entry for the new widget
+    if (callerEntry) { // If the caller's entry exists, the new widget's entry goes above it (like the new widget goes above the caller)
+      widgetList.insertBefore(newEntry, callerEntry);
+    }
+    else { // Otherwise, the new widget's entry goes at the top, like the new widget does
+      widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+    }
+
+    // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+    let name = "";
+    if (!this.mainData) {
+      name = "No node selected";
+    }
+    else if (!(app.getProp(this.mainData, "n", "properties", "name"))) {
+      name = `Unnamed ${this.mainData.n.labels[0]} node`;
+    }
+    else {
+      name = `${this.mainData.n.properties.name}: ${this.mainData.n.labels[0]}`;
+    }
+    newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+    ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${this.widgetID}">
+    Data Browser: <span idr="name">${name}</span></li>`;
+
 
     // By this point, the new widget div has been created by buildHeader() and added to the page by the above line
     const widget = document.getElementById(this.widgetID);
@@ -200,6 +244,20 @@ class dataBrowser {
       html += `</table>`;
 
       cell.innerHTML = html;
+
+      // If this is the main data cell - meaning main data is changing - update the entry in the widgets list
+      if (cellName === "Main") {
+        const widgetList = document.getElementById("widgetList"); // Get the list of widgets
+        const entry = app.domFunctions.getChildByIdr(widgetList, this.widgetID);
+        if (entry) {
+          const entryName = app.domFunctions.getChildByIdr(entry, "name");
+          let mainName = `${app.getProp(data, "n", "properties", "name")}: ${data.n.labels[0]}`;
+          if (!mainName) {
+            mainName = `Unnamed ${data.n.labels[0]} node`;
+          }
+          entryName.innerHTML = mainName;
+        }
+      }
     }
   }
 

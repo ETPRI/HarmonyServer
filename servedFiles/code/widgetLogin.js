@@ -62,13 +62,22 @@ class widgetLogin {
       app.login.info = document.getElementById("userInfo");
       app.login.sessionInfo = document.getElementById("sessionInfo");
 
+      const widgetList = document.getElementById("headerList"); // Get the list of widgets
+      const newEntry = document.createElement("li"); // Create an entry for the new widget
+      widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+
+      // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+      newEntry.outerHTML = `<li idr="loginDiv" onclick="app.clickWidgetEntry(this)" draggable="true"
+      ondragstart="app.drag(this, event)" ondragover="event.preventDefault()" ondrop="app.drop(this, event)">
+      Login widget</li>`;
+
       // Create debug and regression headers and link to debug and regression buttons in login header
       app.createDebug();
-      const headerExists = !(document.getElementById("regressionHeader") == null);
-      if (headerExists) {
+      // const headerExists = (document.getElementById("regressionHeader") !== null);
+      if (document.getElementById("regressionHeader")) {
         app.regression.buildRegressionHeader();
-        app.login.viewAdmin.push(document.getElementById("debugButton"));
-        app.login.viewAdmin.push(document.getElementById("regressionButton"));
+        // app.login.viewAdmin.push(document.getElementById("debugButton"));
+        // app.login.viewAdmin.push(document.getElementById("regressionButton"));
 
         app.login.viewLoggedIn.push(document.getElementById('changeProfileButton'));
       }
@@ -229,6 +238,48 @@ class widgetLogin {
         obj.rel = {"type":"User", "return":false};
         obj.to = {"type":"M_Session", "properties":{"M_GUID":loginObj.login.sessionGUID}, "return":false};
 
+        // Add the search buttons, regression header and debug header to the widgets list
+        const headerList = document.getElementById("headerList"); // Get the list of widgets
+        const minList = document.getElementById("minimizedList");
+
+        let newEntry = null;
+        if (loginObj.login.permissions === "Admin") {
+          newEntry = document.createElement("li");
+          headerList.appendChild(newEntry);
+          newEntry.outerHTML =
+          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="regressionHeader"
+          class="hidden">Regression Testing</li>`;
+
+          newEntry = document.createElement("li");
+          minimizedList.appendChild(newEntry);
+          newEntry.outerHTML =
+          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="regressionHeader">
+          Regression Testing</li>`;
+
+          newEntry = document.createElement("li");
+          headerList.appendChild(newEntry);
+          newEntry.outerHTML =
+          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="debugHeader"
+          class="hidden">Debugging</li>`;
+
+          newEntry = document.createElement("li");
+          minimizedList.appendChild(newEntry);
+          newEntry.outerHTML =
+          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="debugHeader">Debugging</li>`;
+        }
+
+        newEntry = document.createElement("li"); // Create an entry for the node search buttons
+        headerList.appendChild(newEntry);
+
+        // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+        newEntry.outerHTML =
+        `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+        ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="buttonsDiv">Node search buttons</li>`;
+
         loginObj.app.REST.sendQuery(obj, "createRelation", "Linking session", loginObj.userRequest, loginObj.login.loginDiv, "upkeep", null, function() {
           resolve(true);
         }.bind(this));
@@ -262,6 +313,7 @@ class widgetLogin {
       const obj = {};
       obj.from = {"id":loginObj.login.userID};
       obj.rel = {"type":"Favorite", "return":false};
+      obj.to = {};
 
       loginObj.app.REST.sendQuery(obj, "changeRelation", "Restoring favorites", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data) {
         resolve(data);
@@ -546,7 +598,7 @@ class widgetLogin {
     app.faveNode = 1;
 
     this.loginButton.setAttribute("value", "Log In");
-    this.loginButton.setAttribute("onclick", "app.widget('createSession', this)");
+    this.loginButton.setAttribute("onclick", "app.widget('login', this)");
 
     this.userID = null; // Log the user out
     this.userGUID = null;

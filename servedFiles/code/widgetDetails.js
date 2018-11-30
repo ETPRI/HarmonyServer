@@ -16,7 +16,7 @@ input: label
 
 
 class widgetDetails {
-constructor(label, container, GUID, name, callerID, userRequest) { // Label: the type of node described. ID: the ID of the node. Container: Where to put it
+constructor(label, container, GUID, name, callerID, userRequest, standalone) { // Label: the type of node described. ID: the ID of the node. Container: Where to put it
     // DOM pointers to data that will change, just make place holders
     this.widgetDOM   = container;
     this.tableDOM    = {};
@@ -198,6 +198,17 @@ restoreSize(button) {
 }
 
 refresh() {   // put in one field label and input row for each field - includes creating dragdrop table
+  // Update this.name and the name stored in the widget list
+  let thisName = app.getProp(this, "currentData", "properties", "name");
+  if (thisName) {
+    this.name = thisName;
+    const widgetList = document.getElementById("widgetList");
+    const entry = app.domFunctions.getChildByIdr(widgetList, this.idWidget);
+    if (entry) {
+      const entryName = app.domFunctions.getChildByIdr(entry, "name");
+      entryName.innerHTML = thisName;
+    }
+  }
   let fieldCount = 0;
   this.hiddenFields = 0;
   this.propFieldsNum = 0;
