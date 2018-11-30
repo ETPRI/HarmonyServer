@@ -360,14 +360,14 @@ menuNodes(name, criteria) {
 
 	if (toReplace) { // If there was another table already shown, and it had an entry in the widget list
 		toReplace.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-		ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${name}">Table of ${name} nodes</li>`;
+		ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${name}" class="tableEntry">Table of ${name} nodes</li>`;
 	}
 
 	else {
 		let newEntry = document.createElement('li');
 		headerList.appendChild(newEntry);
 		newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-		ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${name}">Table of ${name} nodes</li>`;
+		ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${name}" class="tableEntry">Table of ${name} nodes</li>`;
 	}
 
 	// Hide the shown table, if any
@@ -379,6 +379,13 @@ menuNodes(name, criteria) {
 	// Create the required table, if it didn't already exist
 	if (!(this.widgets[name])) {
 		this.widgets[name] = new widgetTableNodes(name, null);
+	}
+
+	// If there was already a table shown in the minimized widgets list, remove it
+	const minimizedList = document.getElementById("minimizedList");
+	const tableEntries = minimizedList.getElementsByClassName("tableEntry"); // should be at most one, but may as well loop through just in case
+	for (let i = 0; i < tableEntries.length; i++) {
+		minimizedList.removeChild(tableEntries[i]);
 	}
 
 	// Show the required table
