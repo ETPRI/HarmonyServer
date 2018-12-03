@@ -3,29 +3,35 @@
 small web server that serves static files and a
 REST API into a database
 
+ideas to think about
+create server status object accessable by admin
+
 */
 
-var http = require('http');
-var fs   = require('fs');
-var path = require('path');
+var http = require('http');      //
+var fs   = require('fs');        // access local file system
+var path = require('path');      // ?
 var url  = require('url');
-var uuidv1 = require('uuid/v1');
-var integrityClass = require('./integrity');
-var CRUDclass = require('./CRUD');
-var backupClass = require('./backup');
-const config = require('./config');
+var uuidv1 = require('uuid/v1');                // create GUID based on mac address, and date/time
+var integrityClass = require('./integrity');    // check consiticy of database
+var CRUDclass = require('./CRUD');              // REST API to database, rewrite for each back end
+var backupClass = require('./backup');          // back up database to local file?
+const config = require('./config');             // configure file locations, ports, etc on server
 
-// start running neo4j code
+// connect to db server, neo4j
 const neo4j  = require('neo4j-driver').v1;
 // Create a driver instance, for the user neo4j with password neo4j.
 // It should be enough to have a single driver per database per application.
 const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", config.neo4j.password));
 
+// create instances of required classes
 let backup = new backupClass(config, fs, driver, stringEscape);
 let integrity = new integrityClass(driver, uuidv1, stringEscape, true);
 let CRUD = new CRUDclass(uuidv1, integrity, driver);
 
+// process requests to server
 http.createServer(function (request, response) {
+    // find out if client is running on same machine as server
     let source = "Remote ";
     if (request.headers.host === `127.0.0.1:${config.port}` || request.headers.host === `localhost:${config.port}`) {
       source = "Local ";
@@ -34,17 +40,16 @@ http.createServer(function (request, response) {
     console.log(source, 'request ', request.url);
 
     var q = url.parse(request.url, true);
-    response.setHeader('Access-Control-Allow-Origin', '*');
+    response.setHeader('Access-Control-Allow-Origin', '*');  // ?
 
     if (q.pathname === "/get"){
-      // reading a form
-      console.log("get: %s\n", JSON.stringify(q.query));
-      response.statusCode = 200;
-      response.setHeader('Content-Type', 'text/plain');
-      runGremlin(q.query.gremlinSteps, response);
-      return;
-    }
-    else if (request.method === "POST") {
+      // reading a form, not using Gremlin now
+      // console.log("get: %s\n", JSON.stringify(q.query));
+      // response.statusCode = 200;
+      // response.setHeader('Content-Type', 'text/plain');
+      // runGremlin(q.query.gremlinSteps, response);
+      // return;
+    } else if (request.method === "POST") {
       // REST API
       let body = '';
       request.on('data', chunk => {
@@ -55,22 +60,23 @@ http.createServer(function (request, response) {
         response.setHeader('Content-Type', 'text/plain');
         var obj = JSON.parse(body);
         switch (obj.server) {
-          case "neo4j":
-            runNeo4j(obj.query, response);
-            break;
-          case "gremlin":
-            runGremlin2(obj.query, response);
-            break;
-          case "backupNeo4j":
-            backup.processBackup(obj.query, response);
-            break;
           case "CRUD":
             CRUD.runCRUD(obj, response);
             break;
           case "file":
             runFileRequest(obj, response);
             break;
+          case "neo4j":
+            runNeo4j(obj.query, response);
+            break;
+          // case "gremlin":
+          //   runGremlin2(obj.query, response);
+          //   break;
+          case "backupNeo4j":
+            backup.processBackup(obj.query, response);
+            break;
           default:
+            // get error to user, add to server log
             console.log("Error server = %s\n", obj.server );
         }
       });
@@ -78,11 +84,14 @@ http.createServer(function (request, response) {
     }
 
     // serve static file
-    var filePath = './servedFiles';  // default location of served files relative to where server is
-    if (request.url == "/") {
-      filePath += "/view/app.html";
-  // filePath += "/admin/Neo4jRun.html";
-  //filePath += "_app.html";
+    var filePath = config.servedDirecrtory;  // default location of served files relative to where server is
+//    if (request.url == "/") {
+    if (request.url === "/") {
+      // serve the defalut application
+      filePath += config.defaultAppDirectory+"/app.html"
+    } else if (request.url.lastIndexOf('/')  === 0) {
+      // serve file from default applicartion directory
+      filePath += config.defaultAppDirectory+request.url;
     } else {
       // try to find static file to return
       filePath += request.url ;

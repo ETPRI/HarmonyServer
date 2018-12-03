@@ -127,7 +127,7 @@ class widgetNode extends widgetDetails {
     const aboveSpan = app.domFunctions.getChildByIdr(this.widgetDOM, "aboveTable");
     aboveSpan.innerHTML = aboveTableHTML;
 
-    let addSave = `<input idr = "addSaveButton" type="button" onclick="app.widget('saveAdd',this)">`;
+    let addSave = `<input idr = "addSaveButton" type="button" onclick="app.widget('saveAddMain',this)">`;
     if (this.queryObjectName.slice(0,2) === 'M_') { // if this is a metadata node
       addSave = "";
     }

@@ -1,16 +1,16 @@
 class copy {
   constructor() {
-    this.nodes = [];
-    this.rels = [];
-    this.nodesDone = [];
-    this.relsDone = [];
-    this.nodeBlocksize = 100;
-    this.relBlocksize = 20;
+    this.nodes = [];           // list of node types
+    this.rels = [];            // list of relation types
+    this.nodesDone = [];       // list of nodes done?
+    this.relsDone = [];        // list of relations done?
+    this.nodeBlocksize = 100;  // number of nodes to copy before updating client status
+    this.relBlocksize = 20;    // number of relations to copy before updating client status
     this.progress = document.getElementById('progress');
 
-    this.source = "";
-    this.destination = "";
-    this.latestCL = -1;
+    this.source = "";          // ?
+    this.destination = "";     // ?
+    this.latestCL = -1;        // ?
   }
 
   //----------------Main functions - "tables of contents"------------------------

@@ -633,6 +633,8 @@ addField(name, value) { // If name and value don't exist, we're adding a blank r
   valueIn.outerHTML = `<input type = "text" idr = "newFieldValue${this.newFields++}" onChange = "app.widget('changed',this.parentElement)" onblur = "app.widget('checkNewField', this)" value = "${value}">`
 }
 
+
+
 saveAddMain(widgetElement, userRequest) {
   if (!userRequest) { // If no user request was specified, create one
     userRequest = app.REST.startUserRequest("Saving node", this.widgetDOM);
@@ -1146,6 +1148,7 @@ saveComplete(saveObj) { // Refreshes the node table and logs that addSave was cl
     this.buildStart(saveObj.userRequest);
   }
 
+
   // Update the widget
   this.refresh();
 
@@ -1159,6 +1162,264 @@ saveComplete(saveObj) { // Refreshes the node table and logs that addSave was cl
   app.regression.log(JSON.stringify(obj));
   app.regression.record(obj);
 }
+
+
+
+
+// saveAdd(widgetElement, userRequest) { // Saves changes or adds a new node
+//   // userRequest may be already set if setOwner was called (and called this again afterwards),
+//   // or if the details widget is NOT a standalone widget and the save button was clicked elsewhere
+//   // (like in a mindmap). Otherwise it needs to be set.
+//   if (!userRequest) {
+//     userRequest = app.REST.startUserRequest("Saving node", this.widgetDOM);
+//   }
+//
+//   // If the node didn't exist (so there was an Add button) or was owned by someone else, create a new node
+//   if ((widgetElement && widgetElement.value === "Add") || (this.owner && this.owner.id !== app.login.userID)) {
+//     this.save(null, userRequest, "Add");
+//   }
+//
+//   // If the node existed but had no owner, make this user its owner, then call saveAdd again to save it
+//   else if (!(this.owner)) {
+//     app.setOwner(this.widgetDOM, userRequest, this, 'saveAdd');
+//   }
+//
+//   // If the node existed, had an owner but was not owned by someone else, then it was already owned by this user - just keep moving.
+//   else {
+//     const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, "trashCheck");
+//     // If the node was trashed and now shouldn't be
+//     if (this.savedData && this.savedData.properties._trash === true && checkbox.checked === false) {
+//       this.untrashNode(userRequest);
+//     }
+//     // If the node was not trashed and now should be. I used negation here, rather than checking for === false, because _trash could be undefined.
+//     else if (this.savedData && !(this.savedData.properties._trash === true) && checkbox.checked === true) {
+//       this.trashNode(userRequest);
+//     }
+//     // If the node was and should stay trashed, but the reason has changed
+//     else if (this.savedData && this.savedData.properties._trash === true && app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason').classList.contains("changedData")) {
+//       this.updateReason(userRequest);
+//     }
+//     // If the node's trash status isn't changing, only the data, go straight to save();
+//     else {
+//       this.save(null, userRequest, "Save");
+//     }
+//   } // end else (the node was already owned by this user)
+// }
+//
+// trashNode(userRequest) {
+//   this.savedData.properties._trash = true;
+//   const user = app.login.userID;
+//   const node = this.id;
+//   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
+//   const reason = reasonInp.value;
+//   reasonInp.setAttribute("class",""); // remove changedData class from reason
+//
+//   const obj = {};
+//   obj.from = {"id":user, "return":false};
+//   obj.to = {"id":node, "return":false};
+//   obj.rel = {"type":"Trash", "merge":true, "properties":{"reason":app.stringEscape(reason)}, "return":false};
+//
+//   app.REST.sendQuery(obj, "changeRelation", "Trashing node", userRequest, this.widgetDOM, null, null, this.save.bind(this), "Save");
+// }
+//
+// updateReason(userRequest) {
+//   const user = app.login.userID;
+//   const node = this.id;
+//   const reasonInp = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
+//   const reason = reasonInp.value;
+//   this.savedData.properties.reason = reason;
+//   reasonInp.setAttribute("class","");
+//
+//   const obj = {};
+//   obj.from = {"id":user, "return":false};
+//   obj.to = {"id":node, "return":false};
+//   obj.rel = {"type":"Trash", "return":false};
+//   obj.changes = [{"item":"rel", "property":"reason", "value":app.stringEscape(reason)}];
+//
+//   app.REST.sendQuery(obj, "changeRelation", "Updating reason", userRequest, this.widgetDOM, null, null, this.save.bind(this), "Save");
+// }
+//
+// untrashNode(userRequest) {
+//   this.savedData.properties._trash = false;
+//   const user = app.login.userID;
+//   const node = this.id;
+//
+//   const obj = {};
+//   obj.from = {"id":user, "return":false};
+//   obj.to = {"id":node, "return":false};
+//   obj.rel = {"type":"Trash", "return":false};
+//
+//   app.REST.sendQuery(obj, "deleteRelation", "Restoring node", userRequest, this.widgetDOM, null, null, this.save.bind(this), "Save");
+//
+// }
+//
+// ////////////////////////////////////////////////////////////////////
+// updateMetaData(tempMetaData, newFields, propFieldsChanged, userRequest) {
+//   const metadataObj = {};
+//   metadataObj.from = {"id":app.login.userID, "return":false};
+//   metadataObj.rel = {"type":"Settings", "merge":true, "return":false};
+//   metadataObj.to = {"type":"M_MetaData", "name":"metadata", "properties":{"name":this.queryObjectName}};
+//   metadataObj.changes = [];
+//
+//   const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy', 'fields'];
+//   for (let i = 0; i < propertyNames.length; i++) {
+//     if (JSON.stringify(this[propertyNames[i]]) !== JSON.stringify(tempMetaData[propertyNames[i]])) {
+//       const change = {};
+//       change.item = "rel";
+//       change.property = propertyNames[i];
+//       change.value = app.stringEscape(JSON.stringify(tempMetaData[propertyNames[i]]));
+//       metadataObj.changes.push(change);
+//       this[propertyNames[i]] = tempMetaData[propertyNames[i]];
+//       this.queryObject[propertyNames[i]] = tempMetaData[propertyNames[i]];
+//     }
+//   }
+//
+//   app.REST.sendQuery(metadataObj, "changeRelation", "Updating settings", userRequest, this.widgetDOM, null, null, this.updateFields.bind(this), newFields, propFieldsChanged);
+//
+// }
+//
+// // data should contain only the metadata node, under the name "metadata"
+// // newFields is an object where each key is a new fieldName and each value is a label
+// // propFieldsChanged is a boolean which is true if the list of proposed fields has changed
+// updateFields(data, userRequest, newFields, propFieldsChanged) {
+//   // Need to update fields if there are any new fields.
+//   // Need to update proposedFields if the list of proposed fields has changed.
+//
+//   if (Object.keys(newFields).length > 0 || propFieldsChanged) {
+//     let updateFields = false;
+//
+//     let fields = JSON.parse(data[0].metadata.properties.fields);
+//     for (let fieldName in newFields) { // Add any new fields to the fields object
+//       fields[fieldName] = newFields[fieldName];
+//       updateFields = true;
+//     }
+//
+//     let propFields = JSON.parse(data[0].metadata.properties.proposedFields);
+//     // Remove old proposed fields
+//     for (let fieldName in propFields) {
+//       if (fieldName in fields) {
+//         delete propFields[fieldName]; // If it's in fields, it's an official field now, not just a proposed field
+//       }
+//     }
+//
+//     // Add new proposed fields
+//     for (let fieldName in this.proposedFields) {
+//       propFields[fieldName] = this.proposedFields[fieldName];
+//     }
+//
+//     const obj = {};
+//     obj.node = {"type":"M_MetaData", "properties":{"name":this.queryObjectName}, "return":false};
+//     obj.changes = [];
+//
+//     if (updateFields) {
+//       obj.changes.push({"property":"fields", "value":app.stringEscape(JSON.stringify(fields))});
+//     }
+//     if (propFieldsChanged) {
+//       obj.changes.push({"property":"proposedFields", "value":app.stringEscape(JSON.stringify(propFields))});
+//     }
+//
+//     if (obj.changes.length > 0) {
+//       app.REST.sendQuery(obj, "changeNode", "Updating metadata", userRequest, this.widgetDOM);
+//     }
+//   }
+// }
+//
+// addComplete(data, userRequest) { // Refreshes the node table and logs that addSave was clicked
+//   for (let prop in data[0].n.properties) {
+//     // strings can stay strings and numbers are already stored as numbers.
+//     // Anything else was stored as a string and needs to be parsed.
+//     let type = app.getProp(this.fields, prop, "type");
+//     if (type && type !== "string" && type !== "number") {
+//       data[0].n.properties[prop] = JSON.parse(data[0].n.properties[prop]);
+//     }
+//   }
+//
+//   this.savedData = data[0].n; // takes single nodes
+//   this.currentData = JSON.parse(JSON.stringify(this.savedData));
+//
+//   // If the user has just added this node, it belongs to them
+//   this.owner = {"name":app.login.userName, "id":app.login.userID, "GUID":app.login.userGUID};
+//   this.id = this.savedData.id;
+//   // const id = this.id;
+//   const name = this.savedData.properties.name;
+//   const nameLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "name");
+//   nameLabel.textContent=`: ${name}`;
+//
+//   // const obj = {};
+//   // obj.id = this.idWidget;
+//   // obj.idr = "addSaveButton";
+//   // obj.action = "click";
+//   // obj.data = JSON.parse(JSON.stringify(data));
+//   // app.stripIDs(obj.data);
+//   // app.regression.log(JSON.stringify(obj));
+//   // app.regression.record(obj);
+//
+//   app.setOwner(this.widgetDOM, userRequest, this); // I don't mind this running asynchronously because I don't think it's needed for refresh or buildStart.
+//   this.refresh();
+//   if (this.buildStart) { // If this is a standalone node with relations, call this.buildStart to show them
+//     this.buildStart(userRequest);
+//   }
+// }
+//
+// saveComplete(saveObj) { // Refreshes the node table and logs that addSave was clicked
+//   // Parse properties if needed and store the data
+//   for (let prop in saveObj.data[0].n.properties) {
+//     // strings can stay strings and numbers are already stored as numbers.
+//     // Anything else was stored as a string and needs to be parsed.
+//     let type = app.getProp(this.fields, prop, "type");
+//     if (type && type !== "string" && type !== "number") {
+//       saveObj.data[0].n.properties[prop] = JSON.parse(saveObj.data[0].n.properties[prop]);
+//     }
+//   }
+//
+//   this.savedData = saveObj.data[0].n;
+//
+//   // Keep the trash relation shown in the table, if any
+//   const text = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
+//   const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
+//   if (checkbox.checked) {
+//     this.savedData.properties._trash = true;
+//     this.savedData.properties.reason = text.value;
+//   }
+//   else {
+//     this.savedData.properties._trash = false;
+//   }
+//
+//   // Make a copy - currentData constantly updates while savedData updates only on save
+//   this.currentData = JSON.parse(JSON.stringify(this.savedData));
+//
+//   // The node belongs to the user who has just saved it
+//   this.owner = {"name":app.login.userName, "id":app.login.userID, "GUID":app.login.userGUID};
+//
+//   // If the user has just added this node, its ID needs to be set
+//   if (saveObj.action === "Add") {
+//     this.id = this.savedData.id;
+//     const name = this.savedData.properties.name;
+//     const nameLabel = app.domFunctions.getChildByIdr(this.widgetDOM, "name");
+//     nameLabel.textContent=`: ${name}`;
+//   }
+//
+//   // If this is a standalone node (so should show relations)
+//   // and has just been added (so its relations weren't already shown), call buildStart to show them
+//   if (this.buildStart && saveObj.action === "Add") {
+//     this.buildStart(userRequest);
+//   }
+//
+//
+//   // Update the widget
+//   this.refresh();
+//
+//   // log
+//   const obj = {};
+//   obj.id = this.idWidget;
+//   obj.idr = "addSaveButton";
+//   obj.action = "click";
+//   obj.data = JSON.parse(JSON.stringify(data));
+//   app.stripIDs(obj.data);
+//   app.regression.log(JSON.stringify(obj));
+//   app.regression.record(obj);
+// }
+
 
 changed(cell, edited) { // Highlights when current fields are different from saved fields
   // Make sure we have a currentData object - if this is a new node it may need to be created
@@ -1203,6 +1464,285 @@ changed(cell, edited) { // Highlights when current fields are different from sav
     } // end if (savedData exists; we can compare it to current data)
   } // end if (fieldName exists and is a valid field; we can set currentData)
 } // end method (changed)
+
+// save(trashUntrash, userRequest, buttonValue) { // Builds query to add or update a node, runs it and passes the results to saveData() or addComplete()
+//   let propFieldsChanged = false;
+//   let tr = this.tBodyDOM.firstElementChild;
+//
+//   let data = {}; // Data can be an object representing properties (for a new node) or an array of changes (for an existing one)
+//   if (buttonValue === "Save") {
+//     data = [];
+//   }
+//
+//   let tempMetaData = {};
+//   const propertyNames = ['fieldsDisplayed', 'formFieldsDisplayed', 'nodeLabel', 'orderBy', 'fields'];
+//   for (let i = 0; i < propertyNames.length; i++) {
+//     tempMetaData[propertyNames[i]] = JSON.parse(JSON.stringify(this[propertyNames[i]]));
+//   } // copy of metadata
+//
+//   let newFields = {};
+//   let reordered = false;
+//   let currentFields = [];
+//
+//   const label = app.domFunctions.getChildByIdr(this.widgetDOM, 'nodeTypeLabel');
+//   const labelText = label.textContent;
+//   const renamed = (labelText != tempMetaData.nodeLabel);
+//   if (renamed) { // update metadata nodeLabel object
+//     tempMetaData.nodeLabel = labelText;
+//   }
+//
+//   /* goes through all rows - that is, all fields.
+//   If a row is new and the user is an admin, adds its name and description to fields and formFieldsDisplayed,
+//   and adds it to newFields and currentFields.
+//   If a row is new and the user is NOT an admin, just adds the name and description to proposedFields.
+//   If a row already existed, adds it to currentFields, saves the size if it's a textbox,
+//   and adds it to data if it's changed or the node is new.
+//   If a row is an existing proposed field, and the user is an admin, looks at whether the checkbox is checked.
+//   If so, adds to fields, formFieldsDisplayed, newFields and currentFields, just as if the admin added it.
+//   Also removes that field from proposedFields since it will now be an official field.
+//   */
+//   while (tr) {
+//     const dataCell = tr.lastElementChild;
+//     const dataInput = dataCell.firstElementChild; // find <input> element if it exists
+//
+//     // Get the value of the attribute - the content of the cell for non-editable cells,
+//     // the value of the input for editable cells (which HAVE inputs)
+//     let value = dataCell.textContent;
+//     if (dataInput && (dataInput.tagName === 'INPUT' || dataInput.tagName === 'TEXTAREA')) {
+//       value = dataInput.value;
+//     }
+//
+//     // process new fields
+//     const idr = tr.getAttribute('idr');
+//     if (idr && idr.slice(0,11) === "newFieldRow") {
+//       const nameCell = tr.firstElementChild;
+//       const name = nameCell.firstElementChild.value;
+//       const descCell = nameCell.nextElementSibling;
+//       const desc = descCell.firstElementChild.value;
+//       if (name != "" && currentFields.indexOf(name) == -1) { // If the field has been filled in, and that name didn't already exist
+//         const fieldName = name.replace(/\s/g, "").replace(/\(/g, "").replace(/\)/g, "");
+//
+//         if (app.login.permissions === "Admin") {
+//           // Add new fields to object.
+//           tempMetaData.fields[fieldName] = {"label": name, "description":desc};
+//           newFields[fieldName] = {"label": name, "description":desc};
+//           tempMetaData.formFieldsDisplayed.push(fieldName);
+//           currentFields.push(fieldName);
+//         }
+//         else {
+//           // Add new proposed fields to object. No other changes at this time.
+//           this.proposedFields[fieldName] = {"label": name, "description":desc};
+//           propFieldsChanged = true;
+//         }
+//       }
+//     }
+//
+//     // process existing fields
+//     else if (idr && idr.slice(0,2) === 'tr') {
+//       const fieldName = idr.slice(2);
+//       currentFields.push(fieldName);
+//
+//       if (app.getProp(tempMetaData, "fields", fieldName, "input", "name") === "textarea") {
+//         tempMetaData.fields[fieldName].input.height = dataInput.clientHeight
+//                                                   - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-top'))
+//                                                   - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-bottom'));
+//         tempMetaData.fields[fieldName].input.width = dataInput.clientWidth
+//                                                   - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-left'))
+//                                                   - parseInt(getComputedStyle(dataInput).getPropertyValue('padding-right'));
+//       }
+//
+//       if(buttonValue == "Save" && dataCell.getAttribute("class") === "changedData") {
+//         // create a set for this field
+//         if (fieldName in tempMetaData.fields) {
+//           const change = {};
+//           change.property = fieldName;
+//           if (tempMetaData.fields[fieldName].type === "number") {
+//             change.value = value;
+//             change.string = false;
+//           }
+//           else if (value) {
+//             change.value = app.stringEscape(value);  // assume string
+//           }
+//           else {
+//             change.value = "";
+//           }
+//           data.push(change);
+//         }
+//       }
+//       else if (value && buttonValue == "Add") {
+//         data[fieldName] = app.stringEscape(value);
+//       }
+//     }
+//
+//     // process proposed rows if the user is an admin (and may have approved some)
+//     else if (idr && idr.slice(0,7) === 'propRow' && app.login.permissions === "Admin") {
+//       const checkBox = tr.getElementsByTagName('input')[0]; // should be the only input in the row
+//       if (checkBox.checked) {
+//         const nameCell = tr.firstElementChild;
+//         const name = nameCell.textContent;
+//         const descCell = nameCell.nextElementSibling;
+//         const desc = descCell.textContent;
+//         if (name != "" && currentFields.indexOf(name) == -1) { // If the field has been filled in, and that name didn't already exist
+//           const fieldName = name.replace(/\s/g, "").replace(/\(/g, "").replace(/\)/g, "");
+//
+//           tempMetaData.fields[fieldName] = {"label": name, "description":desc};
+//           newFields[fieldName] = {"label": name, "description":desc};
+//           tempMetaData.formFieldsDisplayed.push(fieldName);
+//           currentFields.push(fieldName);
+//           delete this.proposedFields[fieldName];
+//           propFieldsChanged = true;
+//         }
+//       }
+//     }
+//
+//     tr=tr.nextElementSibling;
+//   }
+//
+//   // Build a string listing the fields from the form (done above) and a string listing the fields from the field object.
+//   // If they don't match, need to update the order of fields in fields, fieldsDisplayed and formFieldsDisplayed.
+//   let oldFields = [];
+//   for (let fieldName in tempMetaData.fields) {
+//     oldFields.push(fieldName);
+//   }
+//   reordered = (JSON.stringify(oldFields) != JSON.stringify(currentFields));
+//   if (reordered) {
+//     let fields = {};
+//     let fieldsDisplayed = [];
+//     let formFieldsDisplayed = [];
+//     for (let i = 0; i < currentFields.length; i++) {
+//       const fieldName = currentFields[i];
+//       if (tempMetaData.fieldsDisplayed.indexOf(fieldName) !== -1) {
+//         fieldsDisplayed.push(fieldName);
+//       }
+//       // If this field is in this.formFieldsDisplayed (so should also be in formFieldsDisplayed) and isn't a duplicate
+//       if (tempMetaData.formFieldsDisplayed.indexOf(fieldName) !== -1 && formFieldsDisplayed.indexOf(fieldName) === -1) {
+//         formFieldsDisplayed.push(fieldName);
+//       }
+//       fields[fieldName] = tempMetaData.fields[fieldName];
+//     }
+//     tempMetaData.fields = fields;
+//     // app.metaData.node[this.queryObjectName].fields = fields;
+//     tempMetaData.fieldsDisplayed = fieldsDisplayed;
+//     // app.metaData.node[this.queryObjectName].fieldsDisplayed = fieldsDisplayed;
+//     tempMetaData.formFieldsDisplayed = formFieldsDisplayed;
+//     // app.metaData.node[this.queryObjectName].formFieldsDisplayed = formFieldsDisplayed;
+//   }
+//
+//   this.lastSaveFFD = tempMetaData.formFieldsDisplayed; // Reflects formFieldsDisplayed at last save
+//   this.updateMetaData(tempMetaData, newFields, propFieldsChanged, userRequest);
+//
+//   // This should only ever come up when saving - both because adding uses an object, not an array, for data
+//   // and because adding should add every field to data every time.
+//   if (data.length == 0) {
+//     // If the node was trashed or untrashed (meaning data were passed in), but no other changes need to be made,
+//     // don't bother to run an empty query or refresh the widget, but do log the fact that addSave was clicked.
+//     // if (trashUntrash) {
+//     //   const obj = {};
+//     //   obj.id = this.idWidget;
+//     //   obj.idr = "addSaveButton";
+//     //   obj.action = "click";
+//     //   app.regression.log(JSON.stringify(obj));
+//     //   app.regression.record(obj);
+//     // }
+//     // refresh on save no matter what
+//     this.refresh();
+//   }
+//   else {
+//     let obj = {};
+//     let CRUD = "";
+//     let func = null;
+//
+//     if (buttonValue === "Save") {
+//       obj.node = {"name":"n", "id":this.id};
+//       obj.changes = data;
+//       CRUD = "changeNode";
+//       func = this.saveData.bind(this);
+//     }
+//     else {
+//       obj = {"name":"n", "type":this.queryObjectName, "properties":data};
+//       CRUD = "createNode";
+//       func = this.addComplete.bind(this);
+//     }
+//
+//     app.REST.sendQuery(obj, CRUD, "Saving node", userRequest, this.widgetDOM, null, null, function(data, userRequest, func, app) {
+//       // First, if this is a file node, and a new file has been uploaded or the node has been copied,
+//       // call the server's saveFile function. Also, if a new file has been uploaded,
+//       // increment this.numStoredFiles and the file counter in the widget.
+//       if (this.queryObjectName === "file" && (this.fileBinary || (this.owner && this.owner.GUID !== app.login.userGUID))) {
+//         const obj = {"userGUID":app.login.userGUID, "nodeGUID":data[0].n.properties.M_GUID};
+//         if (this.fileBinary) {
+//           obj.fileBinary = this.fileBinary;
+//           obj.fileType = app.getProp(this, "currentData", "properties", "type", this.numStoredFiles++);
+//
+//           const storedCounter = app.domFunctions.getChildByIdr(this.widgetDOM, 'numStoredFiles');
+//           storedCounter.textContent = this.numStoredFiles;
+//         }
+//
+//         if ((this.owner && this.owner.GUID !== app.login.userGUID)) {
+//           obj.copyNodeGUID = this.currentData.properties.M_GUID;
+//           obj.copyUserGUID = this.owner.GUID;
+//         }
+//
+//         const queryObject = {"server": "file", "function": "saveFile", "query": obj};
+//         const request = JSON.stringify(queryObject);
+//
+//         const serverRequest = app.REST.serverRequests[userRequest]++; // record the current server request and then increment
+//
+//         const xhttp = new XMLHttpRequest();
+//         const update = app.REST.startProgress(this.widgetDOM, "Saving file", request.length, userRequest, serverRequest);
+//         const details = this;
+//
+//         xhttp.onreadystatechange = function() {
+//       		if (this.readyState == 4 && this.status == 200) {
+//       			const responseSize = this.responseText.length;
+//       			app.REST.stopProgress(details.widgetDOM, update, responseSize, userRequest, serverRequest);
+//       		}
+//       	};
+//
+//         xhttp.open("POST", "");
+//         xhttp.send(request);         // send request to server
+//       } // end if (a file needs to be saved)
+//
+//       // Then call the function passed in (either saveData or addComplete)
+//       func(data, userRequest);
+//     }.bind(this), func, app);
+//   }
+// }
+
+// saveData(data) { // Refreshes the node table and logs that addSave was clicked
+//   for (let prop in data[0].n.properties) {
+//     // strings can stay strings and numbers are already stored as numbers.
+//     // Anything else was stored as a string and needs to be parsed.
+//     let type = app.getProp(this.fields, prop, "type");
+//     if (type && type !== "string" && type !== "number") {
+//       data[0].n.properties[prop] = JSON.parse(data[0].n.properties[prop]);
+//     }
+//   }
+//
+//   this.savedData = data[0].n;
+//   // Keep the trash relation shown in the table
+//   const text = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashReason');
+//   const checkbox = app.domFunctions.getChildByIdr(this.widgetDOM, 'trashCheck');
+//   if (checkbox.checked) {
+//     this.savedData.properties._trash = true;
+//     this.savedData.properties.reason = text.value;
+//   }
+//   else {
+//     this.savedData.properties._trash = false;
+//   }
+//   this.currentData = JSON.parse(JSON.stringify(this.savedData));
+//   this.refresh();
+//
+//   // log
+//   const obj = {};
+//   obj.id = this.idWidget;
+//   obj.idr = "addSaveButton";
+//   obj.action = "click";
+//   obj.data = JSON.parse(JSON.stringify(data));
+//   app.stripIDs(obj.data);
+//   app.regression.log(JSON.stringify(obj));
+//   app.regression.record(obj);
+// }
 
 toggleReason(checkBox) {
   const reason = app.domFunctions.getChildByIdr(this.trashRow, 'trashReason');

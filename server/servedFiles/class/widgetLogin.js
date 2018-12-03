@@ -87,7 +87,7 @@ class widgetLogin {
       }
     };
 
-    xhttp.open("GET", "view/widgetLogin.html");
+    xhttp.open("GET", "../widgetLogin.html");
     xhttp.send();
   }
 
