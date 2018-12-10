@@ -63,11 +63,6 @@ buildApp() {
 	this.buttonsDiv = document.getElementById("buttonsDiv");
 	this.login.viewLoggedIn.push(this.buttonsDiv);
 
-	const obj = {};
-	obj.object = this;
-	obj.method = 'clearWidgets';
-	obj.args = [];
-	this.login.doOnLogout.push(obj);
 	document.addEventListener("keydown", this.keyPressed.bind(this));
 
 	// Check for metadata and add it if needed
@@ -1306,7 +1301,7 @@ sendQuery(obj, CRUD, description, DOMelement, GUID, url, onComplete, ...args) {
 		if (this.readyState == 4 && this.status == 200) {
 			if (this.responseText === "timeout") {
 				alert ("Sorry, your session has timed out.");
-				logout();
+				logout(true);
 			}
 			else {
 				const responseSize = this.responseText.length;

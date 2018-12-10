@@ -119,6 +119,7 @@ class widgetLogin {
   tryLogin(dataObj) {
     return new Promise(function(resolve, reject){
       dataObj.userRequest = dataObj.app.REST.startUserRequest("Login", dataObj.login.loginDiv);
+      dataObj.app.REST.serverRequests[dataObj.userRequest]++; // Increment serverRequests because the first server request for this user request is to login
 
       const obj = {"userName":dataObj.login.nameInput.value, "password":dataObj.login.passwordInput.value, "userRequest":dataObj.userRequest, "browserName":navigator.userAgent};
       if (dataObj.login.sessionGUID) {
@@ -146,22 +147,51 @@ class widgetLogin {
   }
 
   loginComplete(dataObj) {
+    // First, no matter what, update login variables and hide stuff that's only visible when logged out (like the login fields)
+    this.loginSetVariables(dataObj);
+
+    for (let i in this.viewLoggedOut) { // Hide all items that are visible when logged out
+      this.viewLoggedOut[i].classList.add("hidden");
+    }
+
+    // Then, if this is NOT an instance of a timed-out user logging back in, reset everything
+    if (this.oldUserGUID !== this.userGUID) {
+      // Hide all items that should have been hidden on logout - just in case the last logout was a timeout and the items weren't hidden
+      this.logoutUpdateItems();
+
+      // Show all items that this user is permitted to see
+      this.loginUpdateItems();
+
+      // Add the search buttons, regression header and debug header to the widgets list
+      this.loginUpdateWidgetList();
+    }
+
+    // Finally, update the login div and clear the "old user" info so it doesn't interfere with future logins
+    this.oldUserGUID = null;
+    this.loginUpdateLoginDiv();
+  }
+
+  loginSetVariables(dataObj) {
     this.userName = dataObj.data.userName;
     this.userHandle = dataObj.handle;
     this.userID = dataObj.data.ID.low;
     this.userGUID = dataObj.data.GUID;
     this.permissions = dataObj.data.role;
+  }
 
+  loginUpdateLoginDiv() {
     this.info.textContent = `Logged in as ${this.userName} -- Role: ${this.permissions}`;
     this.info.classList.add('loggedIn');
     this.sessionInfo.textContent = `Session GUID: ${this.sessionGUID}`;
 
+    // Turn login button into logout button
+    this.loginButton.setAttribute("value", "Log Out");
+    this.loginButton.setAttribute("onclick", "app.widget('logout', this)");
+  }
+
+  loginUpdateItems() {
     for (let i in this.viewLoggedIn) { // Show all items that are visible when logged in
       this.viewLoggedIn[i].classList.remove("hidden");
-    }
-
-    for (let i in this.viewLoggedOut) { // Hide all items that are visible when logged out
-      this.viewLoggedOut[i].classList.add("hidden");
     }
 
     if (this.permissions == "Admin") { // If the user is an admin...
@@ -178,17 +208,14 @@ class widgetLogin {
         object[method](...args); // run the method in the object with the args.
       }
     }
+  }
 
-    // Turn login button into logout button
-    this.loginButton.setAttribute("value", "Log Out");
-    this.loginButton.setAttribute("onclick", "app.widget('logout', this)");
-
-    // Add the search buttons, regression header and debug header to the widgets list
+  loginUpdateWidgetList() {
     const headerList = document.getElementById("headerList"); // Get the list of widgets
     const minList = document.getElementById("minimizedList");
 
     let newEntry = null;
-    if (dataObj.login.permissions === "Admin") {
+    if (this.permissions === "Admin") {
       newEntry = document.createElement("li");
       headerList.appendChild(newEntry);
       newEntry.outerHTML =
@@ -494,26 +521,46 @@ class widgetLogin {
   }
 
   // Logs the user out: resets login information to null, resets the info paragraph to say "not logged in",
-  // then hides/reveals items and calls methods as appropriate on logout.
-  logout() {
-    for (let i in this.viewLoggedOut) { // Show all items that are visible when logged out
+  // then hides/reveals items and calls methods as appropriate on logout. Does not show/hide items if the user timed out
+  logout(timeout) {
+    // Show all items that are visible when logged out
+    for (let i in this.viewLoggedOut) {
       this.viewLoggedOut[i].classList.remove("hidden");
     }
 
-    for (let i in this.viewLoggedIn) { // Hide all items that are visible when logged in
+    if (timeout !== true) {
+      this.logoutUpdateItems();
+    }
+    else {
+      this.oldUserGUID = this.userGUID;
+    }
+    
+    this.logoutUpdateLoginDiv();
+    this.logoutSetVariables();
+    this.logoutEndSession();
+  }
+
+  logoutUpdateItems() {
+    // Hide all items that are visible when logged in
+    for (let i in this.viewLoggedIn) {
       this.viewLoggedIn[i].classList.add("hidden");
     }
 
-    for (let i in this.viewAdmin) { // Hide all items that are visible when logged in as an admin
+    // Hide all items that are visible when logged in as an admin
+    for (let i in this.viewAdmin) {
       this.viewAdmin[i].classList.add("hidden");
     }
 
-    for (let i in this.doOnLogout) { // Run all methods that run when a user logs out
+    // Run all methods that run when a user logs out
+    for (let i in this.doOnLogout) {
       const object = this.doOnLogout[i].object;
       const method = this.doOnLogout[i].method;
       const args = this.doOnLogout[i].args;
       object[method](...args);
     }
+
+    // Clear widgets
+    app.clearWidgets();
 
     // Clear favorites
     const faveRow = document.getElementById("faveNodes");
@@ -524,22 +571,29 @@ class widgetLogin {
               ondrop = "app.dropLink(this, event); app.widget('saveFavorite', this)">
             </td>`;
     app.faveNode = 1;
+  }
 
+  logoutUpdateLoginDiv() {
     this.loginButton.setAttribute("value", "Log In");
     this.loginButton.setAttribute("onclick", "app.widget('login', this)");
-
-    this.userID = null; // Log the user out
-    this.userGUID = null;
-    this.userName = null;
-    this.permissions = null;
-    this.info.textContent = `Not Logged In`;
-    this.info.classList.remove("loggedIn");
-    this.sessionInfo.textContent = '';
 
     this.nameInput.value = "";
     this.passwordInput.value = "";
 
+    this.info.textContent = `Not Logged In`;
+    this.info.classList.remove("loggedIn");
+    this.sessionInfo.textContent = '';
+  }
 
+  logoutSetVariables() {
+    this.userID = null;
+    this.userGUID = null;
+    this.userName = null;
+    this.permissions = null;
+    this.userHandle = null;
+  }
+
+  logoutEndSession() {
     const userRequest = app.REST.startUserRequest("Logout", this.loginDiv);
 
     const obj = {"userRequest":userRequest, "sessionGUID":this.sessionGUID, "browserGUID":this.browserGUID};

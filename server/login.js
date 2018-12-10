@@ -283,7 +283,7 @@ module.exports = class login {
 
     const query = `match (s:M_Session {M_GUID: "${dataObj.sessionGUID}"}), (b:M_Browser {M_GUID: "${dataObj.browserGUID}"})
     set s.endTime = "${now}" with s, b
-    create (s)-[r:Request {{userRequest:"${dataObj.userRequest}", serverRequest:"0", description:"Logging out",
+    create (s)-[r:Request {userRequest:"${dataObj.userRequest}", serverRequest:"0", description:"Logging out",
       startTime:"${now}", M_GUID:"${requestGUID}", M_CreateChangeLog:"${createChangeNumber}"}]->(b),
     (change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:"${requestGUID}", user_GUID:"upkeep",
       action:"create", label:"Request", itemType:"relation", M_GUID:"${this.uuid()}"}),

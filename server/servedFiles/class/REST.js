@@ -59,7 +59,6 @@ class REST {
 
   	// topWidget should now be the top-level widget containing the element, or null if the element doesn't exist or isn't in a widget
   	if (topWidget) {
-
   		const freezables = topWidget.getElementsByClassName('freezable');
   		for (let i = 0; i < freezables.length; i++) {
   			freezables[i].classList.add("requestRunning");
@@ -117,7 +116,7 @@ class REST {
         "description":text,
         "startTime":recordStartTime,
         "requestLength":request.length,
-        "request":JSON.parse(request)
+        "request":app.stringEscape(request)
       };
 
       if (app.login.sessionGUID && app.login.browserGUID) { // if a session is ongoing, record the request
@@ -187,7 +186,11 @@ class REST {
 
       if (response) {
         this.requestDetails[userRequest][serverRequest].responseLength = response.length;
-        this.requestDetails[userRequest][serverRequest].response = JSON.parse(response); // store this (unstringified) in object but not (for now) in DB
+
+        if (response !== "timeout") {
+          response = JSON.parse(response);
+        }
+        this.requestDetails[userRequest][serverRequest].response = response; // store this (unstringified) in object but not (for now) in DB
       }
 
   		// If a session is running, and the count is defined (meaning that this request was logged when it began),
@@ -262,8 +265,9 @@ class REST {
   	xhttp.onreadystatechange = function() {
   		if (this.readyState == 4 && this.status == 200) {
         if (this.responseText === "timeout") {
+          REST.stopProgress(DOMelement, update, this.responseText, userRequest, serverRequest);
           alert ("Sorry, your session has timed out.");
-          logout();
+          logout(true);
         }
         else {
     			const data = JSON.parse(this.responseText);
