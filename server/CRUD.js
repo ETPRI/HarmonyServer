@@ -2,10 +2,11 @@ module.exports = class CRUD {
   /*
   Just copies the uuid creator function, integrity module and driver from server.js
   */
-  constructor(uuid, integrity, driver) {
+  constructor(uuid, integrity, driver, stringEscape) {
     this.uuid = uuid;
     this.integrity = integrity;
     this.driver = driver;
+    this.stringEscape = stringEscape;
   }
 
   /* Calls whatever method the object requested, assuming that method exists.
@@ -61,23 +62,6 @@ module.exports = class CRUD {
     this.sendQuery(query, response);
   }
 
-  /* Deletes the node(s) with the given description. obj.query (renamed dataObj) is an object containing:
-  type: String. The type of node to delete (e.g. "people" or "topic")
-  id: number. The Neo4j ID of the node to delete.
-  properties: Object. Each key is a property to set, and its value is the value it should be given.
-              For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to delete myself.
-  */
-  deleteNode(obj, response) {
-    let dataObj = obj.query;
-
-    const strings = {ret:"", where:""};
-    const node = this.buildSearchString(dataObj, strings, "where", "node");
-
-    const query = `match (${node}) with node, node.M_GUID as id detach delete node
-                   create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", itemType:"node", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})`;
-    this.sendQuery(query, response);
-  }
-
   /* Finds the node(s) with the given description and makes any changes that were requested. obj.query (renamed dataObj)
   is an object containing:
   node: Object. Stores pretty much the same information as obj.query did in createNode and deleteNode:
@@ -102,7 +86,7 @@ module.exports = class CRUD {
   limit: Number. The maximum number of nodes to return.
 
   This method can be used to find a node by simply not requesting any changes.
-  */
+  */ /* dwb guid, list of attribute value pairs to change, return updated node */
   changeNode(obj, response) {
     let dataObj = obj.query;
     const strings = {ret:"", where:""};
@@ -230,7 +214,7 @@ module.exports = class CRUD {
       return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
       name: The name under which the node will be returned. If no name is given and return is not false,
             the node will be returned with the name "to".
-  */
+  */ /*dwb attribute value pairs, guid of start not guid of end node */
   createRelation(obj, response) {
     let dataObj = obj.query;
     const strings = {ret:"", where:""};
@@ -323,7 +307,7 @@ module.exports = class CRUD {
       return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
       name: The name under which the node will be returned. If no name is given and return is not false,
             the node will be returned with the name "to".
-  */
+  */  /* guid of relation */
   deleteRelation(obj, response) {
     let dataObj = obj.query;
     // These strings are stored in an object so they can be passed in and out of methods and updated
@@ -414,7 +398,7 @@ module.exports = class CRUD {
   limit: Number. The maximum number of patterns to return.
 
   This method can be used to find a relation by simply not requesting any changes.
-  */
+  */ /* same as change node,*/
   changeRelation(obj, response) {
     let dataObj = obj.query;
     // These strings are stored in an object so they can be passed in and out of methods and updated
@@ -577,7 +561,7 @@ module.exports = class CRUD {
   limit: Number. The maximum number of patterns to return.
 
   This method can be used to find an optional relation by simply not requesting any changes.
-  */
+  */ /* dwb get even if relations do not exist */
   findOptionalRelation(obj, response) {
     let dataObj = obj.query;
     // These strings are stored in an object so they can be passed in and out of methods and updated
@@ -650,152 +634,6 @@ module.exports = class CRUD {
     this.sendQuery(query, response);
   }
 
-  /* Finds the pattern (start)-[rel1]->(middle)-[rel2]-(end) where the nodes and relations fit the given descriptions,
-  and makes any requested changes. Obj.query (renamed dataObj) is an object containing:
-  start: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
-      type: String. The type of node to find (e.g. "people" or "topic")
-      id: number. The Neo4j ID of the node to find.
-      properties: Object. Each key is a property the node should have, and its value is the value it should have.
-                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
-      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
-      name: The name under which the node will be returned. If no name is given and return is not false,
-            the node will be returned with the name "start".
-
-  rel1: Object. Describes the optional relation, and contains:
-      type: String. The type of relation to create (e.g. "View" or "Permissions")
-      id: number. The Neo4j ID of the relation to delete.
-      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
-                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
-      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
-      name: The name under which the relation will be returned. If no name is given and return is not false,
-            the relation will be returned with the name "rel1".
-
-  middle: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
-      type: String. The type of node to find (e.g. "people" or "topic")
-      id: number. The Neo4j ID of the node to find.
-      properties: Object. Each key is a property the node should have, and its value is the value it should have.
-                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
-      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
-      name: The name under which the node will be returned. If no name is given and return is not false,
-            the node will be returned with the name "middle".
-
-  rel2: Object. Describes the optional relation, and contains:
-      type: String. The type of relation to create (e.g. "View" or "Permissions")
-      id: number. The Neo4j ID of the relation to delete.
-      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
-                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
-      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
-      name: The name under which the relation will be returned. If no name is given and return is not false,
-            the relation will be returned with the name "rel1".
-
-  end: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
-      type: String. The type of node to find (e.g. "people" or "topic")
-      id: number. The Neo4j ID of the node to find.
-      properties: Object. Each key is a property the node should have, and its value is the value it should have.
-                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
-      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
-      name: The name under which the node will be returned. If no name is given and return is not false,
-            the node will be returned with the name "end".
-
-  changes: Array of objects. Each object contains:
-      item: string. Which item should be changed ("start", "rel1", "middle", "rel2" or "end")
-      property: string. The name of the property to set
-      value: usually string. The value to set the property to
-
-  order: Array of objects. The fields to order the results by. Each object contains:
-      item: Which item the property to order on belongs to ("start", "rel1", "middle", "rel2" or "end")
-      name: The name of the property to order on (e.g. "nameLast" for people)
-      direction: The direction to order the results in. Defaults to ascending. If direction is set to "D", orders descending.
-
-  limit: Number. The maximum number of nodes to return.
-
-  This method can be used to find a pattern by simply not requesting any changes.
-  */
-  changeTwoRelPattern(obj, response) {
-    let dataObj = obj.query;
-    const strings = {ret:"", where:""};
-
-    // Build the string representing the "start" node - what goes in the first set of parentheses
-    let start = "";
-    if (dataObj.start) {
-      start = this.buildSearchString(dataObj.start, strings, "where", "start");
-    }
-    else {
-      start = this.buildSearchString({}, strings, "where", "start");
-    }
-
-    // Build the string representing the "middle" node - what goes in the second set of parentheses
-    let middle = "";
-    if (dataObj.middle) {
-      middle = this.buildSearchString(dataObj.middle, strings, "where", "middle");
-    }
-    else {
-      middle = this.buildSearchString({}, strings, "where", "middle");
-    }
-
-    // Build the string representing the "end" node - what goes in the third set of parentheses
-    let end = "";
-    if (dataObj.end) {
-      end = this.buildSearchString(dataObj.end, strings, "where", "end");
-    }
-    else {
-      end = this.buildSearchString({}, strings, "where", "end");
-    }
-
-    // Build the string representing the first relation - what goes in the first set of brackets
-    let rel1 = "";
-    if (dataObj.rel1) {
-      rel1 = this.buildSearchString(dataObj.rel1, strings, "where", "rel1");
-    }
-    else {
-      rel1 = this.buildSearchString({}, strings, "where", "rel1");
-    }
-
-    // Build the string representing the second relation - what goes in the second set of brackets
-    let rel2 = "";
-    if (dataObj.rel2) {
-      rel2 = this.buildSearchString(dataObj.rel2, strings, "where", "rel2");
-    }
-    else {
-      rel2 = this.buildSearchString({}, strings, "where", "rel2");
-    }
-
-
-    // Build the string representing the changes - what comes after the SET keyword
-    // dataObj.changes should be an array, each entry in which includes an item, a property, a value and possibly a string boolean
-    let changes ="";
-    let changeLogData = {"userGUID":obj.GUID, changeLogs:""};
-    if (dataObj.changes) {
-      changes = this.buildChangesString(dataObj.changes, changeLogData);
-    }
-
-    let changeLogs = "";
-    if (changeLogData.changeLogs.length > 0) {
-      changeLogs = `with start, middle, end, rel1, rel2 create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
-    }
-
-    if (strings.ret != "" && dataObj.distinct) {
-      strings.ret = `return distinct ${strings.ret}`;
-    }
-    else if (strings.ret != "") {
-      strings.ret = `return ${strings.ret}`;
-    }
-
-    let orderBy = "";
-    if (dataObj.order) {
-      orderBy = this.buildOrderString(dataObj.order);
-    }
-
-    let limit = "";
-    if (dataObj.limit) {
-      limit = `limit ${dataObj.limit}`;
-    }
-
-    const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where}
-                   ${changes} ${changeLogs} ${strings.ret} ${orderBy} ${limit}`;
-    this.sendQuery(query, response);
-  }
-
   /* A specific method for running searches for widgetTableNodes, which involve regexes and limits
   and can't be done with the more general methods. obj.query (renamed dataObj) contains:
   type: The type of node to search for (e.g. "people" or "topic")
@@ -817,16 +655,16 @@ module.exports = class CRUD {
     let dataObj = obj.query;
     let GUID = obj.GUID;
 
-    // Example search string:
-    // match (n:type) where n.numField < value and n.stringField =~(?i)value
-    // optional match (n)-[:Permissions]->(perm:M_LoginTable) return n, perm.name as permissions
-    // order by first, second desc, third limit 9
+    // Build the where clause, starting with trash relation(s) or lack thereof
+    let where = "";
 
-    // Notes: use *. for wildcard in string search. Only search for permissions if type = people.
-    // Regexes apparently have to be in a where clause, not in curly braces, so for simplicity, put all criteria in where clause.
+    if (dataObj.trashed) {
+      where = `where ${dataObj.name}.M_trash = "true" and `; // show nodes which the user has trashed
+    }
+    else {
+      where = `where ${dataObj.name}.M_trash = "false" and `; // show nodes the user has not trashed
+    }
 
-    // Build the where clause, starting with requirement that current user has not trashed this node
-    let where = `where a.M_GUID="${GUID}" and not (a)-[:Trash]->(${dataObj.name}) and `;
     if (dataObj.type === "all") {
       where += `not labels(${dataObj.name})[0] starts with "M_" and `; // Screen out metadata nodes
     }
@@ -934,7 +772,7 @@ module.exports = class CRUD {
       limit = `limit ${parseInt(dataObj.limit)}`;
     }
 
-    const query = `${match}, (a) ${where} ${permCheck} ${ownerCheck} ${withClause} ${linkCheck}
+    const query = `${match} ${where} ${permCheck} ${ownerCheck} ${withClause} ${linkCheck}
                    ${ret} ${orderBy} ${limit}`;
     this.sendQuery(query, response);
   }
@@ -943,7 +781,7 @@ module.exports = class CRUD {
     This is the simplest method here - obj.query is simply the name of the query to run ("nodes", "keysNode", etc.),
     and all the method does is look up the code to run that query and pass it to sendQuery. The only other
     parameter to note is obj.GUID, the GUID of the logged-in user, and that's only relevant when looking at their own trash.
-  */
+  */ /* dwb currenlty used in deveopler function */
   getMetaData(obj, response) {
     let queryName = obj.query;
     let GUID = obj.GUID;
@@ -953,8 +791,8 @@ module.exports = class CRUD {
       ,keysNode: "MATCH (p) unwind keys(p) as key RETURN  distinct key, labels(p) as label,  count(key) as count  order by key"
       ,relations: "MATCH (a)-[r]->(b) return distinct labels(a), type(r), labels(b), count(r) as count  order by type(r)"
       ,keysRelation: "match ()-[r]->() unwind keys(r) as key return distinct key, type(r), count(key) as count"
-      ,myTrash: `match (user)-[rel:Trash]->(node) where user.M_GUID = "${GUID}" return node.name as name, node.M_GUID as GUID, labels(node) as labels, rel.reason as reason, node`
-      ,allTrash: `match ()-[rel:Trash]->(node) return node.M_GUID as GUID, node.name as name, count(rel) as count`
+      // ,myTrash: `match (user)-[rel:Trash]->(node) where user.M_GUID = "${GUID}" return node.name as name, node.M_GUID as GUID, labels(node) as labels, rel.reason as reason, node`
+      // ,allTrash: `match ()-[rel:Trash]->(node) return node.M_GUID as GUID, node.name as name, count(rel) as count`
     }
 
     this.sendQuery(metadataQueries[queryName], response);
@@ -970,7 +808,7 @@ module.exports = class CRUD {
       max: Number. The number of the last changelog stored in the database when syncing began -
                     the search will be for changelogs with a number LESS THAN OR EQUAL TO this.
       limit: Number. The maximum number of changelogs to search for.
-  */
+  */  
   getChangeLogs(obj, response) {
     let where = `n.user_GUID = '${obj.query.GUID}'`;
     let ret = `n`;
@@ -1003,6 +841,173 @@ module.exports = class CRUD {
     }
 
     const query = `match (n:M_ChangeLog) where ${where} return ${ret} ${order} ${limit}`;
+    this.sendQuery(query, response);
+  }
+
+//-------------------------------Helper functions - do not call directly-------------------------------
+
+  /* Deletes the node(s) with the given description. obj.query (renamed dataObj) is an object containing:
+  type: String. The type of node to delete (e.g. "people" or "topic")
+  id: number. The Neo4j ID of the node to delete.
+  properties: Object. Each key is a property to set, and its value is the value it should be given.
+              For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to delete myself.
+  */
+  deleteNode(obj, response) {
+    let dataObj = obj.query;
+
+    const strings = {ret:"", where:""};
+    const node = this.buildSearchString(dataObj, strings, "where", "node");
+
+    const query = `match (${node}) with node, node.M_GUID as id detach delete node
+                   create (c:M_ChangeLog {number:${++this.integrity.changeCount}, action:"delete", itemType:"node", item_GUID:id, user_GUID:"${obj.GUID}", M_GUID:"${this.uuid()}"})`;
+    this.sendQuery(query, response);
+  }
+
+  /* Finds the pattern (start)-[rel1]->(middle)-[rel2]-(end) where the nodes and relations fit the given descriptions,
+  and makes any requested changes. Obj.query (renamed dataObj) is an object containing:
+  start: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "start".
+
+  rel1: Object. Describes the optional relation, and contains:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      id: number. The Neo4j ID of the relation to delete.
+      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel1".
+
+  middle: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "middle".
+
+  rel2: Object. Describes the optional relation, and contains:
+      type: String. The type of relation to create (e.g. "View" or "Permissions")
+      id: number. The Neo4j ID of the relation to delete.
+      properties: Object. Each key is a property that the relation should have, and its value is the value it should have.
+                  For instance, I might set properties to {"username":"Amy", "password":"password"} to match login credentials.
+      return: Boolean. Defaults to true. If false, the relation is not returned, cutting down on traffic.
+      name: The name under which the relation will be returned. If no name is given and return is not false,
+            the relation will be returned with the name "rel1".
+
+  end: Object. Describes the node to search for, and contains all the same fields as node in changeNode:
+      type: String. The type of node to find (e.g. "people" or "topic")
+      id: number. The Neo4j ID of the node to find.
+      properties: Object. Each key is a property the node should have, and its value is the value it should have.
+                  For instance, I might set properties to {"nameFirst":"Amy", "nameLast":"Fiori"} to find myself.
+      return: Boolean. Defaults to true. If false, the node is not returned, cutting down on traffic.
+      name: The name under which the node will be returned. If no name is given and return is not false,
+            the node will be returned with the name "end".
+
+  changes: Array of objects. Each object contains:
+      item: string. Which item should be changed ("start", "rel1", "middle", "rel2" or "end")
+      property: string. The name of the property to set
+      value: usually string. The value to set the property to
+
+  order: Array of objects. The fields to order the results by. Each object contains:
+      item: Which item the property to order on belongs to ("start", "rel1", "middle", "rel2" or "end")
+      name: The name of the property to order on (e.g. "nameLast" for people)
+      direction: The direction to order the results in. Defaults to ascending. If direction is set to "D", orders descending.
+
+  limit: Number. The maximum number of nodes to return.
+
+  This method can be used to find a pattern by simply not requesting any changes.
+
+  Not currently in use.
+  */ /* ()-[]->()-[]->() */
+  changeTwoRelPattern(obj, response) {
+    let dataObj = obj.query;
+    const strings = {ret:"", where:""};
+
+    // Build the string representing the "start" node - what goes in the first set of parentheses
+    let start = "";
+    if (dataObj.start) {
+      start = this.buildSearchString(dataObj.start, strings, "where", "start");
+    }
+    else {
+      start = this.buildSearchString({}, strings, "where", "start");
+    }
+
+    // Build the string representing the "middle" node - what goes in the second set of parentheses
+    let middle = "";
+    if (dataObj.middle) {
+      middle = this.buildSearchString(dataObj.middle, strings, "where", "middle");
+    }
+    else {
+      middle = this.buildSearchString({}, strings, "where", "middle");
+    }
+
+    // Build the string representing the "end" node - what goes in the third set of parentheses
+    let end = "";
+    if (dataObj.end) {
+      end = this.buildSearchString(dataObj.end, strings, "where", "end");
+    }
+    else {
+      end = this.buildSearchString({}, strings, "where", "end");
+    }
+
+    // Build the string representing the first relation - what goes in the first set of brackets
+    let rel1 = "";
+    if (dataObj.rel1) {
+      rel1 = this.buildSearchString(dataObj.rel1, strings, "where", "rel1");
+    }
+    else {
+      rel1 = this.buildSearchString({}, strings, "where", "rel1");
+    }
+
+    // Build the string representing the second relation - what goes in the second set of brackets
+    let rel2 = "";
+    if (dataObj.rel2) {
+      rel2 = this.buildSearchString(dataObj.rel2, strings, "where", "rel2");
+    }
+    else {
+      rel2 = this.buildSearchString({}, strings, "where", "rel2");
+    }
+
+
+    // Build the string representing the changes - what comes after the SET keyword
+    // dataObj.changes should be an array, each entry in which includes an item, a property, a value and possibly a string boolean
+    let changes ="";
+    let changeLogData = {"userGUID":obj.GUID, changeLogs:""};
+    if (dataObj.changes) {
+      changes = this.buildChangesString(dataObj.changes, changeLogData);
+    }
+
+    let changeLogs = "";
+    if (changeLogData.changeLogs.length > 0) {
+      changeLogs = `with start, middle, end, rel1, rel2 create ${changeLogData.changeLogs.slice(0, changeLogData.changeLogs.length - 2)}`;
+    }
+
+    if (strings.ret != "" && dataObj.distinct) {
+      strings.ret = `return distinct ${strings.ret}`;
+    }
+    else if (strings.ret != "") {
+      strings.ret = `return ${strings.ret}`;
+    }
+
+    let orderBy = "";
+    if (dataObj.order) {
+      orderBy = this.buildOrderString(dataObj.order);
+    }
+
+    let limit = "";
+    if (dataObj.limit) {
+      limit = `limit ${dataObj.limit}`;
+    }
+
+    const query = `match (${start})-[${rel1}]->(${middle})-[${rel2}]->(${end}) ${strings.where}
+                   ${changes} ${changeLogs} ${strings.ret} ${orderBy} ${limit}`;
     this.sendQuery(query, response);
   }
 
@@ -1061,9 +1066,13 @@ module.exports = class CRUD {
       for (let prop in obj.properties) { // go through all of them...
         // add to the changeLog string if necessary...
         if (changeLogData) {
+          let value = obj.properties[prop];
+          if (typeof value === "object") {
+            value = this.stringEscape(JSON.stringify(value));
+          }
           changeLogData.changeLogs += `(change${this.integrity.changeCount++}:M_ChangeLog {number:${this.integrity.changeCount},
                                        item_GUID:"${changeLogData.itemGUID}", itemType:"${itemType}", user_GUID:"${changeLogData.userGUID}",
-                                       action:"change", attribute:"${prop}", value:"${obj.properties[prop]}", M_GUID:"${this.uuid()}"}), `;
+                                       action:"change", attribute:"${prop}", value:"${value}", M_GUID:"${this.uuid()}"}), `;
         }
         if (props == "") { // and add each one to the props string.
           props = `${prop}: "${obj.properties[prop]}"`;
@@ -1181,7 +1190,7 @@ module.exports = class CRUD {
             obj[record.keys[i]]=record._fields[i];
           }
           result.push(obj);
-          console.log("%s/n",JSON.stringify(obj));
+          console.log("%s\n",JSON.stringify(obj));
         },
         onCompleted: function () {
           // Results should be an array of row objects. Each row object will contain one object per item to return.
@@ -1222,11 +1231,13 @@ module.exports = class CRUD {
               } // end if (the item has properties)
             } // end for (every item in the row)
           } // end for (every row)
-          response.end(JSON.stringify(result));
+          if (response) {
+            response.end(JSON.stringify(result));
+          }
           session.close();
         },
         onError: function (error) {
-          console.log(error);
+          console.log(`\n\nError:${error}\n\nRequest:${query}\n\n`);
         }
       });
     }

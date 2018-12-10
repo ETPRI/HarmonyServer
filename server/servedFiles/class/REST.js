@@ -133,7 +133,7 @@ class REST {
     	  const xhttp = new XMLHttpRequest();
 
     	  xhttp.open("POST","");
-    	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep"};
+    	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep", "token":app.login.sessionGUID};
     	  xhttp.send(JSON.stringify(queryObject));         // send request to server
     	} // end if (a session is ongoing)
     	return requestObj; // Info stopProgress will need later
@@ -211,7 +211,7 @@ class REST {
   			const xhttp = new XMLHttpRequest();
 
   			xhttp.open("POST","");
-  			const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "upkeep"};
+  			const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "upkeep", "token":app.login.sessionGUID};
   			xhttp.send(JSON.stringify(queryObject));         // send request to server
   		}
   	}
@@ -251,25 +251,32 @@ class REST {
 
     const serverRequest = this.serverRequests[userRequest]++; // store current value and increment
 
-  	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": GUID};
+  	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": GUID, "token":app.login.sessionGUID};
   	const request = JSON.stringify(queryObject);
 
   	const xhttp = new XMLHttpRequest();
   	const update = this.startProgress(DOMelement, description, request, userRequest, serverRequest);
   	const REST = this;
+    const logout = app.login.logout.bind(app.login);
 
   	xhttp.onreadystatechange = function() {
   		if (this.readyState == 4 && this.status == 200) {
-  			const data = JSON.parse(this.responseText);
-  			REST.stopProgress(DOMelement, update, this.responseText, userRequest, serverRequest);
+        if (this.responseText === "timeout") {
+          alert ("Sorry, your session has timed out.");
+          logout();
+        }
+        else {
+    			const data = JSON.parse(this.responseText);
+    			REST.stopProgress(DOMelement, update, this.responseText, userRequest, serverRequest);
 
-        // Put caching code here
+          // Put caching code here
 
-  			if (onComplete) {
-  				onComplete(data, userRequest, ...args);
-  			}
-  		}
-  	};
+    			if (onComplete) {
+    				onComplete(data, userRequest, ...args);
+    			}
+        }
+  		} // end if (readyState and status OK)
+  	}; // end anonymous function
 
   	xhttp.open("POST", url);
   	xhttp.send(request);         // send request to server

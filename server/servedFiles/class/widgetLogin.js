@@ -53,37 +53,39 @@ class widgetLogin {
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         // update page with result from server
-      app.login.loginDiv.innerHTML = this.responseText;
+        app.login.loginDiv.innerHTML = this.responseText;
 
-      // Set variables
-      app.login.nameInput = document.getElementById("userName");
-      app.login.passwordInput = document.getElementById("password");
-      app.login.loginButton = document.getElementById("loginButton");
-      app.login.info = document.getElementById("userInfo");
-      app.login.sessionInfo = document.getElementById("sessionInfo");
+        // Set variables
+        app.login.nameInput = document.getElementById("userName");
+        app.login.passwordInput = document.getElementById("password");
+        app.login.loginButton = document.getElementById("loginButton");
+        app.login.info = document.getElementById("userInfo");
+        app.login.sessionInfo = document.getElementById("sessionInfo");
 
-      const widgetList = document.getElementById("headerList"); // Get the list of widgets
-      const newEntry = document.createElement("li"); // Create an entry for the new widget
-      widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+        const widgetList = document.getElementById("headerList"); // Get the list of widgets
+        const newEntry = document.createElement("li"); // Create an entry for the new widget
+        widgetList.insertBefore(newEntry, widgetList.firstElementChild);
 
-      // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
-      newEntry.outerHTML = `<li idr="loginDiv" onclick="app.clickWidgetEntry(this)" draggable="true"
-      ondragstart="app.drag(this, event)" ondragover="event.preventDefault()" ondrop="app.drop(this, event)">
-      Login widget</li>`;
+        // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+        newEntry.outerHTML = `<li idr="loginDiv" onclick="app.clickWidgetEntry(this)" draggable="true"
+        ondragstart="app.drag(this, event)" ondragover="event.preventDefault()" ondrop="app.drop(this, event)">
+        Login widget</li>`;
 
-      // Create debug and regression headers and link to debug and regression buttons in login header
-      app.createDebug();
-      // const headerExists = (document.getElementById("regressionHeader") !== null);
-      if (document.getElementById("regressionHeader")) {
-        app.regression.buildRegressionHeader();
-        // app.login.viewAdmin.push(document.getElementById("debugButton"));
-        // app.login.viewAdmin.push(document.getElementById("regressionButton"));
+        // Create debug and regression headers and link to debug and regression buttons in login header
+        app.createDebug();
+        // const headerExists = (document.getElementById("regressionHeader") !== null);
+        if (document.getElementById("regressionHeader")) {
+          app.regression.buildRegressionHeader();
 
-        app.login.viewLoggedIn.push(document.getElementById('changeProfileButton'));
-      }
+          app.login.viewLoggedIn.push(document.getElementById('changeProfileButton'));
+        }
 
-      // The <p> containing the login fields is only visible when logged out
-      app.login.viewLoggedOut.push(app.login.nameInput.parentElement);
+        // The <p> containing the login fields is only visible when logged out
+        app.login.viewLoggedOut.push(app.login.nameInput.parentElement);
+
+        // The table of favorite nodes is only visible when logged in
+        this.faveTable = document.getElementById("faveTable");
+        app.login.viewLoggedIn.push(this.faveTable);
       }
     };
 
@@ -99,199 +101,129 @@ class widgetLogin {
   }
 
   login() {
-    const userRequest = app.REST.startUserRequest("Login", this.loginDiv);
-    const loginObj = {"login":this, "app":app, "userRequest":userRequest};
-    this.checkSession(loginObj) // This should check whether a session is running, create one and merge the browser if not, then resolve.
-      .then(this.tryLogin)
-      .then(this.loginComplete)
-      .then(function(loginSuccessful) {
-        if(loginSuccessful) {
-          this.getMetaData(loginObj)
-          .then(this.updateMetaData.bind(this));
-          this.getFavorites(loginObj)
-          .then(this.loadFavorites.bind(this));
-        }
-      }.bind(this));
+    const dataObj = {"login":this, "app":app};
+    this.tryLogin(dataObj)
+    .then(function(dataObj) {
+      this.sessionGUID = dataObj.data.sessionGUID;
+      this.browserGUID = dataObj.data.browserGUID;
+      if (dataObj.data.success === true) {
+        this.loginComplete(dataObj);
+        this.getMetaData(dataObj)
+        .then(this.updateMetaData.bind(this));
+        this.getFavorites(dataObj)
+        .then(this.loadFavorites.bind(this));
+      } // end if (login was successful)
+    }.bind(this));
   }
 
-  checkSession(loginObj) {
-    return new Promise(function(resolve, reject) {
-      if (!(loginObj.login.sessionGUID && loginObj.login.browserGUID)) {
-        loginObj.login.createSession(loginObj)
-        .then(loginObj.login.mergeBrowser)
-        .then(function() {
-          resolve(loginObj);
-        });
+  tryLogin(dataObj) {
+    return new Promise(function(resolve, reject){
+      dataObj.userRequest = dataObj.app.REST.startUserRequest("Login", dataObj.login.loginDiv);
+
+      const obj = {"userName":dataObj.login.nameInput.value, "password":dataObj.login.passwordInput.value, "userRequest":dataObj.userRequest, "browserName":navigator.userAgent};
+      if (dataObj.login.sessionGUID) {
+        obj.sessionGUID = dataObj.login.sessionGUID;
       }
-      else resolve(loginObj);
+      if (dataObj.login.browserGUID) {
+        obj.browserGUID = dataObj.login.browserGUID;
+      }
+
+    	const queryObject = {"server": "login", "function": "login", "query": obj};
+    	const request = JSON.stringify(queryObject);
+
+    	const xhttp = new XMLHttpRequest();
+
+    	xhttp.onreadystatechange = function() {
+    		if (this.readyState == 4 && this.status == 200) {
+    			dataObj.data = JSON.parse(this.responseText);
+          resolve(dataObj);
+    		}
+    	};
+
+    	xhttp.open("POST", "");
+    	xhttp.send(request);         // send request to server
     });
   }
 
-  createSession(loginObj) {
-    return new Promise(function(resolve, reject) {
-      // Create a session
-      const obj = {"type":"M_Session", "properties":{"startTime":Date.now()}};
+  loginComplete(dataObj) {
+    this.userName = dataObj.data.userName;
+    this.userHandle = dataObj.handle;
+    this.userID = dataObj.data.ID.low;
+    this.userGUID = dataObj.data.GUID;
+    this.permissions = dataObj.data.role;
 
-      app.REST.sendQuery(obj, 'createNode', "Creating Session", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data, userRequest) {
-        loginObj.login.sessionGUID = data[0].node.properties.M_GUID;
-        loginObj.login.requestCount = 0;
-        resolve(loginObj);
-      }); // end sendQuery call
-    }); // end promise constructor call
-  } // end method
+    this.info.textContent = `Logged in as ${this.userName} -- Role: ${this.permissions}`;
+    this.info.classList.add('loggedIn');
+    this.sessionInfo.textContent = `Session GUID: ${this.sessionGUID}`;
 
-  mergeBrowser(loginObj) {
-    return new Promise(function(resolve, reject) {
-      const obj = {};
-      obj.node = {"type":"M_Browser", "properties":{"name":navigator.userAgent}, "merge":true};
+    for (let i in this.viewLoggedIn) { // Show all items that are visible when logged in
+      this.viewLoggedIn[i].classList.remove("hidden");
+    }
 
-      loginObj.app.REST.sendQuery(obj, "changeNode", "Merging browser node", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data, userRequest) {
-        if (data.length === 1) {
-          loginObj.login.browserGUID = data[0].node.properties.M_GUID;
-          resolve();
-        }
-        else {
-          reject();
-        }
-      }); // end sendQuery call
-    }); // end promise constructor call
-  } // end method
+    for (let i in this.viewLoggedOut) { // Hide all items that are visible when logged out
+      this.viewLoggedOut[i].classList.add("hidden");
+    }
 
-  tryLogin(loginObj) {
-    return new Promise(function(resolve, reject) {
-      const name = loginObj.login.nameInput.value;
-      loginObj.login.userHandle = name;
-      const password = loginObj.login.passwordInput.value;
-
-      if (name == "" || password == "") { // If the user didn't enter a name and password, don't even bother trying to log in.
-        alert("Enter your name and password first!");
+    if (this.permissions == "Admin") { // If the user is an admin...
+      for (let i in this.viewAdmin) { // show all items that are visible when logged in as an admin
+        this.viewAdmin[i].classList.remove("hidden");
       }
-      else {
-        const obj = {};
-        obj.from = {"name":"user"};
-        obj.to = {"name":"table", "type":"M_LoginTable"};
-        obj.rel = {"type":"Permissions", "properties":{"username":name, "password":password}, "return":false};
+    }
 
-        loginObj.app.REST.sendQuery(obj, "changeRelation", "Logging In", loginObj.userRequest, loginObj.login.loginDiv, null, null, function(data) {
-          loginObj.data = data;
-          resolve(loginObj);
-        });
+    for (let i in this.doOnLogin) { // Run all methods that run when a user logs in
+      const object = this.doOnLogin[i].object;
+      const method = this.doOnLogin[i].method;
+      const args = this.doOnLogin[i].args;
+      if (object) { // Assuming the object that was provided still exists...
+        object[method](...args); // run the method in the object with the args.
       }
-    }); // end promise constructor call
-  }
+    }
 
-  loginComplete(loginObj) {
-    return new Promise(function(resolve, reject) {
-    	if (loginObj.data.length === 0) {
-    		alert ("No such node found");
-        loginObj.login.userHandle = null;
-        resolve(false);
-    	}
+    // Turn login button into logout button
+    this.loginButton.setAttribute("value", "Log Out");
+    this.loginButton.setAttribute("onclick", "app.widget('logout', this)");
 
-    	else if (loginObj.data.length === 1) { // Can actually log in
-        loginObj.login.userID = loginObj.data[0].user.id; // Log the user in
-        loginObj.login.userName = loginObj.data[0].user.properties.name;
-        loginObj.login.userGUID = loginObj.data[0].user.properties.M_GUID;
-        loginObj.login.permissions = loginObj.data[0].table.properties.name;
-    		loginObj.login.info.textContent = `Logged in as ${loginObj.login.userName} -- Role: ${loginObj.login.permissions}`;
-        loginObj.login.info.classList.add('loggedIn');
-        loginObj.login.sessionInfo.textContent = `Session GUID: ${loginObj.login.sessionGUID}`;
+    // Add the search buttons, regression header and debug header to the widgets list
+    const headerList = document.getElementById("headerList"); // Get the list of widgets
+    const minList = document.getElementById("minimizedList");
 
-        for (let i in loginObj.login.viewLoggedIn) { // Show all items that are visible when logged in
-          loginObj.login.viewLoggedIn[i].removeAttribute("hidden");
-        }
+    let newEntry = null;
+    if (dataObj.login.permissions === "Admin") {
+      newEntry = document.createElement("li");
+      headerList.appendChild(newEntry);
+      newEntry.outerHTML =
+      `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+      ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="regressionHeader"
+      class="hidden">Regression Testing</li>`;
 
-        for (let i in loginObj.login.viewLoggedOut) { // Hide all items that are visible when logged out
-          loginObj.login.viewLoggedOut[i].setAttribute("hidden", "true");
-        }
+      newEntry = document.createElement("li");
+      minimizedList.appendChild(newEntry);
+      newEntry.outerHTML =
+      `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+      ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="regressionHeader">
+      Regression Testing</li>`;
 
-        if (loginObj.login.permissions == "Admin") { // If the user is an admin...
-          for (let i in loginObj.login.viewAdmin) { // show all items that are visible when logged in as an admin
-            loginObj.login.viewAdmin[i].removeAttribute("hidden");
-          }
-        }
+      newEntry = document.createElement("li");
+      headerList.appendChild(newEntry);
+      newEntry.outerHTML =
+      `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+      ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="debugHeader"
+      class="hidden">Debugging</li>`;
 
-        for (let i in loginObj.login.doOnLogin) { // Run all methods that run when a user logs in
-          const object = loginObj.login.doOnLogin[i].object;
-          const method = loginObj.login.doOnLogin[i].method;
-          const args = loginObj.login.doOnLogin[i].args;
-          if (object) { // Assuming the object that was provided still exists...
-            object[method](...args); // run the method in the object with the args.
-          }
-        }
+      newEntry = document.createElement("li");
+      minimizedList.appendChild(newEntry);
+      newEntry.outerHTML =
+      `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+      ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="debugHeader">Debugging</li>`;
+    }
 
-        // Add "myTrash" to metadata options
-        const dropDown = document.getElementById("metaData");
-        const option = document.createElement('option');
-        option.setAttribute("idr", "myTrash");
-        option.setAttribute("value", "myTrash");
-        option.appendChild(document.createTextNode("My Trashed Nodes"));
-        dropDown.appendChild(option);
+    newEntry = document.createElement("li"); // Create an entry for the node search buttons
+    headerList.appendChild(newEntry);
 
-        // Turn login button into logout button
-        loginObj.login.loginButton.setAttribute("value", "Log Out");
-        loginObj.login.loginButton.setAttribute("onclick", "app.widget('logout', this)");
-
-        // Link the user to the session, then call the getMetaData function to search for metadata and the getFavorites function to get favorite nodes
-        const obj = {};
-        obj.from = {"properties":{"M_GUID":loginObj.login.userGUID}, "return":false};
-        obj.rel = {"type":"User", "return":false};
-        obj.to = {"type":"M_Session", "properties":{"M_GUID":loginObj.login.sessionGUID}, "return":false};
-
-        // Add the search buttons, regression header and debug header to the widgets list
-        const headerList = document.getElementById("headerList"); // Get the list of widgets
-        const minList = document.getElementById("minimizedList");
-
-        let newEntry = null;
-        if (loginObj.login.permissions === "Admin") {
-          newEntry = document.createElement("li");
-          headerList.appendChild(newEntry);
-          newEntry.outerHTML =
-          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="regressionHeader"
-          class="hidden">Regression Testing</li>`;
-
-          newEntry = document.createElement("li");
-          minimizedList.appendChild(newEntry);
-          newEntry.outerHTML =
-          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="regressionHeader">
-          Regression Testing</li>`;
-
-          newEntry = document.createElement("li");
-          headerList.appendChild(newEntry);
-          newEntry.outerHTML =
-          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="debugHeader"
-          class="hidden">Debugging</li>`;
-
-          newEntry = document.createElement("li");
-          minimizedList.appendChild(newEntry);
-          newEntry.outerHTML =
-          `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-          ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="debugHeader">Debugging</li>`;
-        }
-
-        newEntry = document.createElement("li"); // Create an entry for the node search buttons
-        headerList.appendChild(newEntry);
-
-        // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
-        newEntry.outerHTML =
-        `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-        ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="buttonsDiv">Node search buttons</li>`;
-
-        loginObj.app.REST.sendQuery(obj, "createRelation", "Linking session", loginObj.userRequest, loginObj.login.loginDiv, "upkeep", null, function() {
-          resolve(true);
-        }.bind(this));
-
-    	 // end elseif (can log in)
-      }
-      else {
-        loginObj.login.userHandle = null;
-    		alert ("Multiple such nodes found");
-        resolve(false);
-    	}
-    });
+    // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+    newEntry.outerHTML =
+    `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+    ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="buttonsDiv">Node search buttons</li>`;
   }
 
   getMetaData(loginObj) {
@@ -563,17 +495,17 @@ class widgetLogin {
 
   // Logs the user out: resets login information to null, resets the info paragraph to say "not logged in",
   // then hides/reveals items and calls methods as appropriate on logout.
-  logout(button) {
+  logout() {
     for (let i in this.viewLoggedOut) { // Show all items that are visible when logged out
-      this.viewLoggedOut[i].removeAttribute("hidden");
+      this.viewLoggedOut[i].classList.remove("hidden");
     }
 
     for (let i in this.viewLoggedIn) { // Hide all items that are visible when logged in
-      this.viewLoggedIn[i].setAttribute("hidden", "true");
+      this.viewLoggedIn[i].classList.add("hidden");
     }
 
     for (let i in this.viewAdmin) { // Hide all items that are visible when logged in as an admin
-      this.viewAdmin[i].setAttribute("hidden", "true");
+      this.viewAdmin[i].classList.add("hidden");
     }
 
     for (let i in this.doOnLogout) { // Run all methods that run when a user logs out
@@ -582,10 +514,6 @@ class widgetLogin {
       const args = this.doOnLogout[i].args;
       object[method](...args);
     }
-
-    // Remove the last option, which should be "myTrash", from metadata options
-    const dropDown = document.getElementById("metaData");
-    dropDown.remove(dropDown.length-1);
 
     // Clear favorites
     const faveRow = document.getElementById("faveNodes");
@@ -611,24 +539,17 @@ class widgetLogin {
     this.nameInput.value = "";
     this.passwordInput.value = "";
 
-    let userRequest = app.REST.startUserRequest("Logout", this.loginDiv);
 
-    const obj = {};
-    obj.node = {"type":"M_Session", "properties":{"M_GUID":this.sessionGUID}, "return":false};
-    obj.changes = [{"property":"endTime", "value":Date.now()},];
+    const userRequest = app.REST.startUserRequest("Logout", this.loginDiv);
 
-    app.REST.sendQuery(obj, "changeNode", "Ending session", userRequest, this.loginDiv);
+    const obj = {"userRequest":userRequest, "sessionGUID":this.sessionGUID, "browserGUID":this.browserGUID};
 
-    this.sessionGUID = null;
-    this.browserGUID = null;
-    this.requestCount = 0;
+    const queryObject = {"server": "login", "function": "logout", "query": obj};
+    const request = JSON.stringify(queryObject);
 
-    // Log
-    const obj2 = {};
-    obj2.id = "loginDiv";
-    obj2.idr = "loginButton";
-    obj2.action = "click";
-    app.regression.log(JSON.stringify(obj2));
-    app.regression.record(obj2);
+    const xhttp = new XMLHttpRequest();
+
+    xhttp.open("POST", "");
+    xhttp.send(request);         // send request to server
   }
 }

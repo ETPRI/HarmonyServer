@@ -125,7 +125,16 @@ class widgetTableNodes {
       }
     }
 
-    obj.owner = this.buildOwner();
+    let ownedCheck = app.domFunctions.getChildByIdr(this.widgetDOM, "owned");
+    if (ownedCheck.checked) {
+      obj.owner = app.login.userGUID;
+    }
+
+    let trashCheck = app.domFunctions.getChildByIdr(this.widgetDOM, "trashed");
+    if (trashCheck.checked) {
+      obj.trashed = true;
+    }
+
 
     if (obj.type == "people") {
       const dropDown = app.domFunctions.getChildByIdr(this.widgetDOM, "permissionsDropdown");
@@ -165,14 +174,6 @@ class widgetTableNodes {
     return where;
   }
 
-  buildOwner() {
-    let ownedCheck = app.domFunctions.getChildByIdr(this.widgetDOM, "owned");
-    if (ownedCheck.checked) {
-      return app.login.userGUID;
-    }
-    else return null;
-  }
-
   ////////////////////////////////////////////////////////////////////
   buildHeader() {
     // build header
@@ -191,6 +192,7 @@ class widgetTableNodes {
     <input type="button" value="Reset" idr="clearButton" onclick="app.widget('reset', this)">
     # To Display <input value ="${this.limitDefault}" idr="limit" style="width: 20px;" onblur = "app.regression.logText(this)" onkeydown="app.widget('searchOnEnter', this, event)">
     <input type="checkbox" idr="owned"> Owned
+    <input type="checkbox" idr="trashed"> Trashed
     ${buttonHTML}${addText}
     </span>
     <input type="button" class="hidden" idr="cancelButton" value="Cancel" onclick="app.stopProgress(this)">

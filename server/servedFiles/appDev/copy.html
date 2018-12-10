@@ -1,5 +1,15 @@
 <html>
 <script src="copy.js"></script>
+<b>Make a metadata query</b>
+<select id="metaData" onchange="app.menuDBstats(this); this.selectedIndex = 0">
+  <option value="">MetaData</option>
+  <option value="nodes">Nodes</option>
+  <option value="keysNode">Node Keys</option>
+  <option value="relations">Relations</option>
+  <option value="keysRelation">Relation Keys</option>
+</select>
+
+
 <b>Copy from the logged-in server to a database on another server</b><br>
 Notes: No need to enter "http" - that is added by the program.<br>
 If entering an IP address, DO include the port number (unless it's a default port).<br>

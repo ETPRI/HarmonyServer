@@ -53,14 +53,15 @@ buildApp() {
 
 	// Make the workspace and table header visible only when a user is logged in, and remove all widgets when the user logs out.
 	this.workSpace = document.getElementById("workSpace");
-	this.workSpace.setAttribute("hidden", true);
+	this.workSpace.classList.add("hidden");
 	this.login.viewLoggedIn.push(this.workSpace);
 	this.tableHeader = document.getElementById("tableHeader");
-	this.tableHeader.setAttribute("hidden", true);
+	this.tableHeader.classList.add("hidden");
 	this.login.viewLoggedIn.push(this.tableHeader);
 	this.adminButtons = document.getElementById("adminButtons");
-	this.adminButtons.setAttribute("hidden", true);
 	this.login.viewAdmin.push(this.adminButtons);
+	this.buttonsDiv = document.getElementById("buttonsDiv");
+	this.login.viewLoggedIn.push(this.buttonsDiv);
 
 	const obj = {};
 	obj.object = this;
@@ -215,38 +216,6 @@ keyPressed(evnt) {
 	}
 }
 
-// Makes the debug header visible, and changes the button used to show it into a "Hide Debug" button
-// showDebug(button) {
-// 	const debugHeader = document.getElementById('debugHeader');
-// 	debugHeader.classList.remove("hidden");
-// 	button.setAttribute("value", "Hide Debug Menu");
-// 	button.setAttribute("onclick", "app.hideDebug(this)");
-// }
-//
-// // Makes the debug header invisible, and changes the button used to hide it into a "Show Debug" button
-// hideDebug(button) {
-// 	const debugHeader = document.getElementById('debugHeader');
-// 	debugHeader.classList.add("hidden");
-// 	button.setAttribute("value", "Show Debug Menu");
-// 	button.setAttribute("onclick", "app.showDebug(this)");
-// }
-//
-// // Makes the regression header visible, and changes the button used to show it into a "Hide Regression" button
-// showRegression(button) {
-// 	const regressionHeader = document.getElementById('regressionHeader');
-// 	regressionHeader.removeAttribute("hidden");
-// 	button.setAttribute("value", "Hide Regression Menu");
-// 	button.setAttribute("onclick", "app.hideRegression(this)");
-// }
-//
-// // Makes the regression header invisible, and changes the button used to show it into a "Show Regression" button
-// hideRegression(button) {
-// 	const regressionHeader = document.getElementById('regressionHeader');
-// 	regressionHeader.setAttribute("hidden", "true");
-// 	button.setAttribute("value", "Show Regression Menu");
-// 	button.setAttribute("onclick", "app.showRegression(this)");
-// }
-
 // Removes all widgets other than the login div and regression header from both the screen and the widgets array
 // To add: Also clear the widget list of everything except the login widget, and minimize the debug and regression headers
 clearWidgets() {
@@ -318,7 +287,6 @@ createDebug() {
 					<option value="keysRelation">Relation Keys</option>
 					<option value="dataBrowser">Data Browser</option>
 					<option value="sync">Sync with remote server</option>
-					<option value="allTrash">All Trashed Nodes</option>
 				</select>
 				<input type="button" id="LogButton" value="Start Logging" onclick="app.regression.logToggle(this)">
 				<input type="button" id="Clear" value="Clear ALL" onclick="app.regression.clearAll(app)">
@@ -402,7 +370,7 @@ menuNodes(name, criteria) {
 	}
 }
 
-// displays meta-data on nodes, keysNodes, relations, keysRelations, all nodes that have been trashed, or all nodes the user has trashed.
+// displays meta-data on nodes, keysNodes, relations, and keysRelations
 // Also creates databrowsers to explore the DB and allows syncing with a remote DB.
 menuDBstats(dropDown){
 	// Get the value from the metadata dropdown.
@@ -976,7 +944,7 @@ startProgress(DOMelement, text, length) {
 	  const xhttp = new XMLHttpRequest();
 
 	  xhttp.open("POST","");
-	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep"};
+	  const queryObject = {"server": "CRUD", "function": "createRelation", "query": obj, "GUID": "upkeep", "token":"upkeep"};
 	  xhttp.send(JSON.stringify(queryObject));         // send request to server
 	} // end if (a session is ongoing)
 	return requestObj; // Info stopProgress will need later
@@ -1043,7 +1011,7 @@ stopProgress(DOMelement, obj, length) {
 			const xhttp = new XMLHttpRequest();
 
 			xhttp.open("POST","");
-			const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "upkeep"};
+			const queryObject = {"server": "CRUD", "function": "changeRelation", "query": obj, "GUID": "upkeep", "token":"upkeep"};
 			xhttp.send(JSON.stringify(queryObject));         // send request to server
 		}
 	}
@@ -1326,20 +1294,27 @@ sendQuery(obj, CRUD, description, DOMelement, GUID, url, onComplete, ...args) {
 		url = "";
 	}
 
-	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": GUID};
+	const queryObject = {"server": "CRUD", "function": CRUD, "query": obj, "GUID": GUID, "token":"upkeep"};
 	const request = JSON.stringify(queryObject);
 
 	const xhttp = new XMLHttpRequest();
 	const update = this.startProgress(DOMelement, description, request.length);
 	const app = this;
+	const logout = this.login.logout.bind(this.login);
 
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
-			const responseSize = this.responseText.length;
-			const data = JSON.parse(this.responseText);
-			app.stopProgress(DOMelement, update, responseSize);
-			if (onComplete) {
-				onComplete(data, ...args);
+			if (this.responseText === "timeout") {
+				alert ("Sorry, your session has timed out.");
+				logout();
+			}
+			else {
+				const responseSize = this.responseText.length;
+				const data = JSON.parse(this.responseText);
+				app.stopProgress(DOMelement, update, responseSize);
+				if (onComplete) {
+					onComplete(data, ...args);
+				}
 			}
 		}
 	};

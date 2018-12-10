@@ -165,111 +165,93 @@ queryObjectsInit() {
     	 ,"type(r)": {label: "-Relation->"  , comment: "Like a table in RDBS"}
     	 ,"count":   {label: "Count"        , comment: ""}
      }}
-
-
-  this.queryObjects.myTrash = {
-     nameTable: "myTrash"
-     ,fields: {
-         "GUID":     {label: "GUID",   att: `onclick="app.widget('edit',this)"`}
-       ,"name":   {label:"Name"}
-     	 ,"labels": {label: "Labels"}
-     	 ,"reason":  {label: "Reason"}
-      }}
-
-  this.queryObjects.allTrash = {
-     nameTable: "allTrash"
-     ,fields: {
-         "GUID":     {label: "GUID",   att: `onclick="app.widget('showReasons',this)"`}
-       ,"name":   {label:"Name"}
-     	 ,"count": {label: "Times trashed"}
-      }}
 } /// end method
 
-edit(element){
-  const GUID = element.innerHTML;
-  new widgetNode(this.widgetID, element.nextElementSibling.nextElementSibling.innerText, GUID);
-
-  const obj={};
-  obj.id=app.domFunctions.widgetGetId(element);
-  obj.idr=element.getAttribute("idr");
-  obj.action="click";
-  app.regression.log(JSON.stringify(obj));
-  app.regression.record(obj);
-}
-
-showReasons(element) {
-  const GUID = element.innerHTML;
-  const obj = {};
-  obj.from = {"name":"user"};
-  obj.to = {"name":"node", "properties":{"M_GUID":GUID}};
-  obj.rel = {"type":"Trash"};
-
-  const callerID = app.domFunctions.widgetGetId(element);
-
-  const userRequest = app.REST.startUserRequest("Searching for details", this.widgetDOM);
-
-  app.REST.sendQuery(obj, "changeRelation", "Searching for details", userRequest, this.widgetDOM, null, null, this.buildReasons.bind(this), callerID);
-}
-
-buildReasons(data, userRequest, callerID) {
-  if (data) { // assuming some trash relations were found
-    let ID = app.idCounter;
-    let html = app.widgetHeader('trashTable');
-    html += `<table><thead>
-    <tr><th colspan=3>${data[0].node.properties.name} (node#${data[0].node.id})</th></tr>
-    <tr><th>UserID</th><th>User Name</th><th>Reason for trashing</th></tr></thead><tbody>`
-
-    for (let i=0; i<data.length; i++) {
-      html += `<tr><td>${data[i].user.id}</td><td>${data[i].user.properties.name}</td><td>${data[i].rel.properties.reason}</td></tr>`
-    }
-
-    html+='</tbody></table></div>';
-
-    // add
-
-    const parent = document.getElementById('widgets');
-    let caller = document.getElementById(callerID);
-    const newWidget = document.createElement('div'); // create placeholder div
-
-    // I want to insert the new widget before the TOP-LEVEL widget that called it, if that widget is in the widgets div.
-    // The ID passed in is that of the widget that called it, but it may be in another widget. So go up the chain until
-    // either caller's parent is the widgets div (meaning that caller is a top-level widget in the widgets div), or caller
-    // has no parent (meaning that the original caller was NOT in the widgets div, since no ancestor in that div was found).
-    while (caller && caller.parentElement && caller.parentElement !== parent) {
-      caller = caller.parentElement;
-    }
-
-    if (caller && caller.parentElement == parent) { // If the caller (or its parent widget) is, itself, in the widgets div
-      parent.insertBefore(newWidget, caller); // Insert the new div before the caller
-    }
-    else {
-      parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
-    }
-
-    newWidget.outerHTML = html; // replace placeholder with the div that was just written
-
-    const widgetList = document.getElementById("widgetList"); // Get the list of widgets
-    let callerEntry = null;
-    if (caller) {
-      callerEntry = app.domFunctions.getChildByIdr(widgetList, caller.getAttribute("id"));
-    } // Find the entry on that list for the caller, assuming the caller and its entry exist
-
-    const newEntry = document.createElement("li"); // Create an entry for the new widget
-    if (callerEntry) { // If the caller's entry exists, the new widget's entry goes above it (like the new widget goes above the caller)
-      widgetList.insertBefore(newEntry, callerEntry);
-    }
-    else { // Otherwise, the new widget's entry goes at the top, like the new widget does
-      widgetList.insertBefore(newEntry, widgetList.firstElementChild);
-    }
-
-    // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
-    let name = `Unnamed ${data[0].node.labels[0]} node`;
-    if (app.getProp(data, 0, "node", "properties", "name")) {
-      name = `${data[0].node.properties.name}: ${data[0].node.labels[0]}`;
-    }
-    newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
-    ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${ID}">
-    Reasons for trashing node: <span idr="name">${name}</span></li>`;
-  }
-}
+// edit(element){
+//   const GUID = element.innerHTML;
+//   new widgetNode(this.widgetID, element.nextElementSibling.nextElementSibling.innerText, GUID);
+//
+//   const obj={};
+//   obj.id=app.domFunctions.widgetGetId(element);
+//   obj.idr=element.getAttribute("idr");
+//   obj.action="click";
+//   app.regression.log(JSON.stringify(obj));
+//   app.regression.record(obj);
+// }
+//
+// showReasons(element) {
+//   const GUID = element.innerHTML;
+//   const obj = {};
+//   obj.from = {"name":"user"};
+//   obj.to = {"name":"node", "properties":{"M_GUID":GUID}};
+//   obj.rel = {"type":"Trash"};
+//
+//   const callerID = app.domFunctions.widgetGetId(element);
+//
+//   const userRequest = app.REST.startUserRequest("Searching for details", this.widgetDOM);
+//
+//   app.REST.sendQuery(obj, "changeRelation", "Searching for details", userRequest, this.widgetDOM, null, null, this.buildReasons.bind(this), callerID);
+// }
+//
+// buildReasons(data, userRequest, callerID) {
+//   if (data) { // assuming some trash relations were found
+//     let ID = app.idCounter;
+//     let html = app.widgetHeader('trashTable');
+//     html += `<table><thead>
+//     <tr><th colspan=3>${data[0].node.properties.name} (node#${data[0].node.id})</th></tr>
+//     <tr><th>UserID</th><th>User Name</th><th>Reason for trashing</th></tr></thead><tbody>`
+//
+//     for (let i=0; i<data.length; i++) {
+//       html += `<tr><td>${data[i].user.id}</td><td>${data[i].user.properties.name}</td><td>${data[i].rel.properties.reason}</td></tr>`
+//     }
+//
+//     html+='</tbody></table></div>';
+//
+//     // add
+//
+//     const parent = document.getElementById('widgets');
+//     let caller = document.getElementById(callerID);
+//     const newWidget = document.createElement('div'); // create placeholder div
+//
+//     // I want to insert the new widget before the TOP-LEVEL widget that called it, if that widget is in the widgets div.
+//     // The ID passed in is that of the widget that called it, but it may be in another widget. So go up the chain until
+//     // either caller's parent is the widgets div (meaning that caller is a top-level widget in the widgets div), or caller
+//     // has no parent (meaning that the original caller was NOT in the widgets div, since no ancestor in that div was found).
+//     while (caller && caller.parentElement && caller.parentElement !== parent) {
+//       caller = caller.parentElement;
+//     }
+//
+//     if (caller && caller.parentElement == parent) { // If the caller (or its parent widget) is, itself, in the widgets div
+//       parent.insertBefore(newWidget, caller); // Insert the new div before the caller
+//     }
+//     else {
+//       parent.insertBefore(newWidget, parent.firstElementChild) // Insert the new div at the top of the widgets div
+//     }
+//
+//     newWidget.outerHTML = html; // replace placeholder with the div that was just written
+//
+//     const widgetList = document.getElementById("widgetList"); // Get the list of widgets
+//     let callerEntry = null;
+//     if (caller) {
+//       callerEntry = app.domFunctions.getChildByIdr(widgetList, caller.getAttribute("id"));
+//     } // Find the entry on that list for the caller, assuming the caller and its entry exist
+//
+//     const newEntry = document.createElement("li"); // Create an entry for the new widget
+//     if (callerEntry) { // If the caller's entry exists, the new widget's entry goes above it (like the new widget goes above the caller)
+//       widgetList.insertBefore(newEntry, callerEntry);
+//     }
+//     else { // Otherwise, the new widget's entry goes at the top, like the new widget does
+//       widgetList.insertBefore(newEntry, widgetList.firstElementChild);
+//     }
+//
+//     // Set up the new widget's entry - it should describe the widget for now, and later we'll add listeners
+//     let name = `Unnamed ${data[0].node.labels[0]} node`;
+//     if (app.getProp(data, 0, "node", "properties", "name")) {
+//       name = `${data[0].node.properties.name}: ${data[0].node.labels[0]}`;
+//     }
+//     newEntry.outerHTML = `<li onclick="app.clickWidgetEntry(this)" draggable="true" ondragstart="app.drag(this, event)"
+//     ondragover="event.preventDefault()" ondrop="app.drop(this, event)" idr="${ID}">
+//     Reasons for trashing node: <span idr="name">${name}</span></li>`;
+//   }
+// }
 } ////////////////////////////////////////////////// end class

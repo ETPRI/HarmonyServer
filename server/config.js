@@ -3,7 +3,7 @@ var config = {};
 config.port = 8081;   // 8080 -> production, 8081 -> beta
 
 // where files are downloaded, their is a direcgtory for each GUID user
-config.servedDirecrtory    = "servedFiles";  // all served files are subdirectory is this
+config.servedDirectory    = "servedFiles";  // all served files are subdirectory in this
 config.defaultAppDirectory = "/appHarmony";        // subdirectory that defaul app is servered from
                                           // assume app.html lives there
 

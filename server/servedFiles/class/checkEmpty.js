@@ -5,7 +5,7 @@ class checkEmpty {
   }
 
   // Runs a query to see all nodes in the database, then passes the results to verifyEmpty.
-  checkEmpty() {
+  checkEmpty(button) {
     const obj = {};
     obj.node = {};
 
