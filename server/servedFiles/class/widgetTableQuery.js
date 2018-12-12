@@ -55,24 +55,26 @@ queryComplete(data) {
   app.activeWidget = document.getElementById(this.widgetID);
   document.getElementById(this.widgetID).classList.add("activeWidget");
 
-  // log
-  const obj = {};
-  obj.id = this.dropdownId;
-  obj.value = this.queryObjectName;
-  obj.action = "click";
-  obj.data = data;
-  app.stripIDs(obj.data);
+  if (app.regression) {
+    // log
+    const obj = {};
+    obj.id = this.dropdownId;
+    obj.value = this.queryObjectName;
+    obj.action = "click";
+    obj.data = data;
+    app.stripIDs(obj.data);
 
-  // I want to do this part here, rather than adding it to stripIDs, because while a NODE's "identity" field is pretty much always going to be its Neo4j ID,
-  // I worry that a field we specifically asked to have returned, and which we happened to name "ID", might at some point be something we want to record.
-  // I think that may be better to remove on a case-by-case basis.
-  for (let i = 0; i < obj.data.length; i++) {
-    if ('id' in obj.data[i]) {
-      delete obj.data[i].id;
+    // I want to do this part here, rather than adding it to stripIDs, because while a NODE's "identity" field is pretty much always going to be its Neo4j ID,
+    // I worry that a field we specifically asked to have returned, and which we happened to name "ID", might at some point be something we want to record.
+    // I think that may be better to remove on a case-by-case basis.
+    for (let i = 0; i < obj.data.length; i++) {
+      if ('id' in obj.data[i]) {
+        delete obj.data[i].id;
+      }
     }
+    app.regression.log(JSON.stringify(obj));
+    app.regression.record(obj);
   }
-  app.regression.log(JSON.stringify(obj));
-  app.regression.record(obj);
 }
 
 ////////////////////////////////////////////////////////////////////

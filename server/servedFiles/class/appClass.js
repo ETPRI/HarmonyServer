@@ -52,16 +52,23 @@ buildApp() {
 	this.widgets.loginDiv = this.login;
 
 	// Make the workspace and table header visible only when a user is logged in, and remove all widgets when the user logs out.
-	this.workSpace = document.getElementById("workSpace");
-	this.workSpace.classList.add("hidden");
-	this.login.viewLoggedIn.push(this.workSpace);
-	this.tableHeader = document.getElementById("tableHeader");
-	this.tableHeader.classList.add("hidden");
-	this.login.viewLoggedIn.push(this.tableHeader);
-	this.adminButtons = document.getElementById("adminButtons");
-	this.login.viewAdmin.push(this.adminButtons);
-	this.buttonsDiv = document.getElementById("buttonsDiv");
-	this.login.viewLoggedIn.push(this.buttonsDiv);
+	const viewLoggedInIDs = ["workSpace", "tableHeader", "buttonsDiv"];
+	for (let i = 0; i < viewLoggedInIDs.length; i++) {
+		if (document.getElementById(viewLoggedInIDs[i])) {
+			this[viewLoggedInIDs[i]] = document.getElementById(viewLoggedInIDs[i]);
+			this[viewLoggedInIDs[i]].classList.add("hidden");
+			this.login.viewLoggedIn.push(this[viewLoggedInIDs[i]]);
+		}
+	}
+
+	const viewAdminIDs = ["adminButtons"];
+	for (let i = 0; i < viewAdminIDs.length; i++) {
+		if (document.getElementById(viewAdminIDs[i])) {
+			this[viewAdminIDs[i]] = document.getElementById(viewAdminIDs[i]);
+			this[viewAdminIDs[i]].classList.add("hidden");
+			this.login.viewAdmin.push(this[viewAdminIDs[i]]);
+		}
+	}
 
 	document.addEventListener("keydown", this.keyPressed.bind(this));
 
@@ -219,14 +226,14 @@ clearWidgets() {
 	for (let id in this.widgets) { // For every widget...
 		if (id != "loginDiv" && id != "regressionHeader") { // (except for the login div and regression header)...
 
-			// delete  html2 from page
+			// delete  html2 from page, assuming it exists and isn't inside a protected widget
 			const widget = document.getElementById(id);
-			if (widget && !(login.contains(widget)) && !(regHeader.contains(widget))) {
+			if (widget && !(login && login.contains(widget)) && !(regHeader && regHeader.contains(widget))) {
 				widget.parentElement.removeChild(widget);
 			}
 
-			// Remove widget objects
-			if (!widget || (!(login.contains(widget)) && !(regHeader.contains(widget)))) {
+			// Remove widget objects from widgets object, unless the DOM element still exists AND is in a protected widget
+			if (!widget || (!(login && login.contains(widget)) && !(regHeader && regHeader.contains(widget)))) {
 				delete this.widgets[id];
 			}
 		}
@@ -512,7 +519,7 @@ widgetClose(widgetElement) {
 		}
 		delete this.widgets[id]; // Delete the original widget.
 
-		while (children.length >0) {
+		while (children.length > 0) {
 			const child = children.pop(); // Grab a child widget...
 			const widget = this.widgets[child];
 			if (widget.containedWidgets) { // Get the IDs of all widgets contained within it...
@@ -527,20 +534,24 @@ widgetClose(widgetElement) {
 		widget.parentElement.removeChild(widget);
 
 		// Remove widget from widget list on page
-		const widgetList = document.getElementById("widgetList");
-		const entry = app.domFunctions.getChildByIdr(widgetList, id);
-		if (entry) {
-			widgetList.removeChild(entry);
+		const widgetList = document.getElementById("widgetsList");
+		if (widgetsList) {
+			const entry = app.domFunctions.getChildByIdr(widgetList, id);
+			if (entry) {
+				widgetList.removeChild(entry);
+			}
 		}
 	}
 
 	// log
-	const obj = {};
-	obj.id = id;
-	obj.idr = widgetElement.getAttribute("idr");
-	obj.action = "click";
-	this.regression.log(JSON.stringify(obj));
-	this.regression.record(obj);
+	if (this.regression) {
+		const obj = {};
+		obj.id = id;
+		obj.idr = widgetElement.getAttribute("idr");
+		obj.action = "click";
+		this.regression.log(JSON.stringify(obj));
+		this.regression.record(obj);
+	}
 }
 
 widgetFullScreen(widgetElement) {

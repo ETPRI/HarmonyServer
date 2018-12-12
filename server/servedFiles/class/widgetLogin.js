@@ -49,18 +49,19 @@ class widgetLogin {
     // the loginDiv functions as a widget so app.widget can work with it. Over in app, it's also added to the widgets array.
     this.loginDiv.setAttribute("class", "widget");
     const xhttp = new XMLHttpRequest();
+    const login = this;
 
     xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
         // update page with result from server
-        app.login.loginDiv.innerHTML = this.responseText;
+        login.loginDiv.innerHTML = this.responseText;
 
         // Set variables
-        app.login.nameInput = document.getElementById("userName");
-        app.login.passwordInput = document.getElementById("password");
-        app.login.loginButton = document.getElementById("loginButton");
-        app.login.info = document.getElementById("userInfo");
-        app.login.sessionInfo = document.getElementById("sessionInfo");
+        login.nameInput = document.getElementById("userName");
+        login.passwordInput = document.getElementById("password");
+        login.loginButton = document.getElementById("loginButton");
+        login.info = document.getElementById("userInfo");
+        login.sessionInfo = document.getElementById("sessionInfo");
 
         const widgetList = document.getElementById("headerList"); // Get the list of widgets
         const newEntry = document.createElement("li"); // Create an entry for the new widget
@@ -72,24 +73,35 @@ class widgetLogin {
         Login widget</li>`;
 
         // Create debug and regression headers and link to debug and regression buttons in login header
-        app.createDebug();
-        // const headerExists = (document.getElementById("regressionHeader") !== null);
+        if (document.getElementById("debugHeader")) {
+          app.createDebug();
+        }
+
         if (document.getElementById("regressionHeader")) {
           app.regression.buildRegressionHeader();
+        }
 
-          app.login.viewLoggedIn.push(document.getElementById('changeProfileButton'));
+        let profileButton = document.getElementById('changeProfileButton');
+        if (profileButton) {
+          login.viewLoggedIn.push(profileButton);
         }
 
         // The <p> containing the login fields is only visible when logged out
-        app.login.viewLoggedOut.push(app.login.nameInput.parentElement);
+        login.viewLoggedOut.push(app.login.nameInput.parentElement);
 
-        // The table of favorite nodes is only visible when logged in
-        this.faveTable = document.getElementById("faveTable");
-        app.login.viewLoggedIn.push(this.faveTable);
+        // The table of favorite nodes and page menu are only visible when logged in
+        const viewLoggedInIDs = ["faveTable", "pageMenu"];
+        for (let i = 0; i < viewLoggedInIDs.length; i++) {
+          const item = document.getElementById(viewLoggedInIDs[i]);
+          if (item) {
+            item.classList.add("hidden");
+            login.viewLoggedIn.push(item);
+          }
+        }
       }
     };
 
-    xhttp.open("GET", "../widgetLogin.html");
+    xhttp.open("GET", "../appHarmony/widgetLogin.html");
     xhttp.send();
   }
 
@@ -108,10 +120,14 @@ class widgetLogin {
       this.browserGUID = dataObj.data.browserGUID;
       if (dataObj.data.success === true) {
         this.loginComplete(dataObj);
-        this.getMetaData(dataObj)
-        .then(this.updateMetaData.bind(this));
-        this.getFavorites(dataObj)
-        .then(this.loadFavorites.bind(this));
+        if (app.metaData) { // update metadata if we are storing it
+          this.getMetaData(dataObj)
+          .then(this.updateMetaData.bind(this));
+        }
+        if (document.getElementById("faveNodes")) { // Load favorites if there's a place to show them
+          this.getFavorites(dataObj)
+          .then(this.loadFavorites.bind(this));
+        }
       } // end if (login was successful)
     }.bind(this));
   }
@@ -162,8 +178,10 @@ class widgetLogin {
       // Show all items that this user is permitted to see
       this.loginUpdateItems();
 
-      // Add the search buttons, regression header and debug header to the widgets list
-      this.loginUpdateWidgetList();
+      // Add the search buttons, regression header and debug header to the widgets list, if it exists
+      if (document.getElementById("widgetLists")) {
+        this.loginUpdateWidgetList();
+      }
     }
 
     // Finally, update the login div and clear the "old user" info so it doesn't interfere with future logins
@@ -534,7 +552,7 @@ class widgetLogin {
     else {
       this.oldUserGUID = this.userGUID;
     }
-    
+
     this.logoutUpdateLoginDiv();
     this.logoutSetVariables();
     this.logoutEndSession();
@@ -562,15 +580,17 @@ class widgetLogin {
     // Clear widgets
     app.clearWidgets();
 
-    // Clear favorites
+    // Clear favorites if they exist
     const faveRow = document.getElementById("faveNodes");
-    faveRow.innerHTML = `
-            <td id="faveNodes">Favorite Nodes (Shortcuts):</td>
-            <td id="faveNode0"
-              ondragover = "event.preventDefault()"
-              ondrop = "app.dropLink(this, event); app.widget('saveFavorite', this)">
-            </td>`;
-    app.faveNode = 1;
+    if (faveRow) {
+      faveRow.innerHTML = `
+              <td id="faveNodes">Favorite Nodes (Shortcuts):</td>
+              <td id="faveNode0"
+                ondragover = "event.preventDefault()"
+                ondrop = "app.dropLink(this, event); app.widget('saveFavorite', this)">
+              </td>`;
+      app.faveNode = 1;
+    }
   }
 
   logoutUpdateLoginDiv() {

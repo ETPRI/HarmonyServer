@@ -1,0 +1,205 @@
+  .site-header
+    {
+      background-image:url(http://etpri.org/devsite/wp-content/themes/lifestyle-pro/images/etpriheader.jpg)!important;
+      background-size:cover!important;
+      min-height:315px!important;
+      padding:20px 0 0 20px!important
+    }
+
+
+  .title-area
+    {
+      max-width:307px!important;
+      background-color:rgba(255,255,255,0.8)!important;
+    }
+
+  .site-title
+    {
+      font-size:36px!important;
+      font-weight:700!important;
+      padding:20px!important;
+      color:#2f7d3c!important
+    }
+
+  .custom-description
+    {
+      color:#fff;
+      max-width:690px;
+      float:right;
+      width:100%;
+      margin-top:-140px!important;
+    }
+/*  .genesis-nav-menu .menu-item:hover
+    {
+      color:#1e6901!important
+    }
+  .genesis-nav-menu a
+    {
+      color:#1e6901!important
+    }
+  .nav-secondary
+    {
+      margin-top:-54px!important;
+      background-color:rgba(221,235,184,.86)!important;
+      font-size:16px!important;
+      text-transform:uppercase!important;
+      color:#1e6901!important;
+      font-weight:700!important
+    }
+  .genesis-nav-menu li>a:focus,.genesis-nav-menu li>a:hover,.genesis-nav-menu a:focus,.genesis-nav-menu a:hover,.genesis-nav-menu .current-menu-item>a,.site-header .genesis-nav-menu .current-menu-item>a
+    {
+      background-color:#ddebb8!important;
+      color:#1e6901!important
+    }
+  .genesis-nav-menu .menu-item:hover
+    {
+      background-color:#ddebb8!important;
+      color:#1e6901!important
+    }
+  .site-inner
+    {
+      background-image:none!important;
+      background-color:rgba(255,255,255,.43)!important;
+      padding-top:0!important
+    }
+  .content .entry
+    {
+      border:none!important
+    }
+  .custom-clear
+    {
+      clear:both!important
+    }
+  .page-widget1 button,.page-widget1 input[type=button],.page-widget1 input[type=reset],.page-widget1 input[type=submit],.page-widget1 .button,.page-widget1 .entry-content .button
+    {
+      width:95%!important;
+      text-align:center!important;
+      font-size:36px!important;
+      background-color:#49d256!important;
+      text-transform:uppercase!important;
+      padding-bottom:10px!important
+    }
+  .page-widget1 button:focus,.page-widget1 button:hover,.page-widget1 input[type=button]:focus,.page-widget1 input[type=button]:hover,.page-widget1 input[type=reset]:focus,.page-widget1 input[type=reset]:hover,.page-widget1 input[type=submit]:focus,.page-widget1 input[type=submit]:hover,.page-widget1 .button:focus,.page-widget1 .button:hover,.page-widget1 .entry-content .button:focus,.page-widget1 .entry-content .button:hover
+    {
+      color:#fff!important;
+      box-shadow:rgba(0,6,8,.35) 6px 7px 4px 0
+    }
+  .page-widget
+    {
+      margin-top:-20px
+    }
+  .page-widget1
+    {
+      padding-left:60px;
+      padding-right:50px;
+      margin-top:-40px
+    }
+  .page-widget2
+    {
+      padding-left:20px;
+      padding-right:20px;
+      padding-top:20px;
+      padding-bottom:20px;
+      margin-top:0;
+      background-color:rgba(255,255,255,.3)
+    }
+  .page-widget2 h4
+    {
+      color:#2e7a3a!important;
+      font-weight:700
+    }
+  .page-widget2 .entry
+    {
+      border:2px solid #20ad38!important;
+      background-color:rgba(255,255,255,.55)!important;
+      padding-top:15px!important;
+      padding-bottom:0!important;
+      margin-bottom:0!important
+    }
+  .page-widget2 .entry-header h4
+    {
+      font-size:20px;
+      font-weight:400
+    }
+  @media only screen and (max-width:1139px)
+    {
+      .custom-description
+        {
+          float:left!important;
+          margin-top:-165px!important
+        }
+    }
+
+  @media only screen and (max-width:1023px)
+    {
+      .title-area
+        {
+          max-height:155px!important
+        }
+      .site-title
+        {
+          font-size:30px!important
+        }
+      .custom-description
+        {
+          float:left!important;
+          margin-top:-180px!important
+        }
+      .page-widget1 .button
+        {
+          font-size:24px!important
+        }
+      .page-widget2
+        {
+          padding-top:20px;
+          margin-top:-20px
+        }
+    }
+
+    @media only screen and (max-width:767px)
+      {
+        .site-header
+          {
+            min-height:200px!important
+          }
+        .custom-description
+          {
+            display:none
+          }
+        .nav-secondary
+          {
+            margin-top:0!important
+          }
+        .menu-toggle,.sub-menu-toggle
+          {
+            background-color:rgba(221,235,184,.86)!important
+          }
+        .menu-toggle:focus,.menu-toggle:hover,.sub-menu-toggle:focus,.sub-menu-toggle:hover
+          {
+            background-color:rgba(221,235,184,.86)!important
+          }
+        .content .entry
+          {
+            padding:10px
+          }
+        .page-widget1
+          {
+            padding-left:20px;
+            padding-right:10px
+          }
+        .page-widget1 .button
+          {
+            font-size:24px!important
+          }
+        .page-widget2
+          {
+            padding-bottom:0;
+            margin-top:20px;
+            padding-left:10px;
+            padding-right:10px
+          }
+        .page-widget2 .one-half
+          {
+            margin-bottom:20px
+          }
+      } */
