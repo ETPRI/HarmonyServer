@@ -29,7 +29,7 @@ const driver = neo4j.driver("bolt://localhost", neo4j.auth.basic("neo4j", config
 let backup = new backupClass(config, fs, driver, stringEscape);
 let integrity = new integrityClass(driver, uuidv1, stringEscape, true);
 let CRUD = new CRUDclass(uuidv1, integrity, driver, stringEscape);
-let login = new loginClass(uuidv1, integrity, driver);
+let login = new loginClass(config, uuidv1, integrity, driver);
 
 // process requests to server
 http.createServer(function (request, response) {
@@ -648,7 +648,7 @@ function tokenExists(token) {
 function updateTokenTimer(token) {
   clearTimeout(login.tokens[token].timer)
   login.tokens[token].timer = setTimeout(function() {
-    delete login.tokens[token];}, login.timerDurationMS);
+    delete login.tokens[token];}, config.timerDurationMS);
 }
 
 function stringEscape(text) {

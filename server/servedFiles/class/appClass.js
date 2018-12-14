@@ -535,7 +535,7 @@ widgetClose(widgetElement) {
 
 		// Remove widget from widget list on page
 		const widgetList = document.getElementById("widgetsList");
-		if (widgetsList) {
+		if (widgetList) {
 			const entry = app.domFunctions.getChildByIdr(widgetList, id);
 			if (entry) {
 				widgetList.removeChild(entry);

@@ -1,10 +1,10 @@
 module.exports = class login {
-  constructor(uuid, integrity, driver) {
+  constructor(config, uuid, integrity, driver) {
+    this.config = config;
     this.uuid = uuid;
     this.integrity = integrity;
     this.driver = driver;
     this.tokens = {};
-    this.timerDurationMS = 30*60*1000; // minutes * 60 s/min * 1000ms/s; normally 30 minutes; 1 when testing
   }
 
   /* Calls whatever method the object requested, assuming that method exists.
@@ -111,7 +111,7 @@ module.exports = class login {
               resolve(dataObj);
             }
             else {
-              createBrowser(dataObj) // Otherwise, create one, then record its GUID and resolve (this may not work; have to try it)
+              dataObj.server.createBrowser(dataObj) // Otherwise, create one, then record its GUID and resolve (this may not work; have to try it)
                 .then(function(browserGUID) {
                   dataObj.browserGUID = browserGUID;
                   resolve(dataObj);
@@ -133,7 +133,7 @@ module.exports = class login {
       const createChangeNumber = ++dataObj.server.integrity.changeCount;
 
       const query =
-      `create (b:M_Browser {name:"${dataObj.browserName}", M_GUID:${browserGUID}, M_CreateChangeLog:${createChangeNumber}}),
+      `create (b:M_Browser {name:"${dataObj.browserName}", M_GUID:"${browserGUID}", M_CreateChangeLog:${createChangeNumber}}),
       (change0:M_ChangeLog {number:${createChangeNumber}, item_GUID:"${browserGUID}", user_GUID:"upkeep",
         action:"create", label:"M_Browser", itemType:"node", M_GUID:"${dataObj.server.uuid()}"}),
       (change1:M_ChangeLog {number:${++dataObj.server.integrity.changeCount}, item_GUID:"${browserGUID}", user_GUID:"upkeep",
@@ -238,7 +238,7 @@ module.exports = class login {
         "browserGUID":dataObj.browserGUID,
         timer: setTimeout(function(){
           delete tokens[dataObj.sessionGUID];
-        }, dataObj.server.timerDurationMS)
+        }, dataObj.server.config.timerDurationMS)
       };
 
       // record successful login

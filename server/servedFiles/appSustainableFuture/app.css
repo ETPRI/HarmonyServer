@@ -1,0 +1,27 @@
+body {
+  margin: 0;
+}
+
+.columns {
+  padding-left: 0.9375rem;
+}
+
+header:before, header:after {
+  content: " ";
+  display: table;
+}
+
+.row {
+    max-width: 61.25rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+header.main {
+    height: 175px;
+    background: url('header-bg.jpg') no-repeat;
+}
+
+.logo-area, .social {
+    margin-top: 20px;
+}

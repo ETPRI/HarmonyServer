@@ -18,7 +18,7 @@ config.neo4jBackup = "backups/Neo4j";  // backup and restore should be indepenan
 // export server config to nodejs
 module.exports = config;
 
-
+config.timerDurationMS = 30*60*1000; // minutes * 60s/m * 1000ms/s; usually 30 minutes; 1 when testing
 
 
 /// depricated infig info to be deleted in future

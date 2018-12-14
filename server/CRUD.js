@@ -808,7 +808,7 @@ module.exports = class CRUD {
       max: Number. The number of the last changelog stored in the database when syncing began -
                     the search will be for changelogs with a number LESS THAN OR EQUAL TO this.
       limit: Number. The maximum number of changelogs to search for.
-  */  
+  */
   getChangeLogs(obj, response) {
     let where = `n.user_GUID = '${obj.query.GUID}'`;
     let ret = `n`;
