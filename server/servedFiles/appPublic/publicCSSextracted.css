@@ -1,6 +1,6 @@
 .site-header
   {
-    background-image:url(http://etpri.org/devsite/wp-content/themes/lifestyle-pro/images/etpriheader.jpg)!important;
+    background-image:url(images/etpriheader.jpg)!important;
     background-size:cover!important;
     min-height:315px!important;
     padding:20px 0 0 20px!important
@@ -45,7 +45,7 @@
 body
   {
     margin:0;
-    background-image: url("https://etpri.org/wp-content/uploads/2017/11/gb-texture.png");
+    background-image: url("images/gb-texture.png");
     color:#767673;
   }
 
