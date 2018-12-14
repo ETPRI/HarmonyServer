@@ -764,9 +764,16 @@ savePromise(saveObj) {
     let propFieldsChanged = false;
     let tr = details.tBodyDOM.firstElementChild;
 
-    let data = {}; // Data can be an object representing properties (for a new node) or an array of changes (for an existing one)
-    if (action === "Save") {
-      data = [];
+    // Data can be an object representing properties (for a new node) or an array of changes (for an existing one)
+    let data = [];
+    // If the node is new, save its trash status
+    if (action === "Add") {
+      const checkbox = saveObj.app.domFunctions.getChildByIdr(details.widgetDOM, "trashCheck");
+      let trash = "false";
+      if (checkbox.checked) {
+        trash = "true";
+      }
+      data = {"M_trash":trash};
     }
 
     let tempMetaData = {};

@@ -216,7 +216,7 @@ button:focus,button:hover,input[type=button]:focus,input[type=button]:hover,inpu
     font-weight:700!important
   }
 
-  .genesis-nav-menu li>a:focus,.genesis-nav-menu li>a:hover,.genesis-nav-menu a:focus,.genesis-nav-menu a:hover,.genesis-nav-menu .current-menu-item>a,.site-header .genesis-nav-menu .current-menu-item>a{
+  .genesis-nav-menu li>a:focus,.genesis-nav-menu li>a:hover,.genesis-nav-menu a:focus,.genesis-nav-menu a:hover,.genesis-nav-menu .current-menu-item>a,.site-header .genesis-nav-menu .-menu-item>a{
     background-color:#ddebb8!important;
   }
 
