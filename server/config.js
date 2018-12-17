@@ -21,7 +21,7 @@ module.exports = config;
 config.timerDurationMS = 30*60*1000; // minutes * 60s/m * 1000ms/s; usually 30 minutes; 1 when testing
 
 
-/// depricated infig info to be deleted in future
+/// deprecated infig info to be deleted in future
 
 
 // used for cosmo-db

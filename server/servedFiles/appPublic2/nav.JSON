@@ -1,0 +1,58 @@
+[
+  {"name":"Home", "HTML":"home"},
+  {"name":"About", "HTML":"about", "children":
+    [
+      {"name":"Mission", "HTML":"mission"},
+      {"name":"Staff", "HTML":"staff"},
+      {"name":"Volunteers", "HTML":"volunteers"},
+      {"name":"Board", "HTML":"Board"},
+      {"name":"The Sustainable Future Center", "HTML":"center"}
+    ]
+  },
+  {"name":"Activities", "HTML":"activities", "children":
+    [
+      {"name":"Calendar: Classes, Workshops, Events", "HTML":"calendar"},
+      {"name":"Classes", "HTML":"classes", "children":
+        [
+          {"name":"Home Gardeners' Roundtable & Workshops", "HTML":"karma-farm"}
+        ]
+      },
+      {"name":"Special Interest Groups (SIGs)", "HTML":"sig", "children":
+        [
+          {"name":"Aquaponics SIG", "HTML":"aquaponics"},
+          {"name":"Chickens SIG", "HTML":"chickens"},
+          {"name":"Foraging SIG", "HTML":"foraging"},
+          {"name":"Permaculture Structures", "HTML":"structures"}
+        ]
+      },
+      {"name":"Demonstration Site", "HTML":"demo-site"},
+      {"name":"Sustainable Living", "HTML":"sustainable-living"}
+    ]
+  },
+  {"name":"Get Involved", "HTML":"get-involved", "children":
+    [
+      {"name":"Volunteer", "HTML":"volunteer"},
+      {"name":"Newsletter", "HTML":"newsletter"},
+      {"name":"Contact", "HTML":"contact"},
+      {"name":"Tax Deductible Donations", "HTML":"donate"}
+    ]
+  },
+  {"name":"Membership Benefits", "HTML":"benefit", "children":
+    [
+      {"name":"Libraries", "HTML":"libraries"},
+      {"name":"Gardens", "HTML":"gardens"},
+      {"name":"Meeting Spaces", "HTML":"meeting-space"},
+      {"name":"Social Events", "HTML":"social-events"}
+    ]
+  },
+  {"name":"Resources", "HTML":"resources", "children":
+    [
+      {"name":"Permaculture Links", "HTML":"permaculture"},
+      {"name":"Guide To Our Vestal Neighborhood", "HTML":"neighborhood"},
+      {"name":"Field Trip Information", "HTML":"field-trip"}
+    ]
+  },
+  {"name":"Blog", "HTML":"blog"},
+  {"description":"Facebook", "icon":"facebook", "URL":"https://www.facebook.com/etpri/"},
+  {"description":"Instagram", "icon":"instagram", "URL":"https://www.instagram.com/easttnpermaculture/"}
+]
